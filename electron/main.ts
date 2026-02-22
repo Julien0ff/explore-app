@@ -291,7 +291,7 @@ function createMainWindow() {
     width: 1200,
     height: 800,
     show: false, // Hidden initially
-    icon: path.join(__dirname, '../public/logo.svg'), // Set app icon
+    icon: path.join(__dirname, '../public/icon.ico'), // Set app icon (Windows prefers .ico)
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,

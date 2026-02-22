@@ -106,11 +106,11 @@ function setupSession() {
             electron_1.session.defaultSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
                 const headers = details.requestHeaders;
                 // Force Chrome User Agent
-                headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
-                // Remove Electron identifiers
-                delete headers['Sec-Ch-Ua'];
-                delete headers['Sec-Ch-Ua-Mobile'];
-                delete headers['Sec-Ch-Ua-Platform'];
+                headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+                // Mock Client Hints to match Chrome
+                headers['Sec-Ch-Ua'] = '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"';
+                headers['Sec-Ch-Ua-Mobile'] = '?0';
+                headers['Sec-Ch-Ua-Platform'] = '"Windows"';
                 callback({ cancel: false, requestHeaders: headers });
             });
         }
@@ -119,7 +119,7 @@ function setupSession() {
         console.error('Failed to setup session:', e);
     }
 }
-const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
+const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 electron_1.app.userAgentFallback = userAgent;
 // Register IPC listeners once
 function setupIPC() {
@@ -280,7 +280,7 @@ function createMainWindow() {
         width: 1200,
         height: 800,
         show: false, // Hidden initially
-        icon: path_1.default.join(__dirname, '../public/logo.svg'), // Set app icon
+        icon: path_1.default.join(__dirname, '../public/icon.ico'), // Set app icon (Windows prefers .ico)
         webPreferences: {
             preload: path_1.default.join(__dirname, 'preload.js'),
             nodeIntegration: false,
