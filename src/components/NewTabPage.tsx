@@ -1,0 +1,382 @@
+import React, { useState, useEffect } from 'react';
+import { Logo } from './Logo';
+import { Search, Plus, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { clsx } from 'clsx';
+
+import { getAccentColorClass } from '../lib/theme';
+
+interface NewTabPageProps {
+  onSearch: (query: string) => void;
+  theme: 'dark' | 'light' | 'system';
+  accentColor: string;
+  language: 'fr' | 'en';
+  onQueryChange?: (query: string) => void;
+  suggestions?: string[];
+}
+
+interface QuickLink {
+  id: string;
+  title: string;
+  url: string;
+}
+
+export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChange, suggestions = [] }: NewTabPageProps) {
+  const colors = getAccentColorClass(accentColor, theme === 'dark');
+  const [query, setQuery] = useState('');
+  const [greeting, setGreeting] = useState('');
+  const [time, setTime] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const hour = now.getHours();
+      
+      // Set greeting
+      if (language === 'fr') {
+        if (hour < 12) setGreeting('Bonjour.');
+        else if (hour < 18) setGreeting('Bon après-midi.');
+        else setGreeting('Bonsoir.');
+      } else {
+        if (hour < 12) setGreeting('Good Morning.');
+        else if (hour < 18) setGreeting('Good Afternoon.');
+        else setGreeting('Good Evening.');
+      }
+
+      // Set time
+      setTime(now.toLocaleTimeString(language === 'fr' ? 'fr-FR' : 'en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      }));
+    };
+
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, [language]);
+
+  const [quickLinks, setQuickLinks] = useState<QuickLink[]>(() => {
+    const saved = localStorage.getItem('explore_quicklinks_v4');
+    return saved ? JSON.parse(saved) : [
+      { id: '1', title: 'YouTube', url: 'youtube.com' },
+      { id: '2', title: 'Tiktok', url: 'tiktok.com' },
+      { id: '3', title: 'Netflix', url: 'netflix.com' },
+      { id: '4', title: 'Anime Sama', url: 'anime-sama.pw' }
+    ];
+  });
+  const [isAddingLink, setIsAddingLink] = useState(false);
+  const [newLinkUrl, setNewLinkUrl] = useState('');
+  const [newLinkTitle, setNewLinkTitle] = useState('');
+
+  useEffect(() => {
+    localStorage.setItem('explore_quicklinks_v4', JSON.stringify(quickLinks));
+  }, [quickLinks]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedSuggestionIndex >= 0 && suggestions[selectedSuggestionIndex]) {
+      onSearch(suggestions[selectedSuggestionIndex]);
+      setShowSuggestions(false);
+    } else if (query.trim()) {
+      onSearch(query);
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedSuggestionIndex(prev => 
+        prev < suggestions.length - 1 ? prev + 1 : prev
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedSuggestionIndex(prev => prev > -1 ? prev - 1 : -1);
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setQuery(val);
+    onQueryChange?.(val);
+    setShowSuggestions(true);
+    setSelectedSuggestionIndex(-1);
+  };
+
+  const handleAddLink = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newLinkUrl && newLinkTitle) {
+      setQuickLinks([...quickLinks, {
+        id: crypto.randomUUID(),
+        title: newLinkTitle,
+        url: newLinkUrl
+      }]);
+      setNewLinkUrl('');
+      setNewLinkTitle('');
+      setIsAddingLink(false);
+    }
+  };
+
+  const removeLink = (id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setQuickLinks(quickLinks.filter(link => link.id !== id));
+  };
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className={clsx(
+        "flex flex-col items-center justify-center h-full w-full",
+        theme === 'dark' ? "bg-[#1e1e2e] text-white" : "bg-white text-gray-900"
+      )}
+    >
+      <div className="flex flex-col items-center gap-8 -mt-20 w-full max-w-2xl px-4">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className="flex flex-col items-center gap-2"
+        >
+          <Logo className="w-24 h-24" />
+          <div className={clsx("text-2xl font-light", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
+            {time}
+          </div>
+        </motion.div>
+        
+        <motion.h1 
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className={clsx(
+            "text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r text-center pb-2",
+            colors.gradientFrom,
+            colors.gradientTo
+          )}
+        >
+          {greeting}
+        </motion.h1>
+        
+        <motion.form 
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          onSubmit={handleSubmit} 
+          className="w-full relative group"
+        >
+          <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
+            <Search className={clsx(
+              "w-5 h-5 transition-colors",
+              theme === 'dark' ? "text-gray-500 group-focus-within:text-white" : "text-gray-400 group-focus-within:text-gray-900"
+            )} />
+          </div>
+          <input
+            type="text"
+            value={selectedSuggestionIndex >= 0 ? suggestions[selectedSuggestionIndex] : query}
+            onChange={handleQueryChange}
+            onKeyDown={handleKeyDown}
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+            placeholder={language === 'fr' ? "Rechercher sur le web..." : "Search the web..."}
+            className={clsx(
+              "w-full py-4 pl-14 pr-6 rounded-2xl shadow-lg border outline-none text-lg transition-all duration-300",
+              theme === 'dark' 
+                ? "bg-[#181825] border-white/5 text-white placeholder-gray-600 focus:bg-[#1e1e2e]" 
+                : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:bg-white",
+              colors.focusBorder,
+              colors.focusShadow,
+              showSuggestions && suggestions.length > 0 && "rounded-b-none border-b-0"
+            )}
+            autoFocus
+          />
+          
+          {showSuggestions && suggestions.length > 0 && (
+            <div className={clsx(
+              "absolute top-full left-0 right-0 rounded-b-2xl shadow-xl border border-t-0 overflow-hidden z-50",
+              theme === 'dark' ? "bg-[#1e1e2e] border-white/5" : "bg-white border-gray-200"
+            )}>
+              {suggestions.map((suggestion, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  className={clsx(
+                    "w-full text-left px-14 py-3 text-lg flex items-center gap-3 transition-colors",
+                    index === selectedSuggestionIndex 
+                      ? clsx(colors.bg, colors.text)
+                      : theme === 'dark' ? "text-gray-300 hover:bg-white/5" : "text-gray-700 hover:bg-gray-50"
+                  )}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setQuery(suggestion);
+                    onSearch(suggestion);
+                    setShowSuggestions(false);
+                  }}
+                  onMouseEnter={() => setSelectedSuggestionIndex(index)}
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          )}
+        </motion.form>
+
+        <motion.div 
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="grid grid-cols-4 gap-4 w-full"
+        >
+          {quickLinks.map((link) => (
+            <div
+              key={link.id}
+              onClick={(e) => {
+                e.preventDefault();
+                onSearch(link.url);
+              }}
+              className={clsx(
+                "group flex flex-col items-center gap-3 p-4 rounded-xl transition-all relative cursor-pointer",
+                theme === 'dark' ? "hover:bg-white/5" : "hover:bg-gray-100"
+              )}
+            >
+              <button
+                onClick={(e) => removeLink(link.id, e)}
+                className={clsx("absolute top-2 right-2 p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-500/20 hover:text-red-500 transition-all z-10", colors.textHover)}
+              >
+                <X className="w-3 h-3 pointer-events-none" />
+              </button>
+              <div className={clsx(
+                "w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold transition-transform group-hover:scale-110",
+                theme === 'dark' ? "bg-[#181825] text-white" : "bg-white text-gray-900 shadow-md"
+              )}>
+                <img 
+                  src={`https://www.google.com/s2/favicons?domain=${link.url}&sz=64`}
+                  alt={link.title}
+                  className="w-6 h-6"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    if (target.src.includes('google.com')) {
+                      target.src = `https://icons.duckduckgo.com/ip3/${link.url}.ico`;
+                    } else {
+                      target.style.display = 'none';
+                      if (target.parentElement) {
+                        target.parentElement.innerText = link.title[0].toUpperCase();
+                      }
+                    }
+                  }}
+                />
+              </div>
+              <span className={clsx("text-sm font-medium transition-colors", theme === 'dark' ? "text-gray-400 group-hover:text-white" : "text-gray-600 group-hover:text-gray-900", colors.textHover)}>{link.title}</span>
+            </div>
+          ))}
+          
+          <button
+            onClick={() => setIsAddingLink(true)}
+            className={clsx(
+              "flex flex-col items-center gap-3 p-4 rounded-xl transition-all group",
+              theme === 'dark' ? "hover:bg-white/5 text-gray-500 hover:text-white" : "hover:bg-gray-100 text-gray-400 hover:text-gray-900",
+              colors.textHover
+            )}
+          >
+            <div className={clsx(
+              "w-12 h-12 rounded-full flex items-center justify-center border-2 border-dashed transition-colors",
+              theme === 'dark' ? "border-gray-700 group-hover:border-gray-500" : "border-gray-300 group-hover:border-gray-400"
+            )}>
+              <Plus className="w-5 h-5" />
+            </div>
+            <span className="text-sm font-medium">{language === 'fr' ? "Ajouter un raccourci" : "Add Shortcut"}</span>
+          </button>
+        </motion.div>
+      </div>
+
+      <AnimatePresence>
+        {isAddingLink && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+             <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsAddingLink(false)}
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              />
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className={clsx(
+                  "relative w-full max-w-sm rounded-2xl shadow-2xl border p-6 overflow-hidden z-10",
+                  theme === 'dark' ? "bg-[#1e1e2e] border-white/10 text-white" : "bg-white border-gray-200 text-gray-900"
+                )}
+              >
+              <h3 className="text-xl font-bold mb-4">{language === 'fr' ? "Ajouter un raccourci" : "Add Shortcut"}</h3>
+              <form onSubmit={handleAddLink} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1 opacity-70">{language === 'fr' ? "Titre" : "Title"}</label>
+                  <input
+                    type="text"
+                    value={newLinkTitle}
+                    onChange={(e) => setNewLinkTitle(e.target.value)}
+                    className={clsx(
+                      "w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2",
+                      theme === 'dark' 
+                        ? "bg-[#181825] border-white/10" 
+                        : "bg-gray-50 border-gray-200",
+                      colors.focusBorder,
+                      colors.ring
+                    )}
+                    placeholder={language === 'fr' ? "Mon raccourci" : "My Shortcut"}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1 opacity-70">URL</label>
+                  <input
+                    type="text"
+                    value={newLinkUrl}
+                    onChange={(e) => setNewLinkUrl(e.target.value)}
+                    className={clsx(
+                      "w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2",
+                      theme === 'dark' 
+                        ? "bg-[#181825] border-white/10" 
+                        : "bg-gray-50 border-gray-200",
+                      colors.focusBorder,
+                      colors.ring
+                    )}
+                    placeholder={language === 'fr' ? "exemple.com" : "example.com"}
+                    required
+                  />
+                </div>
+                <div className="flex gap-3 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingLink(false)}
+                    className={clsx(
+                      "flex-1 px-4 py-2 rounded-xl font-medium transition-colors",
+                      theme === 'dark' ? "bg-white/5 hover:bg-white/10" : "bg-gray-100 hover:bg-gray-200"
+                    )}
+                  >
+                    {language === 'fr' ? "Annuler" : "Cancel"}
+                  </button>
+                  <button
+                    type="submit"
+                    className={clsx(
+                      "flex-1 px-4 py-2 rounded-xl font-medium text-white shadow-lg transition-all hover:scale-105 active:scale-95",
+                      colors.bgSolid,
+                      colors.shadow
+                    )}
+                  >
+                    {language === 'fr' ? "Ajouter" : "Add"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explore Browser</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            overflow: hidden;
+            -webkit-user-select: none;
+        }
+
+        .container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            background: rgba(30, 30, 46, 0.95);
+            border-radius: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .logo {
+            width: 100px;
+            height: 100px;
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .compass-ring {
+            position: absolute;
+            inset: 0;
+            border: 4px solid rgba(59, 130, 246, 0.3);
+            border-radius: 50%;
+            border-top-color: #3b82f6;
+            animation: spin 2s linear infinite;
+        }
+
+        .compass-needle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 60px;
+            height: 60px;
+            transform: translate(-50%, -50%);
+            animation: needle 3s ease-in-out infinite;
+        }
+
+        .needle-path {
+            fill: #3b82f6;
+            filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.5));
+        }
+
+        h1 {
+            color: white;
+            font-size: 32px;
+            margin: 0;
+            font-weight: 700;
+            background: linear-gradient(to right, #60a5fa, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            opacity: 0;
+            animation: fadeUp 0.8s ease-out 0.5s forwards;
+        }
+
+        .loader {
+            width: 40px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            margin-top: 20px;
+            overflow: hidden;
+            opacity: 0;
+            animation: fadeIn 0.5s ease-out 1s forwards;
+        }
+
+        .loader-bar {
+            width: 100%;
+            height: 100%;
+            background: #3b82f6;
+            transform: translateX(-100%);
+            animation: loading 2s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes needle {
+            0%, 100% { transform: translate(-50%, -50%) rotate(0deg); }
+            50% { transform: translate(-50%, -50%) rotate(45deg); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        @keyframes loading {
+            0% { transform: translateX(-100%); }
+            50% { transform: translateX(0); }
+            100% { transform: translateX(100%); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 100%; height: 100%; color: #3b82f6;">
+                <circle cx="12" cy="12" r="10" style="stroke: currentColor; opacity: 0.2;" />
+                <path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z" style="fill: #3b82f6; stroke: #2563eb;" />
+                <path d="M12 2v2M12 20v2M2 12h2M20 12h2" style="stroke: currentColor; opacity: 0.5;" />
+            </svg>
+        </div>
+        <h1>Explore</h1>
+        <div class="loader">
+            <div class="loader-bar"></div>
+        </div>
+    </div>
+</body>
+</html>

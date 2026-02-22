@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Explore - Le navigateur réinventé</title>
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <meta name="description" content="Explore est un navigateur web moderne, rapide et léger. Téléchargez-le maintenant !" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      .gradient-text {
+        background: linear-gradient(135deg, #60A5FA 0%, #A78BFA 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .hero-gradient {
+        background: radial-gradient(circle at center, rgba(59, 130, 246, 0.1) 0%, rgba(0, 0, 0, 0) 70%);
+      }
+    </style>
+  </head>
+  <body class="bg-[#1e1e2e] text-white overflow-x-hidden">
+    <!-- Navbar -->
+    <nav class="fixed w-full z-50 bg-[#181825]/80 backdrop-blur-lg border-b border-white/5">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          <div class="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" opacity="0.2" />
+            <path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z" fill="#3b82f6" stroke="#2563eb" />
+            <path d="M12 2v2M12 20v2M2 12h2M20 12h2" stroke="currentColor" opacity="0.5" />
+          </svg>
+            <span class="font-bold text-xl tracking-tight">Explore</span>
+          </div>
+          <div class="hidden md:block">
+            <div class="ml-10 flex items-baseline space-x-8">
+              <a href="#features" class="hover:text-blue-400 transition-colors px-3 py-2 rounded-md text-sm font-medium">Fonctionnalités</a>
+              <a href="#download" class="bg-blue-600 hover:bg-blue-700 transition-colors px-4 py-2 rounded-full text-sm font-medium">Télécharger</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="relative pt-32 pb-20 sm:pt-40 sm:pb-24 overflow-hidden">
+      <div class="hero-gradient absolute inset-0 pointer-events-none"></div>
+      <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center z-10">
+        <div class="inline-flex items-center px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-sm font-medium mb-6">
+          <span class="flex h-2 w-2 relative mr-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+          </span>
+          Version 1.0 Disponible
+        </div>
+        <h1 class="text-5xl sm:text-7xl font-extrabold tracking-tight mb-8">
+          Le web, <span class="gradient-text">réinventé</span>.
+        </h1>
+        <p class="mt-4 text-xl text-gray-400 max-w-2xl mx-auto mb-10">
+          Explore est un navigateur conçu pour la vitesse, la simplicité et la confidentialité. Une expérience fluide qui s'adapte à vous.
+        </p>
+        <div class="flex flex-col sm:flex-row justify-center gap-4">
+          <a href="#" class="px-8 py-4 bg-blue-600 hover:bg-blue-700 rounded-full font-bold text-lg transition-all transform hover:scale-105 shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Télécharger pour Windows
+          </a>
+          <a href="#features" class="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full font-bold text-lg transition-all flex items-center justify-center">
+            En savoir plus
+          </a>
+        </div>
+        <div class="mt-16 relative mx-auto max-w-5xl">
+          <div class="rounded-xl overflow-hidden shadow-2xl border border-white/10 bg-[#1e1e2e]">
+            <img src="https://images.unsplash.com/photo-1614064641938-3bcee529cf93?q=80&w=2670&auto=format&fit=crop" alt="Explore Browser Interface" class="w-full h-auto opacity-80 hover:opacity-100 transition-opacity duration-500">
+            <!-- Placeholder for actual app screenshot -->
+            <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <span class="text-white/20 text-4xl font-bold">Interface Explore</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Features Section -->
+    <div id="features" class="py-24 bg-[#0a0a0c]">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+          <h2 class="text-3xl font-extrabold sm:text-4xl">
+            Pourquoi choisir <span class="text-blue-400">Explore</span> ?
+          </h2>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <!-- Feature 1 -->
+          <div class="p-8 rounded-2xl bg-white/5 border border-white/5 hover:border-blue-500/30 transition-all hover:-translate-y-1">
+            <div class="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center mb-6 text-blue-400">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <h3 class="text-xl font-bold mb-3">Ultra Rapide</h3>
+            <p class="text-gray-400">Construit sur Chromium, optimisé pour la performance. Naviguez sans ralentissement, même avec de nombreux onglets.</p>
+          </div>
+          <!-- Feature 2 -->
+          <div class="p-8 rounded-2xl bg-white/5 border border-white/5 hover:border-purple-500/30 transition-all hover:-translate-y-1">
+            <div class="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center mb-6 text-purple-400">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </div>
+            <h3 class="text-xl font-bold mb-3">Personnalisable</h3>
+            <p class="text-gray-400">Changez la position des onglets, choisissez votre thème, et adaptez l'interface à votre flux de travail.</p>
+          </div>
+          <!-- Feature 3 -->
+          <div class="p-8 rounded-2xl bg-white/5 border border-white/5 hover:border-green-500/30 transition-all hover:-translate-y-1">
+            <div class="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center mb-6 text-green-400">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <h3 class="text-xl font-bold mb-3">Sécurisé</h3>
+            <p class="text-gray-400">Navigation privée, blocage de traceurs et mises à jour de sécurité régulières pour vous protéger.</p>
+          </div>
+          <!-- Feature 4 -->
+          <div class="p-8 rounded-2xl bg-white/5 border border-white/5 hover:border-red-500/30 transition-all hover:-translate-y-1">
+            <div class="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center mb-6 text-red-400">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+            </div>
+            <h3 class="text-xl font-bold mb-3">Bloqueur de Pubs</h3>
+            <p class="text-gray-400">Naviguez sans interruptions. Notre bloqueur de publicités intégré élimine les distractions et accélère le chargement.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Download Section -->
+    <div id="download" class="py-24 relative overflow-hidden">
+      <div class="absolute inset-0 bg-blue-600/5"></div>
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+        <h2 class="text-3xl font-extrabold sm:text-4xl mb-8">
+          Prêt à explorer le web autrement ?
+        </h2>
+        <p class="text-xl text-gray-400 mb-10">
+          Rejoignez des milliers d'utilisateurs qui ont déjà fait le choix de la modernité.
+        </p>
+        <a href="#" class="inline-flex items-center justify-center px-8 py-4 bg-white text-black hover:bg-gray-200 rounded-full font-bold text-lg transition-colors shadow-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Télécharger Explore V1
+        </a>
+        <p class="mt-4 text-sm text-gray-500">
+          Compatible Windows 10/11. Version Mac & Linux bientôt disponible.
+        </p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-[#0f0f12] border-t border-white/5 py-12">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center">
+        <div class="flex items-center gap-2 mb-4 md:mb-0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-blue-500">
+            <circle cx="12" cy="12" r="10" class="stroke-current opacity-20" />
+            <path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z" class="fill-blue-500 stroke-blue-600" />
+            <path d="M12 2v2M12 20v2M2 12h2M20 12h2" class="stroke-current opacity-50" />
+          </svg>
+          <span class="font-bold text-lg">Explore</span>
+        </div>
+        <div class="flex space-x-6 text-sm text-gray-400">
+          <a href="#" class="hover:text-white transition-colors">Confidentialité</a>
+          <a href="#" class="hover:text-white transition-colors">Conditions</a>
+          <a href="#" class="hover:text-white transition-colors">Contact</a>
+        </div>
+        <div class="mt-4 md:mt-0 text-sm text-gray-500">
+          &copy; 2026 Explore Browser. Tous droits réservés.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
