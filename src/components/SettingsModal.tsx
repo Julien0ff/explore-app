@@ -18,6 +18,14 @@ interface SettingsModalProps {
   setLanguage: (lang: 'fr' | 'en') => void;
   accentColor: string;
   setAccentColor: (color: string) => void;
+  shortcuts: { 
+    newTab: string; closeTab: string; focusUrl: string; reloadTab: string;
+    togglePrivate: string; saveSession: string; restoreSession: string; enablePiP: string
+  };
+  setShortcuts: (s: { 
+    newTab: string; closeTab: string; focusUrl: string; reloadTab: string;
+    togglePrivate: string; saveSession: string; restoreSession: string; enablePiP: string
+  }) => void;
   onOpenUrl: (url: string) => void;
   onImportBookmarks: () => void;
   onClearData: () => void;
@@ -36,6 +44,8 @@ export function SettingsModal({
   setLanguage,
   accentColor,
   setAccentColor,
+  shortcuts,
+  setShortcuts,
   onOpenUrl,
   onImportBookmarks,
   onClearData
@@ -45,8 +55,22 @@ export function SettingsModal({
   const [isSending, setIsSending] = React.useState(false);
   const [suggestionStatus, setSuggestionStatus] = React.useState<'idle' | 'success' | 'error'>('idle');
   const [isUpdating, setIsUpdating] = React.useState(false);
+  const [localShortcuts, setLocalShortcuts] = React.useState(shortcuts);
   const [updateProgress, setUpdateProgress] = React.useState(0);
   const [appVersion, setAppVersion] = React.useState('0.0.0');
+  const [adBlockEnabled, setAdBlockEnabled] = React.useState(true);
+
+  React.useEffect(() => {
+    if (window.electron?.getAdBlockEnabled) {
+      window.electron.getAdBlockEnabled().then(setAdBlockEnabled);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (window.electron?.setAdBlockEnabled) {
+      window.electron.setAdBlockEnabled(adBlockEnabled);
+    }
+  }, [adBlockEnabled]);
 
   React.useEffect(() => {
     if (suggestionStatus !== 'idle') {
@@ -430,6 +454,67 @@ export function SettingsModal({
                   </button>
                 </div>
 
+                {/* Keyboard Shortcuts */}
+                <div>
+                  <h3 className={clsx("text-lg font-medium mb-4", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                    {language === 'fr' ? 'Raccourcis clavier' : 'Keyboard Shortcuts'}
+                  </h3>
+                  <div className={clsx("p-4 rounded-xl border space-y-3", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200")}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <label className="flex items-center gap-3">
+                        <span className={clsx("w-40 text-sm", theme === 'dark' ? "text-white" : "text-gray-900")}>{language === 'fr' ? 'Nouvel onglet' : 'New Tab'}</span>
+                        <input
+                          value={localShortcuts.newTab}
+                          onChange={(e) => setLocalShortcuts({ ...localShortcuts, newTab: e.target.value })}
+                          className={clsx("flex-1 px-3 py-2 rounded-lg border text-sm outline-none", theme === 'dark' ? "bg-[#181825] border-white/10 text-white" : "bg-white border-gray-200 text-gray-900")}
+                          placeholder="Ctrl+T"
+                        />
+                      </label>
+                      <label className="flex items-center gap-3">
+                        <span className={clsx("w-40 text-sm", theme === 'dark' ? "text-white" : "text-gray-900")}>{language === 'fr' ? 'Fermer l’onglet' : 'Close Tab'}</span>
+                        <input
+                          value={localShortcuts.closeTab}
+                          onChange={(e) => setLocalShortcuts({ ...localShortcuts, closeTab: e.target.value })}
+                          className={clsx("flex-1 px-3 py-2 rounded-lg border text-sm outline-none", theme === 'dark' ? "bg-[#181825] border-white/10 text-white" : "bg-white border-gray-200 text-gray-900")}
+                          placeholder="Ctrl+W"
+                        />
+                      </label>
+                      <label className="flex items-center gap-3">
+                        <span className={clsx("w-40 text-sm", theme === 'dark' ? "text-white" : "text-gray-900")}>{language === 'fr' ? 'Focus barre d’URL' : 'Focus URL bar'}</span>
+                        <input
+                          value={localShortcuts.focusUrl}
+                          onChange={(e) => setLocalShortcuts({ ...localShortcuts, focusUrl: e.target.value })}
+                          className={clsx("flex-1 px-3 py-2 rounded-lg border text-sm outline-none", theme === 'dark' ? "bg-[#181825] border-white/10 text-white" : "bg-white border-gray-200 text-gray-900")}
+                          placeholder="Ctrl+L"
+                        />
+                      </label>
+                      <label className="flex items-center gap-3">
+                        <span className={clsx("w-40 text-sm", theme === 'dark' ? "text-white" : "text-gray-900")}>{language === 'fr' ? 'Recharger' : 'Reload'}</span>
+                        <input
+                          value={localShortcuts.reloadTab}
+                          onChange={(e) => setLocalShortcuts({ ...localShortcuts, reloadTab: e.target.value })}
+                          className={clsx("flex-1 px-3 py-2 rounded-lg border text-sm outline-none", theme === 'dark' ? "bg-[#181825] border-white/10 text-white" : "bg-white border-gray-200 text-gray-900")}
+                          placeholder="Ctrl+R"
+                        />
+                      </label>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => setLocalShortcuts(shortcuts)}
+                        className={clsx("px-3 py-2 rounded-lg text-sm transition-colors", theme === 'dark' ? "bg-white/10 text-white hover:bg-white/20" : "bg-white border hover:bg-gray-50 text-gray-900")}
+                      >
+                        {language === 'fr' ? 'Annuler' : 'Cancel'}
+                      </button>
+                      <button
+                        onClick={() => setShortcuts({ ...shortcuts, ...localShortcuts })}
+                        className={clsx("px-3 py-2 rounded-lg text-sm text-white transition-colors", colors.bgSolid, colors.bgHover)}
+                      >
+                        {language === 'fr' ? 'Enregistrer' : 'Save'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Extensions */}
                 <div>
                   <h3 className={clsx("text-lg font-medium mb-4", theme === 'dark' ? "text-white" : "text-gray-900")}>
@@ -451,12 +536,36 @@ export function SettingsModal({
                   </div>
                 </div>
 
-                {/* Data & Privacy */}
+                {/* Privacy & Security */}
                 <div>
                   <h3 className={clsx("text-lg font-medium mb-4", theme === 'dark' ? "text-white" : "text-gray-900")}>
-                    {language === 'fr' ? 'Données & Confidentialité' : 'Data & Privacy'}
+                    {language === 'fr' ? 'Confidentialité & Sécurité' : 'Privacy & Security'}
                   </h3>
                   <div className="space-y-4">
+                    {/* AdBlock Toggle */}
+                    <div className={clsx("p-4 rounded-xl border flex items-center justify-between", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200")}>
+                      <div>
+                        <h4 className={clsx("font-medium", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                          AdBlock
+                        </h4>
+                        <p className={clsx("text-sm", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
+                          {language === 'fr' ? 'Bloquer les publicités intrusives' : 'Block intrusive advertisements'}
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => setAdBlockEnabled(!adBlockEnabled)}
+                        className={clsx(
+                          "w-12 h-6 rounded-full transition-colors relative",
+                          adBlockEnabled ? "bg-green-500" : (theme === 'dark' ? "bg-gray-600" : "bg-gray-300")
+                        )}
+                      >
+                        <div className={clsx(
+                          "absolute top-1 w-4 h-4 rounded-full bg-white transition-all shadow-sm",
+                          adBlockEnabled ? "left-7" : "left-1"
+                        )} />
+                      </button>
+                    </div>
+
                     <div className={clsx("p-4 rounded-xl border flex items-center justify-between", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200")}>
                       <div>
                         <h4 className={clsx("font-medium", theme === 'dark' ? "text-white" : "text-gray-900")}>

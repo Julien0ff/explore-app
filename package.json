@@ -1,7 +1,7 @@
 {
   "name": "navigateur-explore",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.5.0",
   "description": "Navigateur Explore - Le web réinventé",
   "author": "Explore Team",
   "main": "dist-electron/main.js",
@@ -14,11 +14,13 @@
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
+      "public/**/*",
+      "splash.html",
       "package.json"
     ],
     "win": {
       "target": "nsis",
-      "icon": "public/icon.ico"
+      "icon": "public/icon.png"
     },
     "nsis": {
       "oneClick": false,
@@ -27,9 +29,9 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Explore Browser",
-      "installerIcon": "public/icon.ico",
-      "uninstallerIcon": "public/icon.ico",
-      "installerHeaderIcon": "public/icon.ico",
+      "installerIcon": "public/icon.png",
+      "uninstallerIcon": "public/icon.png",
+      "installerHeaderIcon": "public/icon.png",
       "deleteAppDataOnUninstall": true,
       "include": "build/installer.nsh"
     },
@@ -79,6 +81,7 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "postcss": "^8.5.6",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4.2.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.48.0",

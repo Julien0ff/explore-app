@@ -15,7 +15,8 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'framer-motion'],
-          ui: ['lucide-react', 'clsx', 'tailwind-merge']
+          ui: ['lucide-react', 'clsx', 'tailwind-merge'],
+          supabase: ['@supabase/supabase-js']
         }
       }
     }

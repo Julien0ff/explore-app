@@ -1,6 +1,7 @@
-import { app, BrowserWindow, ipcMain, nativeTheme, session, shell, dialog, net } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeTheme, shell, dialog, net } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import path from 'path';
+import http from 'http';
 import fs from 'fs';
 
 let mainWindow: BrowserWindow | null = null;
@@ -40,6 +41,7 @@ if (!gotTheLock) {
 }
 
 // Ad Blocker State
+let adBlockEnabled = true;
 const defaultBlockedDomains: string[] = [
   'doubleclick.net',
   'googlesyndication.com',
@@ -77,14 +79,19 @@ function setupSession() {
     urls: ['*://*/*']
   };
   
-  try {
-    if (session && session.defaultSession) {
+  // Apply to all sessions (default and any partition)
+  app.on('session-created', (sess) => {
+    try {
       // Ad Blocker
-      session.defaultSession.webRequest.onBeforeRequest(filter, (details, callback) => {
+      sess.webRequest.onBeforeRequest(filter, (details, callback) => {
         const url = details.url.toLowerCase();
         
         // Whitelist Google Favicons to prevent them from being blocked
-        if (url.includes('google.com/s2/favicons') || url.includes('/favicon.ico')) {
+        if (
+          url.includes('google.com/s2/favicons') ||
+          url.includes('gstatic.com/favicon') ||
+          url.includes('/favicon.ico')
+        ) {
           callback({ cancel: false });
           return;
         }
@@ -100,7 +107,7 @@ function setupSession() {
       });
 
       // User Agent Spoofing
-      session.defaultSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
+      sess.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
         const headers = details.requestHeaders;
         // Force Chrome User Agent
         headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
@@ -112,10 +119,10 @@ function setupSession() {
 
         callback({ cancel: false, requestHeaders: headers });
       });
+    } catch (e) {
+      console.error('Failed to setup session:', e);
     }
-  } catch (e) {
-    console.error('Failed to setup session:', e);
-  }
+  });
 }
 
 const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
@@ -166,6 +173,10 @@ function setupIPC() {
   });
 
   // IPC for file operations
+  ipcMain.handle('open-external', async (_, url) => {
+    await shell.openExternal(url);
+  });
+
   ipcMain.handle('open-file-location', async (_, filePath) => {
     console.log('Main process received open-file-location request:', filePath);
     if (filePath) {
@@ -192,6 +203,11 @@ function setupIPC() {
   });
 
   // IPC for blocking domains
+  ipcMain.handle('get-adblock-enabled', () => adBlockEnabled);
+  ipcMain.on('set-adblock-enabled', (_event, enabled: boolean) => {
+    adBlockEnabled = enabled;
+  });
+
   ipcMain.on('block-domain', (_event, domain) => {
     if (domain) {
       if (!userBlockedDomains.includes(domain)) {
@@ -229,6 +245,63 @@ function setupIPC() {
     }
   });
 
+  // IPC for Auth Window
+  ipcMain.handle('open-auth-window', async (_, url) => {
+    const authWindow = new BrowserWindow({
+      width: 600,
+      height: 700,
+      parent: mainWindow || undefined,
+      modal: true,
+      show: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+      }
+    });
+
+    // Force User Agent for Google Sign In
+    const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
+    authWindow.webContents.setUserAgent(userAgent);
+
+    authWindow.once('ready-to-show', () => {
+      authWindow.show();
+    });
+
+    // Handle redirects to custom protocol
+    authWindow.webContents.on('will-navigate', (event, url) => {
+      if (url.startsWith('explore://')) {
+        event.preventDefault();
+        mainWindow?.webContents.send('deep-link', url);
+        authWindow.close();
+      }
+    });
+
+    authWindow.webContents.on('will-redirect', (event, url) => {
+      if (url.startsWith('explore://')) {
+        event.preventDefault();
+        mainWindow?.webContents.send('deep-link', url);
+        authWindow.close();
+      }
+    });
+
+    // Also handle new window opening (some auth flows open popups)
+    authWindow.webContents.setWindowOpenHandler(({ url }) => {
+      if (url.startsWith('explore://')) {
+        mainWindow?.webContents.send('deep-link', url);
+        authWindow.close();
+        return { action: 'deny' };
+      }
+      return { action: 'allow' };
+    });
+
+    try {
+      await authWindow.loadURL(url);
+    } catch (e) {
+      console.error('Failed to load auth URL:', e);
+      authWindow.close();
+    }
+  });
+
   // IPC for clearing data
   ipcMain.handle('clear-data', async () => {
     if (!mainWindow) return;
@@ -258,6 +331,60 @@ function setupIPC() {
     }
   });
 
+  // Prepare local OAuth redirect server
+  let oauthServer: http.Server | null = null;
+  ipcMain.handle('prepare-oauth', async () => {
+    return new Promise<string>((resolve, reject) => {
+      try {
+        if (oauthServer) {
+          oauthServer.close();
+          oauthServer = null;
+        }
+        oauthServer = http.createServer((req, res) => {
+          if (!req.url) {
+            res.statusCode = 400;
+            res.end('Bad Request');
+            return;
+          }
+          if (req.url.startsWith('/auth/callback')) {
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+            res.end(`
+              <html>
+              <head>
+                <style>body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background-color: #f3f4f6; }</style>
+              </head>
+              <body>
+                <h2>Redirection en cours...</h2>
+                <p>Veuillez patienter.</p>
+                <script>
+                  window.location.replace('explore://auth/callback' + window.location.search + window.location.hash);
+                  setTimeout(() => {
+                    document.body.innerHTML = '<h2>Connexion réussie</h2><p>Vous pouvez fermer cette fenêtre et revenir à Explore.</p>';
+                  }, 500);
+                </script>
+              </body>
+              </html>
+            `);
+            setTimeout(() => {
+              oauthServer?.close();
+              oauthServer = null;
+            }, 3000);
+          } else {
+            res.statusCode = 404;
+            res.end('Not Found');
+          }
+        });
+        // Important: use fixed port 36963 for Supabase Redirect URI match!
+        oauthServer.listen(36963, '127.0.0.1', () => {
+          const redirectUrl = `http://127.0.0.1:36963/auth/callback`;
+          resolve(redirectUrl);
+        });
+      } catch (e) {
+        reject(e);
+      }
+    });
+  });
+
   // Handle directory selection
   ipcMain.handle('select-dirs', async () => {
     const result = await dialog.showOpenDialog(mainWindow!, {
@@ -280,7 +407,7 @@ function createSplashWindow() {
     },
   });
 
-  const splashUrl = `file://${path.join(__dirname, '../splash.html')}`;
+  const splashUrl = `file://${path.join(__dirname, app.isPackaged ? '../splash.html' : '../splash.html')}`;
   splashWindow.loadURL(splashUrl);
   
   return splashWindow;
@@ -291,7 +418,7 @@ function createMainWindow() {
     width: 1200,
     height: 800,
     show: false, // Hidden initially
-    icon: path.join(__dirname, '../public/icon.ico'), // Set app icon (Windows prefers .ico)
+    icon: path.join(__dirname, app.isPackaged ? '../dist/icon.png' : '../public/icon.png'), // Set app icon
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -390,6 +517,16 @@ app.whenReady().then(() => {
   setupIPC();
   createSplashWindow();
   createMainWindow();
+
+  // Check for deep link on startup (Windows/Linux)
+  if (process.platform !== 'darwin') {
+    const url = process.argv.find(arg => arg.startsWith(`${PROTOCOL}://`));
+    if (url) {
+      setTimeout(() => {
+        mainWindow?.webContents.send('deep-link', url);
+      }, 3000); // Wait for window to be ready
+    }
+  }
 
   // Check for updates
   try {

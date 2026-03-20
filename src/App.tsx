@@ -14,7 +14,9 @@ import {
   Trash2,
   Shield,
   FolderPlus,
-  User as UserIcon
+  User as UserIcon,
+  Key,
+  Globe
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -22,12 +24,14 @@ import { Reorder } from 'framer-motion';
 import { Logo } from './components/Logo';
 import { SettingsModal } from './components/SettingsModal';
 import { ConfirmModal } from './components/ConfirmModal';
+import { PasswordManager } from './components/PasswordManager';
+import { VPN } from './components/VPN';
 
 import { AuthModal } from './components/AuthModal';
 import type { User } from './components/AuthModal';
 
+import { BookmarksBar } from './components/BookmarksBar';
 import { BookmarkList } from './components/BookmarkList';
-
 import { supabase } from './lib/supabase';
 import type { HistoryItem, Bookmark } from './types';
 import { Onboarding } from './components/Onboarding';
@@ -59,6 +63,16 @@ function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [showBookmarks, setShowBookmarks] = useState(false);
+  const [showPasswordManager, setShowPasswordManager] = useState(false);
+  const [showVPN, setShowVPN] = useState(false);
+  
+  const [showBookmarksBar] = useState(() => {
+    return localStorage.getItem('showBookmarksBar') === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('showBookmarksBar', String(showBookmarksBar));
+  }, [showBookmarksBar]);
   
   // Settings State
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -142,7 +156,8 @@ function App() {
       ecosia: 'https://www.ecosia.org/search?q='
     };
 
-    const baseUrl = engines[searchEngine.toLowerCase()] || engines.google;
+    const engineKey = searchEngine?.trim().toLowerCase();
+    const baseUrl = engines[engineKey] || engines.google;
     const finalUrl = `${baseUrl}${encodeURIComponent(query)}`;
     console.log('Generated search URL:', finalUrl, 'for engine:', searchEngine);
     return finalUrl;
@@ -301,17 +316,48 @@ function App() {
 
     // Listen for deep links (Google Auth)
     if (window.electron.onDeepLink) {
-      window.electron.onDeepLink((url: string) => {
+      window.electron.onDeepLink(async (url: string) => {
         console.log('Received deep link:', url);
         // Extract tokens from URL
         // Supabase URL format: explore://auth/callback#access_token=...&refresh_token=...&...
         try {
           const urlObj = new URL(url);
-          // The hash might contain the tokens
-          const hash = urlObj.hash.substring(1); // remove #
-          const params = new URLSearchParams(hash);
-          const accessToken = params.get('access_token');
-          const refreshToken = params.get('refresh_token');
+          
+          // Check hash first (Implicit flow)
+          let params = new URLSearchParams(urlObj.hash.substring(1));
+          let accessToken = params.get('access_token');
+          let refreshToken = params.get('refresh_token');
+          
+          // If not in hash, check search params (PKCE or other flows)
+          if (!accessToken) {
+             params = new URLSearchParams(urlObj.search);
+             accessToken = params.get('access_token');
+             refreshToken = params.get('refresh_token');
+          }
+
+          // Handle PKCE code flow if present (code=...)
+          const code = params.get('code');
+          if (code && !accessToken) {
+             console.log('Received PKCE code, exchanging for session...');
+             const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+             if (error) {
+                console.error('Error exchanging code for session:', error);
+             } else if (data.session) {
+                console.log('Session exchanged successfully');
+                setIsAuthModalOpen(false);
+                if (data.user) {
+                   const { user } = data;
+                   const metadata = user.user_metadata || {};
+                   setUser({
+                      id: user.id,
+                      email: user.email!,
+                      name: metadata.full_name || metadata.name || user.email!.split('@')[0],
+                      avatar: metadata.avatar_url || metadata.picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`
+                   });
+                }
+                return; // Done
+             }
+          }
           
           if (accessToken && refreshToken) {
             supabase.auth.setSession({
@@ -342,6 +388,51 @@ function App() {
         }
       });
     }
+    if (window.electron.onOAuthCallback) {
+      window.electron.onOAuthCallback(async (url: string) => {
+        try {
+          const u = new URL(url);
+          const params = new URLSearchParams(u.search);
+          const code = params.get('code');
+          const accessToken = params.get('access_token');
+          const refreshToken = params.get('refresh_token');
+          if (code && !accessToken) {
+            const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+            if (!error && data.session) {
+              setIsAuthModalOpen(false);
+              if (data.user) {
+                const { user } = data;
+                const metadata = user.user_metadata || {};
+                setUser({
+                  id: user.id,
+                  email: user.email!,
+                  name: metadata.full_name || metadata.name || user.email!.split('@')[0],
+                  avatar: metadata.avatar_url || metadata.picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`
+                });
+              }
+            }
+          } else if (accessToken && refreshToken) {
+            const { data, error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken
+            });
+            if (!error && data.user) {
+              setIsAuthModalOpen(false);
+              const { user } = data;
+              const metadata = user.user_metadata || {};
+              setUser({
+                id: user.id,
+                email: user.email!,
+                name: metadata.full_name || metadata.name || user.email!.split('@')[0],
+                avatar: metadata.avatar_url || metadata.picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`
+              });
+            }
+          }
+        } catch (e) {
+          console.error('OAuth callback parse error:', e);
+        }
+      });
+    }
 
     return () => {
       window.electron.offDownloadUpdated();
@@ -355,6 +446,9 @@ function App() {
       }
       if (window.electron.offDeepLink) {
         window.electron.offDeepLink();
+      }
+      if (window.electron.offOAuthCallback) {
+        window.electron.offOAuthCallback();
       }
     };
   }, []);
@@ -567,7 +661,7 @@ function App() {
 
   const addToHistory = async (url: string, title: string) => {
     // Check if url is internal
-    if (url.startsWith('explore://')) return;
+    if (url.startsWith('explore://') || isPrivate) return;
     
     const newItem = {
       id: crypto.randomUUID(),
@@ -659,6 +753,115 @@ function App() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
+  const urlInputRef = useRef<HTMLInputElement | null>(null);
+  const [isPrivate, setIsPrivate] = useState(false);
+
+  type ShortcutMap = {
+    newTab: string;
+    closeTab: string;
+    focusUrl: string;
+    reloadTab: string;
+    togglePrivate: string;
+    saveSession: string;
+    restoreSession: string;
+    enablePiP: string;
+  };
+  const [shortcuts, setShortcuts] = useState<ShortcutMap>(() => {
+    const saved = localStorage.getItem('explore_shortcuts_v1');
+    return saved ? JSON.parse(saved) : {
+      newTab: 'Ctrl+T',
+      closeTab: 'Ctrl+W',
+      focusUrl: 'Ctrl+L',
+      reloadTab: 'Ctrl+R',
+      togglePrivate: 'Ctrl+Shift+N',
+      saveSession: 'Ctrl+Shift+S',
+      restoreSession: 'Ctrl+Shift+R',
+      enablePiP: 'Ctrl+Shift+P',
+    };
+  });
+
+  useEffect(() => {
+    localStorage.setItem('explore_shortcuts_v1', JSON.stringify(shortcuts));
+  }, [shortcuts]);
+
+  const parseShortcut = (shortcut: string) => {
+    const parts = shortcut.split('+').map(p => p.trim().toLowerCase());
+    return {
+      ctrl: parts.includes('ctrl'),
+      alt: parts.includes('alt'),
+      shift: parts.includes('shift'),
+      key: parts.find(p => p.length === 1 || ['enter','escape','space','tab','backspace'].includes(p)) || parts[parts.length - 1]
+    };
+  };
+
+  const matches = React.useCallback((e: KeyboardEvent, shortcut: string) => {
+    const s = parseShortcut(shortcut);
+    const key = e.key.toLowerCase();
+    return (!!s.ctrl === e.ctrlKey) && (!!s.alt === e.altKey) && (!!s.shift === e.shiftKey) && key === s.key;
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (matches(e, shortcuts.newTab)) {
+        e.preventDefault();
+        const newId = crypto.randomUUID();
+        const newTab: Tab = {
+          id: newId,
+          url: 'explore://newtab',
+          title: languageRef.current === 'fr' ? 'Nouvel onglet' : 'New Tab',
+          isLoading: false
+        };
+        setTabs(prev => [...prev, newTab]);
+        setActiveTabId(newId);
+      } else if (matches(e, shortcuts.closeTab)) {
+        e.preventDefault();
+        setTabs(prev => {
+          if (prev.length <= 1) return prev;
+          const idx = prev.findIndex(t => t.id === activeTabId);
+          const nextTabs = prev.filter(t => t.id !== activeTabId);
+          const nextActive = nextTabs[Math.max(0, idx - 1)]?.id || nextTabs[0].id;
+          setActiveTabId(nextActive);
+          return nextTabs;
+        });
+      } else if (matches(e, shortcuts.focusUrl)) {
+        e.preventDefault();
+        urlInputRef.current?.focus();
+        urlInputRef.current?.select();
+      } else if (matches(e, shortcuts.reloadTab)) {
+        e.preventDefault();
+        webviewRefs.current[activeTabId]?.reload();
+      } else if (matches(e, shortcuts.togglePrivate)) {
+        e.preventDefault();
+        setIsPrivate(prev => !prev);
+      } else if (matches(e, shortcuts.saveSession)) {
+        e.preventDefault();
+        localStorage.setItem('explore_sessions', JSON.stringify(tabs));
+      } else if (matches(e, shortcuts.restoreSession)) {
+        e.preventDefault();
+        const saved = localStorage.getItem('explore_sessions');
+        if (saved) {
+          const s = JSON.parse(saved) as Tab[];
+          if (s.length) {
+            setTabs(s);
+            setActiveTabId(s[0].id);
+          }
+        }
+      } else if (matches(e, shortcuts.enablePiP)) {
+        e.preventDefault();
+        const w = webviewRefs.current[activeTabId];
+        w?.executeJavaScript(`
+          (async () => {
+            const v = document.querySelector('video');
+            if (v && document.pictureInPictureEnabled) {
+              try { await v.requestPictureInPicture(); } catch(e) {}
+            }
+          })();
+        `);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [shortcuts, activeTabId, matches, tabs]);
 
   // Function to fetch suggestions
   const fetchSuggestions = async (query: string) => {
@@ -1079,6 +1282,7 @@ function App() {
                   setShowSuggestions(true);
                 }}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                ref={urlInputRef}
                 className={clsx(
                     "w-full border rounded-xl py-1.5 pl-10 pr-24 text-sm focus:outline-none focus:ring-2 transition-all shadow-sm",
                     colors.ring,
@@ -1217,6 +1421,30 @@ function App() {
             >
               <div className="w-4 h-4 flex items-center justify-center font-bold text-xs">H</div>
             </button>
+             <button 
+              className={clsx("p-1.5 hover:bg-white/10 rounded-lg transition-colors", showPasswordManager ? clsx(colors.text, "bg-white/10") : "text-gray-400")}
+              onClick={() => { 
+                setShowPasswordManager(true);
+                setShowHistory(false); 
+                setShowBookmarks(false); 
+                setIsDownloadsOpen(false);
+              }}
+              title={language === 'fr' ? 'Mots de passe' : 'Passwords'}
+            >
+              <Key className="w-4 h-4" />
+            </button>
+             <button 
+              className={clsx("p-1.5 hover:bg-white/10 rounded-lg transition-colors", showVPN ? clsx(colors.text, "bg-white/10") : "text-gray-400")}
+              onClick={() => { 
+                setShowVPN(true);
+                setShowHistory(false); 
+                setShowBookmarks(false); 
+                setIsDownloadsOpen(false);
+              }}
+              title={language === 'fr' ? 'VPN' : 'VPN'}
+            >
+              <Globe className="w-4 h-4" />
+            </button>
           </div>
           
           {/* Window Controls for Left/Right Tab Position */}
@@ -1235,6 +1463,20 @@ function App() {
           )}
 
         </div>
+
+        {/* Bookmarks Bar */}
+        {showBookmarksBar && (
+          <BookmarksBar 
+            bookmarks={bookmarks}
+            onNavigate={(url) => updateTab(activeTabId, { url })}
+            onContextMenu={(e, bookmark) => {
+              e.preventDefault();
+              confirmDeleteBookmark(bookmark.id);
+            }}
+            theme={theme}
+            emptyMessage={language === 'fr' ? 'Barre de favoris vide' : 'Bookmarks bar is empty'}
+          />
+        )}
 
         {/* Bottom Bar (if tabPosition is bottom) */}
         {tabPosition === 'bottom' && (
@@ -1350,7 +1592,7 @@ function App() {
                         parentId={undefined}
                         onMove={moveBookmark}
                         onDelete={confirmDeleteBookmark}
-                        onOpen={(url) => {
+                        onOpen={(url: string) => {
                             updateTab(activeTabId, { url });
                             setShowBookmarks(false);
                         }}
@@ -1425,11 +1667,11 @@ function App() {
                     accentColor={accentColor}
                     onSearch={(query) => {
                       const url = getSearchUrl(query);
+                      console.log('Searching for:', query, 'URL:', url);
                       updateTab(tab.id, { url, title: url, isLoading: true });
                     }} 
                     onQueryChange={(query) => {
                       setUrlInput(query);
-                      setShowSuggestions(true);
                       setSelectedSuggestionIndex(-1);
                     }}
                     suggestions={suggestions}
@@ -1439,6 +1681,7 @@ function App() {
               </div>
             ) : (
               <webview
+                src={tab.url}
                 useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
                 ref={(el: Electron.WebviewTag | null) => {
                   if (el) {
@@ -1451,6 +1694,9 @@ function App() {
                       el.addEventListener('did-stop-loading', () => {
                         updateTab(tab.id, { isLoading: false, title: el.getTitle() });
                         addToHistory(el.getURL(), el.getTitle());
+                      });
+                      el.addEventListener('did-finish-load', () => {
+                        updateTab(tab.id, { isLoading: false, title: el.getTitle(), canGoBack: el.canGoBack(), canGoForward: el.canGoForward() });
                       });
                       el.addEventListener('dom-ready', () => {
                         updateTab(tab.id, { title: el.getTitle(), canGoBack: el.canGoBack(), canGoForward: el.canGoForward() });
@@ -1479,9 +1725,9 @@ function App() {
                     }
                   }
                 }}
-                src={tab.url}
                 className={clsx("w-full h-full bg-transparent")}
-                allowpopups
+                allowpopups={true}
+                partition={isPrivate ? "private" : undefined}
                 webpreferences="contextIsolation=true, nodeIntegration=false"
               />
             )}
@@ -1489,6 +1735,22 @@ function App() {
         ))}
       </div>
       </div>
+
+      <PasswordManager 
+        isOpen={showPasswordManager}
+        onClose={() => setShowPasswordManager(false)}
+        theme={theme}
+        accentColor={accentColor}
+        language={language}
+      />
+
+      <VPN 
+        isOpen={showVPN}
+        onClose={() => setShowVPN(false)}
+        theme={theme}
+        accentColor={accentColor}
+        language={language}
+      />
 
       <AuthModal 
         isOpen={isAuthModalOpen} 
@@ -1532,6 +1794,8 @@ function App() {
         setLanguage={setLanguage}
         accentColor={accentColor}
         setAccentColor={setAccentColor}
+        shortcuts={shortcuts}
+        setShortcuts={setShortcuts}
         onImportBookmarks={handleImportBookmarks}
         onClearData={() => {
           setConfirmModal({

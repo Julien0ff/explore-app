@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const electron_1 = require("electron");
 const electron_updater_1 = require("electron-updater");
 const path_1 = __importDefault(require("path"));
+const http_1 = __importDefault(require("http"));
 const fs_1 = __importDefault(require("fs"));
 let mainWindow = null;
 let splashWindow = null;
@@ -50,6 +51,7 @@ else {
     });
 }
 // Ad Blocker State
+let adBlockEnabled = true;
 const defaultBlockedDomains = [
     'doubleclick.net',
     'googlesyndication.com',
@@ -83,13 +85,16 @@ function setupSession() {
     const filter = {
         urls: ['*://*/*']
     };
-    try {
-        if (electron_1.session && electron_1.session.defaultSession) {
+    // Apply to all sessions (default and any partition)
+    electron_1.app.on('session-created', (sess) => {
+        try {
             // Ad Blocker
-            electron_1.session.defaultSession.webRequest.onBeforeRequest(filter, (details, callback) => {
+            sess.webRequest.onBeforeRequest(filter, (details, callback) => {
                 const url = details.url.toLowerCase();
                 // Whitelist Google Favicons to prevent them from being blocked
-                if (url.includes('google.com/s2/favicons') || url.includes('/favicon.ico')) {
+                if (url.includes('google.com/s2/favicons') ||
+                    url.includes('gstatic.com/favicon') ||
+                    url.includes('/favicon.ico')) {
                     callback({ cancel: false });
                     return;
                 }
@@ -103,7 +108,7 @@ function setupSession() {
                 }
             });
             // User Agent Spoofing
-            electron_1.session.defaultSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
+            sess.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
                 const headers = details.requestHeaders;
                 // Force Chrome User Agent
                 headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
@@ -114,10 +119,10 @@ function setupSession() {
                 callback({ cancel: false, requestHeaders: headers });
             });
         }
-    }
-    catch (e) {
-        console.error('Failed to setup session:', e);
-    }
+        catch (e) {
+            console.error('Failed to setup session:', e);
+        }
+    });
 }
 const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 electron_1.app.userAgentFallback = userAgent;
@@ -159,6 +164,9 @@ function setupIPC() {
         electron_1.nativeTheme.themeSource = mode;
     });
     // IPC for file operations
+    electron_1.ipcMain.handle('open-external', (_, url) => __awaiter(this, void 0, void 0, function* () {
+        yield electron_1.shell.openExternal(url);
+    }));
     electron_1.ipcMain.handle('open-file-location', (_, filePath) => __awaiter(this, void 0, void 0, function* () {
         console.log('Main process received open-file-location request:', filePath);
         if (filePath) {
@@ -185,6 +193,10 @@ function setupIPC() {
         }
     }));
     // IPC for blocking domains
+    electron_1.ipcMain.handle('get-adblock-enabled', () => adBlockEnabled);
+    electron_1.ipcMain.on('set-adblock-enabled', (_event, enabled) => {
+        adBlockEnabled = enabled;
+    });
     electron_1.ipcMain.on('block-domain', (_event, domain) => {
         if (domain) {
             if (!userBlockedDomains.includes(domain)) {
@@ -220,6 +232,57 @@ function setupIPC() {
             return null;
         }
     }));
+    // IPC for Auth Window
+    electron_1.ipcMain.handle('open-auth-window', (_, url) => __awaiter(this, void 0, void 0, function* () {
+        const authWindow = new electron_1.BrowserWindow({
+            width: 600,
+            height: 700,
+            parent: mainWindow || undefined,
+            modal: true,
+            show: false,
+            webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true,
+            }
+        });
+        // Force User Agent for Google Sign In
+        const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
+        authWindow.webContents.setUserAgent(userAgent);
+        authWindow.once('ready-to-show', () => {
+            authWindow.show();
+        });
+        // Handle redirects to custom protocol
+        authWindow.webContents.on('will-navigate', (event, url) => {
+            if (url.startsWith('explore://')) {
+                event.preventDefault();
+                mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send('deep-link', url);
+                authWindow.close();
+            }
+        });
+        authWindow.webContents.on('will-redirect', (event, url) => {
+            if (url.startsWith('explore://')) {
+                event.preventDefault();
+                mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send('deep-link', url);
+                authWindow.close();
+            }
+        });
+        // Also handle new window opening (some auth flows open popups)
+        authWindow.webContents.setWindowOpenHandler(({ url }) => {
+            if (url.startsWith('explore://')) {
+                mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send('deep-link', url);
+                authWindow.close();
+                return { action: 'deny' };
+            }
+            return { action: 'allow' };
+        });
+        try {
+            yield authWindow.loadURL(url);
+        }
+        catch (e) {
+            console.error('Failed to load auth URL:', e);
+            authWindow.close();
+        }
+    }));
     // IPC for clearing data
     electron_1.ipcMain.handle('clear-data', () => __awaiter(this, void 0, void 0, function* () {
         if (!mainWindow)
@@ -251,6 +314,61 @@ function setupIPC() {
             return [];
         }
     }));
+    // Prepare local OAuth redirect server
+    let oauthServer = null;
+    electron_1.ipcMain.handle('prepare-oauth', () => __awaiter(this, void 0, void 0, function* () {
+        return new Promise((resolve, reject) => {
+            try {
+                if (oauthServer) {
+                    oauthServer.close();
+                    oauthServer = null;
+                }
+                oauthServer = http_1.default.createServer((req, res) => {
+                    if (!req.url) {
+                        res.statusCode = 400;
+                        res.end('Bad Request');
+                        return;
+                    }
+                    if (req.url.startsWith('/auth/callback')) {
+                        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                        res.end(`
+              <html>
+              <head>
+                <style>body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background-color: #f3f4f6; }</style>
+              </head>
+              <body>
+                <h2>Redirection en cours...</h2>
+                <p>Veuillez patienter.</p>
+                <script>
+                  window.location.replace('explore://auth/callback' + window.location.search + window.location.hash);
+                  setTimeout(() => {
+                    document.body.innerHTML = '<h2>Connexion réussie</h2><p>Vous pouvez fermer cette fenêtre et revenir à Explore.</p>';
+                  }, 500);
+                </script>
+              </body>
+              </html>
+            `);
+                        setTimeout(() => {
+                            oauthServer === null || oauthServer === void 0 ? void 0 : oauthServer.close();
+                            oauthServer = null;
+                        }, 3000);
+                    }
+                    else {
+                        res.statusCode = 404;
+                        res.end('Not Found');
+                    }
+                });
+                // Important: use fixed port 36963 for Supabase Redirect URI match!
+                oauthServer.listen(36963, '127.0.0.1', () => {
+                    const redirectUrl = `http://127.0.0.1:36963/auth/callback`;
+                    resolve(redirectUrl);
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
+    }));
     // Handle directory selection
     electron_1.ipcMain.handle('select-dirs', () => __awaiter(this, void 0, void 0, function* () {
         const result = yield electron_1.dialog.showOpenDialog(mainWindow, {
@@ -271,7 +389,7 @@ function createSplashWindow() {
             contextIsolation: false,
         },
     });
-    const splashUrl = `file://${path_1.default.join(__dirname, '../splash.html')}`;
+    const splashUrl = `file://${path_1.default.join(__dirname, electron_1.app.isPackaged ? '../splash.html' : '../splash.html')}`;
     splashWindow.loadURL(splashUrl);
     return splashWindow;
 }
@@ -280,7 +398,7 @@ function createMainWindow() {
         width: 1200,
         height: 800,
         show: false, // Hidden initially
-        icon: path_1.default.join(__dirname, '../public/icon.ico'), // Set app icon (Windows prefers .ico)
+        icon: path_1.default.join(__dirname, electron_1.app.isPackaged ? '../dist/icon.png' : '../public/icon.png'), // Set app icon
         webPreferences: {
             preload: path_1.default.join(__dirname, 'preload.js'),
             nodeIntegration: false,
@@ -374,6 +492,15 @@ electron_1.app.whenReady().then(() => {
     setupIPC();
     createSplashWindow();
     createMainWindow();
+    // Check for deep link on startup (Windows/Linux)
+    if (process.platform !== 'darwin') {
+        const url = process.argv.find(arg => arg.startsWith(`${PROTOCOL}://`));
+        if (url) {
+            setTimeout(() => {
+                mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send('deep-link', url);
+            }, 3000); // Wait for window to be ready
+        }
+    }
     // Check for updates
     try {
         electron_updater_1.autoUpdater.checkForUpdatesAndNotify();
