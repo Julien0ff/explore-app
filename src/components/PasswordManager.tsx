@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { X, Key, Copy, Eye, EyeOff, Plus, Trash2, Search, Save, Globe, User, Lock } from 'lucide-react';
+import { X, Key, Copy, Eye, EyeOff, Plus, Trash2, Search, Save, Globe, User, Lock, Check } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getAccentColorClass } from '../lib/theme';
+import { ConfirmModal } from './ConfirmModal';
 
 interface PasswordManagerProps {
   isOpen: boolean;
@@ -41,6 +42,10 @@ export function PasswordManager({ isOpen, onClose, theme, accentColor, language 
   const [showPasswords, setShowPasswords] = useState<Set<string>>(new Set());
   const [isAdding, setIsAdding] = useState(false);
   const [newEntry, setNewEntry] = useState({ site: '', username: '', password: '' });
+  
+  // Custom alerts/toasts
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
     localStorage.setItem('password_manager_entries', JSON.stringify(entries));
@@ -57,11 +62,18 @@ export function PasswordManager({ isOpen, onClose, theme, accentColor, language 
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
+    setToastMessage(language === 'fr' ? 'Mot de passe copié !' : 'Password copied!');
+    setTimeout(() => setToastMessage(null), 2000);
   };
 
   const handleDelete = (id: string) => {
-    if (confirm(language === 'fr' ? 'Supprimer ce mot de passe ?' : 'Delete this password?')) {
-      setEntries(prev => prev.filter(e => e.id !== id));
+    setDeleteConfirmId(id);
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirmId) {
+      setEntries(prev => prev.filter(e => e.id !== deleteConfirmId));
+      setDeleteConfirmId(null);
     }
   };
 
@@ -276,6 +288,40 @@ export function PasswordManager({ isOpen, onClose, theme, accentColor, language 
 
             </motion.div>
           </motion.div>
+          
+          {/* Internal Toast for Password Copies */}
+          <AnimatePresence>
+            {toastMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className={clsx(
+                  "fixed bottom-8 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full shadow-lg border flex items-center gap-2 z-60",
+                  theme === 'dark' ? "bg-[#181825] border-white/10 text-white" : "bg-white border-gray-200 text-gray-900"
+                )}
+              >
+                <div className={clsx("p-1 rounded-full", colors.bg, colors.text)}>
+                  <Check className="w-4 h-4" />
+                </div>
+                <span className="font-medium text-sm">{toastMessage}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Custom Delete Confirmation Modal */}
+          <ConfirmModal
+            isOpen={!!deleteConfirmId}
+            onClose={() => setDeleteConfirmId(null)}
+            onConfirm={confirmDelete}
+            title={language === 'fr' ? 'Supprimer le mot de passe' : 'Delete Password'}
+            message={language === 'fr' 
+              ? 'Êtes-vous sûr de vouloir supprimer définitivement ce mot de passe ?' 
+              : 'Are you sure you want to permanently delete this password?'}
+            theme={theme}
+            accentColor={accentColor}
+            language={language}
+          />
         </>
       )}
     </AnimatePresence>

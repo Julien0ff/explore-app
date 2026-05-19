@@ -48,4 +48,9 @@ contextBridge.exposeInMainWorld('electron', {
   offDeepLink: () => ipcRenderer.removeAllListeners('deep-link'),
   onOAuthCallback: (callback: (url: string) => void) => ipcRenderer.on('oauth-callback', (_, url) => callback(url as string)),
   offOAuthCallback: () => ipcRenderer.removeAllListeners('oauth-callback'),
+  setProxy: (countryId: string) => ipcRenderer.invoke('set-proxy', countryId),
+  disableProxy: () => ipcRenderer.invoke('disable-proxy'),
+  onUpdateAvailable: (callback: () => void) => ipcRenderer.on('update_available', () => callback()),
+  onUpdateDownloaded: (callback: () => void) => ipcRenderer.on('update_downloaded', () => callback()),
+  onDownloadProgress: (callback: (percent: number) => void) => ipcRenderer.on('download_progress', (_, percent) => callback(percent)),
 });

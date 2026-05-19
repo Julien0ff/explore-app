@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ChevronRight, Moon, Sun, Monitor, Search, Globe, Layout } from 'lucide-react';
+import { Check, ChevronRight, Moon, Sun, Monitor, Search, Globe, Layout, Shield } from 'lucide-react';
 import { Logo } from './Logo';
 import { clsx } from 'clsx';
 
@@ -14,6 +14,7 @@ interface OnboardingProps {
 
 export function Onboarding({ onComplete, setTheme, setSearchEngine, currentTheme, language }: OnboardingProps) {
   const [step, setStep] = useState(0);
+  const [agreed, setAgreed] = useState(false);
 
   const nextStep = () => setStep(s => s + 1);
 
@@ -23,6 +24,12 @@ export function Onboarding({ onComplete, setTheme, setSearchEngine, currentTheme
       title: language === 'fr' ? 'Bienvenue sur Explore' : 'Welcome to Explore',
       description: language === 'fr' ? 'Découvrez le web d\'une nouvelle manière moderne.' : 'Experience the web in a new, modern way.',
       icon: <Logo className="w-24 h-24 mb-8" />
+    },
+    {
+      id: 'terms',
+      title: language === 'fr' ? 'Confidentialité & CGU' : 'Privacy & Terms',
+      description: language === 'fr' ? 'Découvrez notre engagement pour votre vie privée.' : 'Learn about our commitment to your privacy.',
+      icon: <Shield className="w-16 h-16 text-emerald-500 mb-6" />
     },
     {
       id: 'theme',
@@ -45,7 +52,7 @@ export function Onboarding({ onComplete, setTheme, setSearchEngine, currentTheme
   ];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white dark:bg-[#1e1e2e] text-gray-900 dark:text-white overflow-hidden">
+    <div className="fixed inset-0 z-100 flex items-center justify-center bg-white dark:bg-[#1e1e2e] text-gray-900 dark:text-white overflow-hidden">
       {/* Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
@@ -64,7 +71,7 @@ export function Onboarding({ onComplete, setTheme, setSearchEngine, currentTheme
           >
             {steps[step].icon}
             
-            <h1 className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
+            <h1 className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-linear-to-r from-blue-500 to-purple-600">
               {steps[step].title}
             </h1>
             
@@ -85,6 +92,83 @@ export function Onboarding({ onComplete, setTheme, setSearchEngine, currentTheme
               )}
 
               {step === 1 && (
+                <div className="w-full flex flex-col gap-4 text-left">
+                  <div className={clsx(
+                    "p-4 rounded-2xl border text-sm space-y-3 max-h-60 overflow-y-auto custom-scrollbar w-full",
+                    currentTheme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200"
+                  )}>
+                    <div className="flex gap-3">
+                      <span className="text-lg">🔒</span>
+                      <div>
+                        <strong className={currentTheme === 'dark' ? "text-white" : "text-gray-900"}>
+                          {language === 'fr' ? 'Confidentialité absolue' : 'Absolute Privacy'}
+                        </strong>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          {language === 'fr' 
+                            ? 'Zéro traçage, zéro télémétrie. Votre navigation reste totalement privée.' 
+                            : 'Zero tracking, zero telemetry. Your browsing remains completely private.'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <span className="text-lg">📁</span>
+                      <div>
+                        <strong className={currentTheme === 'dark' ? "text-white" : "text-gray-900"}>
+                          {language === 'fr' ? 'Données 100% Locales' : '100% Local Data'}
+                        </strong>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          {language === 'fr' 
+                            ? 'Vos mots de passe (cryptés), favoris et historiques sont stockés uniquement sur votre machine.' 
+                            : 'Your passwords (encrypted), bookmarks, and history are stored only on your machine.'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <span className="text-lg">☁️</span>
+                      <div>
+                        <strong className={currentTheme === 'dark' ? "text-white" : "text-gray-900"}>
+                          {language === 'fr' ? 'Données Essentielles Seules' : 'Essential Sync Only'}
+                        </strong>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          {language === 'fr' 
+                            ? 'Si vous activez la synchronisation de compte, seules les données strictement nécessaires et chiffrées sont transmises à nos serveurs.' 
+                            : 'If you enable account sync, only strictly necessary and encrypted data is transmitted to our servers.'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <label className="flex items-center gap-3 cursor-pointer select-none py-1 group mt-2">
+                    <input 
+                      type="checkbox" 
+                      checked={agreed}
+                      onChange={(e) => setAgreed(e.target.checked)}
+                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300 bg-transparent cursor-pointer"
+                    />
+                    <span className="text-xs text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors">
+                      {language === 'fr' 
+                        ? "J'accepte les Conditions d'Utilisation et la Politique de Confidentialité" 
+                        : "I accept the Terms of Use and the Privacy Policy"}
+                    </span>
+                  </label>
+
+                  <button
+                    disabled={!agreed}
+                    onClick={nextStep}
+                    className={clsx(
+                      "mt-2 px-8 py-3.5 rounded-xl font-semibold text-sm transition-all text-center flex items-center justify-center gap-2",
+                      agreed 
+                        ? "bg-blue-600 hover:bg-blue-700 text-white cursor-pointer hover:scale-105 active:scale-95 shadow-md shadow-blue-500/20" 
+                        : "bg-gray-200 dark:bg-white/5 text-gray-400 cursor-not-allowed"
+                    )}
+                  >
+                    {language === 'fr' ? 'Accepter et Continuer' : 'Accept and Continue'}
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {step === 2 && (
                 <div className="grid grid-cols-3 gap-4 w-full">
                   {[
                     { id: 'light', icon: Sun, label: language === 'fr' ? 'Clair' : 'Light' },
@@ -108,13 +192,15 @@ export function Onboarding({ onComplete, setTheme, setSearchEngine, currentTheme
                 </div>
               )}
 
-              {step === 2 && (
+              {step === 3 && (
                 <div className="flex flex-col gap-3 w-full">
                   {[
-                    { id: 'google', name: 'Google', icon: 'https://www.google.com/favicon.ico' },
-                    { id: 'bing', name: 'Bing', icon: 'https://www.bing.com/favicon.ico' },
-                    { id: 'duckduckgo', name: 'DuckDuckGo', icon: 'https://duckduckgo.com/favicon.ico' },
-                    { id: 'ecosia', name: 'Ecosia', icon: 'https://ecosia.org/favicon.ico' }
+                    { id: 'google', name: 'Google', icon: 'https://www.google.com/s2/favicons?domain=google.com&sz=64' },
+                    { id: 'bing', name: 'Bing', icon: 'https://www.google.com/s2/favicons?domain=bing.com&sz=64' },
+                    { id: 'duckduckgo', name: 'DuckDuckGo', icon: 'https://www.google.com/s2/favicons?domain=duckduckgo.com&sz=64' },
+                    { id: 'ecosia', name: 'Ecosia', icon: 'https://www.google.com/s2/favicons?domain=ecosia.org&sz=64' },
+                    { id: 'qwant', name: 'Qwant', icon: 'https://www.google.com/s2/favicons?domain=qwant.com&sz=64' },
+                    { id: 'perplexity', name: 'Perplexity', icon: 'https://icons.duckduckgo.com/ip3/perplexity.ai.ico' }
                   ].map((engine) => (
                     <button
                       key={engine.id}
@@ -132,10 +218,10 @@ export function Onboarding({ onComplete, setTheme, setSearchEngine, currentTheme
                 </div>
               )}
 
-              {step === 3 && (
+              {step === 4 && (
                 <button
                   onClick={onComplete}
-                  className="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl font-semibold text-lg transition-all hover:scale-105 hover:shadow-lg hover:shadow-green-500/30 flex items-center gap-2"
+                  className="px-8 py-4 bg-linear-to-r from-green-500 to-emerald-600 text-white rounded-2xl font-semibold text-lg transition-all hover:scale-105 hover:shadow-lg hover:shadow-green-500/30 flex items-center gap-2"
                 >
                   {language === 'fr' ? 'Commencer la navigation' : 'Start Browsing'}
                   <Globe className="w-5 h-5" />
@@ -143,8 +229,8 @@ export function Onboarding({ onComplete, setTheme, setSearchEngine, currentTheme
               )}
             </div>
 
-            {/* Navigation (for Step 1) */}
-            {step === 1 && (
+            {/* Navigation (for Step 2) */}
+            {step === 2 && (
               <button
                 onClick={nextStep}
                 className="mt-4 px-8 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-medium hover:opacity-90 transition-opacity"

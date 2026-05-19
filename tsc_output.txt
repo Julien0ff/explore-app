@@ -1,0 +1,6 @@
+src/App.tsx(1213,20): error TS2304: Cannot find name 'UserIcon'.
+src/App.tsx(1398,24): error TS2304: Cannot find name 'UserIcon'.
+src/App.tsx(1547,23): error TS2304: Cannot find name 'BookOpen'.
+src/App.tsx(1557,23): error TS2304: Cannot find name 'Tv'.
+src/App.tsx(1567,23): error TS2304: Cannot find name 'Volume2'.
+src/App.tsx(1824,22): error TS2304: Cannot find name 'UserIcon'.

@@ -1,420 +1,683 @@
 <!DOCTYPE html>
 <html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Explore - Le navigateur réinventé</title>
-    <link rel="icon" type="image/svg+xml" href="logo.svg" />
-    <meta name="description" content="Explore est un navigateur web moderne, rapide et léger. Téléchargez-le maintenant !" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <style>
-      html {
-        scroll-behavior: smooth;
-      }
-      body {
-        font-family: 'Inter', sans-serif;
-      }
-      .gradient-text {
-        background: linear-gradient(135deg, #60A5FA 0%, #A78BFA 100%);
-        -webkit-background-clip: text;
-        background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-size: 200% 200%;
-        animation: gradient-move 3s ease infinite;
-      }
-      .hero-gradient {
-        background: radial-gradient(circle at center, rgba(59, 130, 246, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
-        animation: pulse-glow 4s ease-in-out infinite alternate;
-      }
-      
-      @keyframes float {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-20px); }
-      }
-      
-      @keyframes gradient-move {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Explore - Le navigateur réinventé</title>
+  <link rel="icon" type="image/svg+xml" href="logo.svg" />
+  <meta name="description"
+    content="Explore est un navigateur web moderne, rapide et léger. Téléchargez-le maintenant !" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <style>
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    h1,
+    h2,
+    h3,
+    .font-heading {
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #60A5FA 0%, #A78BFA 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-size: 200% 200%;
+      animation: gradient-move 4s ease infinite;
+    }
+
+    .hero-gradient {
+      background: radial-gradient(circle at center, rgba(96, 165, 250, 0.12) 0%, rgba(167, 139, 250, 0.03) 50%, rgba(0, 0, 0, 0) 70%);
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(0px);
       }
 
-      @keyframes pulse-glow {
-        0% { opacity: 0.5; transform: scale(0.95); }
-        100% { opacity: 1; transform: scale(1.05); }
+      50% {
+        transform: translateY(-10px);
+      }
+    }
+
+    @keyframes gradient-move {
+      0% {
+        background-position: 0% 50%;
       }
 
-      .animate-float {
-        animation: float 6s ease-in-out infinite;
+      50% {
+        background-position: 100% 50%;
       }
 
-      .reveal {
-        opacity: 0;
-        transform: translateY(30px);
-        transition: all 0.8s cubic-bezier(0.5, 0, 0, 1);
+      100% {
+        background-position: 0% 50%;
+      }
+    }
+
+    .animate-float {
+      animation: float 6s ease-in-out infinite;
+    }
+
+    @keyframes spin-slow {
+      0% {
+        transform: rotate(0deg);
       }
 
-      .reveal.active {
-        opacity: 1;
-        transform: translateY(0);
+      100% {
+        transform: rotate(360deg);
       }
-      
-      .delay-100 { transition-delay: 0.1s; }
-      .delay-200 { transition-delay: 0.2s; }
-      .delay-300 { transition-delay: 0.3s; }
-    </style>
-  </head>
-  <body class="bg-[#1e1e2e] text-white overflow-x-hidden">
-    <!-- Navbar -->
-    <nav class="fixed w-full z-50 bg-[#181825]/80 backdrop-blur-lg border-b border-white/5 transition-all duration-300" id="navbar">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between h-16">
-          <div class="flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500">
+    }
+
+    .animate-spin-slow {
+      animation: spin-slow 25s linear infinite;
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .reveal.active {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .delay-100 {
+      transition-delay: 0.1s;
+    }
+
+    .delay-200 {
+      transition-delay: 0.2s;
+    }
+
+    .delay-300 {
+      transition-delay: 0.3s;
+    }
+
+    /* Mockup Simulator Theme Variables */
+    .accent-blue {
+      --sim-accent: 59, 130, 246;
+      --sim-accent-hex: #3b82f6;
+    }
+
+    .accent-purple {
+      --sim-accent: 168, 85, 247;
+      --sim-accent-hex: #a855f7;
+    }
+
+    .accent-green {
+      --sim-accent: 34, 197, 94;
+      --sim-accent-hex: #22c55e;
+    }
+
+    .accent-red {
+      --sim-accent: 239, 68, 68;
+      --sim-accent-hex: #ef4444;
+    }
+
+    .accent-gold {
+      --sim-accent: 234, 179, 8;
+      --sim-accent-hex: #eab308;
+    }
+
+    /* Custom scrollbar for simulator console */
+    .console-scrollbar::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .console-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .console-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+    }
+  </style>
+</head>
+
+<body class="bg-[#0f0f15] text-gray-200 overflow-x-hidden">
+  <!-- Navbar -->
+  <nav class="fixed w-full z-50 bg-[#0f0f15]/80 backdrop-blur-xl border-b border-white/5 transition-all duration-300"
+    id="navbar">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+            class="text-blue-500">
             <circle cx="12" cy="12" r="10" stroke="currentColor" opacity="0.2" />
             <path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z" fill="#3b82f6" stroke="#2563eb" />
-            <path d="M12 2v2M12 20v2M2 12h2M20 12h2" stroke="currentColor" opacity="0.5" />
+            <path d="M12 2v2M12 20v2M2 12h2M20 12h2" stroke="currentColor" opacity="0.4" />
           </svg>
-            <span class="font-bold text-xl tracking-tight">Explore</span>
-          </div>
-          <div class="hidden md:block">
-            <div class="ml-10 flex items-baseline space-x-8">
-              <a href="#features" class="hover:text-blue-400 transition-colors px-3 py-2 rounded-md text-sm font-medium">Fonctionnalités</a>
-              <a href="#download" class="bg-blue-600 hover:bg-blue-700 transition-colors px-4 py-2 rounded-full text-sm font-medium">Télécharger</a>
-            </div>
-          </div>
+          <span class="font-bold text-xl tracking-tight text-white font-heading">Explore</span>
         </div>
-      </div>
-    </nav>
-
-    <!-- Hero Section -->
-    <div class="relative pt-32 pb-20 sm:pt-40 sm:pb-24 overflow-hidden">
-      <div class="hero-gradient absolute inset-0 pointer-events-none"></div>
-      <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center z-10">
-        <div class="reveal inline-flex items-center px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-sm font-medium mb-6">
-          <span class="flex h-2 w-2 relative mr-2">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-          </span>
-          Version 1.0 Disponible
-        </div>
-        <h1 class="reveal delay-100 text-5xl sm:text-7xl font-extrabold tracking-tight mb-8">
-          Le web, <span class="gradient-text">réinventé</span>.
-        </h1>
-        <p class="reveal delay-200 mt-4 text-xl text-gray-400 max-w-2xl mx-auto mb-10">
-          Explore est un navigateur conçu pour la vitesse, la simplicité et la confidentialité. Une expérience fluide qui s'adapte à vous.
-        </p>
-        <div class="reveal delay-300 flex flex-col sm:flex-row justify-center gap-4">
-          <a href="#" class="px-8 py-4 bg-blue-600 hover:bg-blue-700 rounded-full font-bold text-lg transition-all transform hover:scale-105 shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Télécharger pour Windows
-          </a>
-          <a href="#features" class="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full font-bold text-lg transition-all flex items-center justify-center">
-            En savoir plus
-          </a>
-        </div>
-        <div class="reveal mt-16 relative mx-auto max-w-5xl">
-          <div class="animate-float rounded-xl overflow-hidden shadow-2xl border border-white/10 bg-[#1e1e2e]">
-            <img src="https://i.ibb.co/ZzHzZrNH/image-2026-02-23-121924297.png" alt="Explore Browser Interface" class="w-full h-auto opacity-80 hover:opacity-100 transition-opacity duration-500">
-            <!-- Placeholder for actual app screenshot -->
-            <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-            </div>
-          </div>
+        <div class="flex items-center gap-4">
+          <a href="#features"
+            class="text-gray-400 hover:text-white transition-colors px-3 py-2 text-sm font-medium">Fonctionnalités</a>
+          <a href="#download"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-full text-sm transition-all shadow-lg shadow-blue-500/25">Télécharger</a>
         </div>
       </div>
     </div>
+  </nav>
 
-    <!-- Features Section -->
-    <div id="features" class="py-24">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-16">
-          <h2 class="reveal text-3xl font-extrabold sm:text-4xl">
-            Pourquoi choisir <span class="text-blue-400">Explore</span> ?
-          </h2>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <!-- Feature 1 -->
-          <div class="reveal delay-100 p-8 rounded-2xl bg-white/5 border border-white/5 hover:border-blue-500/30 transition-all hover:-translate-y-1">
-            <div class="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center mb-6 text-blue-400">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            </div>
-            <h3 class="text-xl font-bold mb-3">Ultra Rapide</h3>
-            <p class="text-gray-400">Construit sur Chromium, optimisé pour la performance. Naviguez sans ralentissement, même avec de nombreux onglets.</p>
-          </div>
-          <!-- Feature 2 -->
-          <div class="reveal delay-200 p-8 rounded-2xl bg-white/5 border border-white/5 hover:border-purple-500/30 transition-all hover:-translate-y-1">
-            <div class="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center mb-6 text-purple-400">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            </div>
-            <h3 class="text-xl font-bold mb-3">Personnalisable</h3>
-            <p class="text-gray-400">Changez la position des onglets, choisissez votre thème, et adaptez l'interface à votre flux de travail.</p>
-          </div>
-          <!-- Feature 3 -->
-          <div class="reveal delay-300 p-8 rounded-2xl bg-white/5 border border-white/5 hover:border-green-500/30 transition-all hover:-translate-y-1">
-            <div class="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center mb-6 text-green-400">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            </div>
-            <h3 class="text-xl font-bold mb-3">Sécurisé</h3>
-            <p class="text-gray-400">Navigation privée, blocage de traceurs et mises à jour de sécurité régulières pour vous protéger.</p>
-          </div>
-          <!-- Feature 4 -->
-          <div class="reveal delay-100 p-8 rounded-2xl bg-white/5 border border-white/5 hover:border-red-500/30 transition-all hover:-translate-y-1">
-            <div class="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center mb-6 text-red-400">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-            </div>
-            <h3 class="text-xl font-bold mb-3">Bloqueur de Pubs</h3>
-            <p class="text-gray-400">Naviguez sans interruptions. Notre bloqueur de publicités intégré élimine les distractions et accélère le chargement.</p>
-          </div>
-        </div>
+  <!-- Hero Section -->
+  <div class="relative pt-32 pb-16 sm:pt-40 sm:pb-20 overflow-hidden">
+    <div class="hero-gradient absolute inset-0 pointer-events-none z-0"></div>
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center z-10">
+      <div
+        class="reveal inline-flex items-center px-3.5 py-1.5 rounded-full border border-blue-500/20 bg-blue-500/10 text-blue-400 text-xs font-semibold mb-6">
+        <span class="flex h-2 w-2 relative mr-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+        </span>
+        Version 1.0 Disponible
       </div>
-    </div>
-
-    <!-- Download Section -->
-    <div id="download" class="py-24 relative overflow-hidden">
-      <div class="absolute inset-0 bg-blue-600/5"></div>
-      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-        <h2 class="reveal text-3xl font-extrabold sm:text-4xl mb-8">
-          Prêt à explorer le web autrement ?
-        </h2>
-        <p class="reveal delay-100 text-xl text-gray-400 mb-10">
-          Rejoignez des milliers d'utilisateurs qui ont déjà fait le choix de la modernité.
-        </p>
-        <a href="#" class="reveal delay-200 inline-flex items-center justify-center px-8 py-4 bg-white text-black hover:bg-gray-200 rounded-full font-bold text-lg transition-colors shadow-lg">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Télécharger Explore V1
-        </a>
-        <p class="reveal delay-300 mt-4 text-sm text-gray-500">
-          Compatible Windows 10/11. Version Mac & Linux bientôt disponible.
-        </p>
-      </div>
-    </div>
-
-    <!-- Footer -->
-    <footer class="bg-[#0f0f12] border-t border-white/5 py-12">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center">
-        <div class="flex items-center gap-2 mb-4 md:mb-0">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-blue-500">
+      <!-- Animated Rotating Logo -->
+      <div class="reveal flex justify-center mb-8">
+        <div class="relative w-28 h-28 sm:w-32 sm:h-32 animate-spin-slow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+            stroke-linejoin="round" class="w-full h-full text-blue-500 drop-shadow-[0_0_25px_rgba(59,130,246,0.4)]">
             <circle cx="12" cy="12" r="10" class="stroke-current opacity-20" />
-            <path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z" class="fill-blue-500 stroke-blue-600" />
+            <path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z" fill="#3b82f6" stroke="#2563eb" />
             <path d="M12 2v2M12 20v2M2 12h2M20 12h2" class="stroke-current opacity-50" />
           </svg>
-          <span class="font-bold text-lg">Explore</span>
-        </div>
-        <div class="flex space-x-6 text-sm text-gray-400">
-          <a href="#" onclick="openModal('privacy')" class="hover:text-white transition-colors">Confidentialité</a>
-          <a href="#" onclick="openModal('terms')" class="hover:text-white transition-colors">Conditions</a>
-          <a href="#" onclick="openModal('contact')" class="hover:text-white transition-colors">Contact</a>
-        </div>
-        <div class="mt-4 md:mt-0 text-sm text-gray-500">
-          &copy; 2026 Explore Browser. Tous droits réservés.
         </div>
       </div>
-    </footer>
+      <h1 class="reveal delay-100 text-5xl sm:text-7xl font-extrabold tracking-tight mb-6 text-white">
+        Le web, <span class="gradient-text">réinventé</span>.
+      </h1>
+      <p class="reveal delay-200 mt-4 text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+        Explore est un navigateur conçu pour la vitesse, la simplicité et la confidentialité. Une expérience fluide et
+        immersive qui s'adapte à vous.
+      </p>
+      <div class="reveal delay-300 flex flex-col sm:flex-row justify-center gap-4 mb-16">
+        <a href="#"
+          class="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-bold text-lg transition-all transform hover:scale-105 shadow-xl shadow-blue-500/20 flex items-center justify-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          Télécharger pour Windows
+        </a>
+        <a href="#features"
+          class="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-full font-bold text-lg transition-all flex items-center justify-center">
+          En savoir plus
+        </a>
+      </div>
 
-    <!-- Modals -->
-    <div id="modal-overlay" class="fixed inset-0 bg-black/80 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0" onclick="closeModal()">
-      <div id="modal-content" class="bg-[#181825] rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto transform scale-95 transition-all duration-300 opacity-0 border border-white/10 shadow-2xl" onclick="event.stopPropagation()">
-        <!-- Privacy Modal -->
-        <div id="modal-privacy" class="hidden p-8">
-          <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold text-white">Politique de Confidentialité</h2>
-            <button onclick="closeModal()" class="text-gray-400 hover:text-white transition-colors">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
+      <!-- High-Fidelity Browser Mockup showing Actual Screenshot -->
+      <div class="reveal mt-12 max-w-5xl mx-auto">
+        <div class="rounded-3xl border border-white/10 shadow-2xl overflow-hidden bg-[#181825] flex flex-col relative">
+
+          <!-- Actual Screenshot Image -->
+          <div class="relative bg-[#0f0f15]">
+            <img src="image app.png" alt="Explore Browser Interface"
+              class="w-full h-auto block opacity-95 hover:opacity-100 transition-opacity duration-500">
           </div>
-          <div class="prose prose-invert max-w-none text-gray-300">
-            <p>Dernière mise à jour : 24/02/2026</p>
-            <h3 class="text-xl font-semibold text-white mt-4 mb-2">1. Collecte des données</h3>
-            <p>Explore Browser est conçu pour respecter votre vie privée. Nous ne collectons aucune donnée de navigation, historique ou mot de passe sur nos serveurs. Toutes vos données restent stockées localement sur votre machine.</p>
-            <h3 class="text-xl font-semibold text-white mt-4 mb-2">2. Services Tiers</h3>
-            <p>Le navigateur utilise les services de Google et Bing uniquement pour effectuer vos recherches. Ces services sont soumis à leurs propres politiques de confidentialité.</p>
-            <h3 class="text-xl font-semibold text-white mt-4 mb-2">3. Mises à jour</h3>
-            <p>Le navigateur vérifie automatiquement les mises à jour via GitHub. Aucune donnée personnelle n'est transmise lors de ce processus.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features Section -->
+  <div id="features" class="py-24 relative">
+    <!-- Gradient Aura behind features -->
+    <div
+      class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-[120px] pointer-events-none">
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div class="text-center mb-16">
+        <span class="text-xs uppercase font-bold tracking-[0.25em] text-blue-500 block mb-2">Performances &
+          Options</span>
+        <h2 class="reveal text-3xl font-extrabold sm:text-4xl text-white">
+          Pourquoi choisir <span class="text-blue-400">Explore</span> ?
+        </h2>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Feature 1 -->
+        <div
+          class="reveal delay-100 p-8 rounded-3xl bg-[#14141f]/60 backdrop-blur-md border border-white/5 hover:border-blue-500/20 transition-all hover:-translate-y-1 group">
+          <div
+            class="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center mb-6 text-blue-400 group-hover:scale-110 transition-transform">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold mb-3 text-white">Ultra Rapide</h3>
+          <p class="text-sm text-gray-400 leading-relaxed">Construit sur Chromium, optimisé pour la performance brute.
+            Naviguez de manière fluide, même avec des dizaines d'onglets ouverts.</p>
+        </div>
+        <!-- Feature 2 -->
+        <div
+          class="reveal delay-200 p-8 rounded-3xl bg-[#14141f]/60 backdrop-blur-md border border-white/5 hover:border-purple-500/20 transition-all hover:-translate-y-1 group">
+          <div
+            class="w-12 h-12 bg-purple-500/10 rounded-2xl flex items-center justify-center mb-6 text-purple-400 group-hover:scale-110 transition-transform">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path
+                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold mb-3 text-white">Personnalisable</h3>
+          <p class="text-sm text-gray-400 leading-relaxed">Déplacez les onglets (gauche, haut, bas, droite), choisissez
+            vos couleurs d'accentuation et personnalisez le mode ambiant.</p>
+        </div>
+        <!-- Feature 3 -->
+        <div
+          class="reveal delay-300 p-8 rounded-3xl bg-[#14141f]/60 backdrop-blur-md border border-white/5 hover:border-green-500/20 transition-all hover:-translate-y-1 group">
+          <div
+            class="w-12 h-12 bg-green-500/10 rounded-2xl flex items-center justify-center mb-6 text-green-400 group-hover:scale-110 transition-transform">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold mb-3 text-white">Sécurisé & Privé</h3>
+          <p class="text-sm text-gray-400 leading-relaxed">Un VPN chiffré intégré et un gestionnaire de mots de passe
+            crypté stocké 100% en local pour une confidentialité maximale.</p>
+        </div>
+        <!-- Feature 4 -->
+        <div
+          class="reveal delay-100 p-8 rounded-3xl bg-[#14141f]/60 backdrop-blur-md border border-white/5 hover:border-red-500/20 transition-all hover:-translate-y-1 group">
+          <div
+            class="w-12 h-12 bg-red-500/10 rounded-2xl flex items-center justify-center mb-6 text-red-400 group-hover:scale-110 transition-transform">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold mb-3 text-white">Bloqueur de Pubs</h3>
+          <p class="text-sm text-gray-400 leading-relaxed">Bloquez instantanément les popups, bannières et traceurs
+            intrusifs. Économisez de la bande passante et accélérez vos pages.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ Section -->
+  <div class="py-20 border-t border-white/5 relative">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div class="text-center mb-12">
+        <span class="text-xs uppercase font-bold tracking-[0.25em] text-blue-500 block mb-2">Aide & FAQ</span>
+        <h2 class="reveal text-3xl font-extrabold text-white font-heading">Des questions sur Explore ?</h2>
+      </div>
+
+      <div class="space-y-3">
+        <!-- Accordion 1 -->
+        <div
+          class="reveal delay-100 bg-[#14141f] border border-white/5 rounded-2xl overflow-hidden transition-all duration-300">
+          <button onclick="toggleFaq(1)"
+            class="w-full px-6 py-5 flex items-center justify-between text-left font-bold text-white hover:bg-white/5 transition-colors focus:outline-none">
+            <span>Est-ce qu'Explore est totalement gratuit ?</span>
+            <span class="text-blue-500 font-normal text-lg" id="faq-icon-1">+</span>
+          </button>
+          <div id="faq-ans-1" class="max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+            <div class="px-6 pb-5 pt-1 text-sm text-gray-400 leading-relaxed border-t border-white/5">
+              Oui, Explore est un navigateur gratuit, développé avec passion pour offrir une alternative moderne,
+              performante et respectueuse de la vie privée à tous les utilisateurs.
+            </div>
           </div>
         </div>
 
-        <!-- Terms Modal -->
-        <div id="modal-terms" class="hidden p-8">
-          <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold text-white">Conditions d'Utilisation</h2>
-            <button onclick="closeModal()" class="text-gray-400 hover:text-white transition-colors">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
-          </div>
-          <div class="prose prose-invert max-w-none text-gray-300">
-            <h3 class="text-xl font-semibold text-white mt-4 mb-2">1. Acceptation</h3>
-            <p>En téléchargeant et en utilisant Explore Browser, vous acceptez ces conditions d'utilisation.</p>
-            <h3 class="text-xl font-semibold text-white mt-4 mb-2">2. Licence</h3>
-            <p>Explore Browser est un logiciel gratuit. Vous êtes libre de l'utiliser à des fins personnelles ou professionnelles.</p>
-            <h3 class="text-xl font-semibold text-white mt-4 mb-2">3. Responsabilité</h3>
-            <p>Le logiciel est fourni "tel quel". Nous ne sommes pas responsables des dommages potentiels causés par son utilisation.</p>
+        <!-- Accordion 2 -->
+        <div
+          class="reveal delay-200 bg-[#14141f] border border-white/5 rounded-2xl overflow-hidden transition-all duration-300">
+          <button onclick="toggleFaq(2)"
+            class="w-full px-6 py-5 flex items-center justify-between text-left font-bold text-white hover:bg-white/5 transition-colors focus:outline-none">
+            <span>Comment fonctionne le VPN intégré ?</span>
+            <span class="text-blue-500 font-normal text-lg" id="faq-icon-2">+</span>
+          </button>
+          <div id="faq-ans-2" class="max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+            <div class="px-6 pb-5 pt-1 text-sm text-gray-400 leading-relaxed border-t border-white/5">
+              Le VPN d'Explore chiffre votre trafic de navigation via des serveurs sécurisés sans stocker aucun log
+              d'activité. Vous pouvez l'activer d'un simple clic depuis votre barre d'adresse pour naviguer de manière
+              totalement anonyme.
+            </div>
           </div>
         </div>
 
-        <!-- Contact Modal -->
-        <div id="modal-contact" class="hidden p-8">
-          <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold text-white">Contactez-nous</h2>
-            <button onclick="closeModal()" class="text-gray-400 hover:text-white transition-colors">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
-          </div>
-          <div class="text-gray-300 space-y-6">
-            <p>Vous avez des questions, des suggestions ou vous avez trouvé un bug ? N'hésitez pas à nous contacter !</p>
-            
-            <div class="bg-[#1e1e2e] p-4 rounded-xl border border-white/5">
-              <h3 class="font-semibold text-white mb-2">Discord</h3>
-              <p class="text-sm mb-3">Rejoignez notre communauté pour discuter directement avec les développeurs.</p>
-              <a href="https://discord.gg/sjqwhXahtc" target="_blank" class="inline-flex items-center text-blue-400 hover:text-blue-300">
-                Rejoindre le serveur
-                <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
-              </a>
-            </div>
-
-            <div class="bg-[#1e1e2e] p-4 rounded-xl border border-white/5">
-              <h3 class="font-semibold text-white mb-2">GitHub</h3>
-              <p class="text-sm mb-3">Signalez des bugs ou proposez des fonctionnalités via nos Issues.</p>
-              <a href="https://github.com/Julien0ff/explore-app/issues" target="_blank" class="inline-flex items-center text-blue-400 hover:text-blue-300">
-                Ouvrir une Issue
-                <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
-              </a>
-            </div>
-            
-            <div class="text-center pt-4">
-              <p class="text-sm text-gray-400">Email : contact@explore-browser.com</p>
+        <!-- Accordion 3 -->
+        <div
+          class="reveal delay-300 bg-[#14141f] border border-white/5 rounded-2xl overflow-hidden transition-all duration-300">
+          <button onclick="toggleFaq(3)"
+            class="w-full px-6 py-5 flex items-center justify-between text-left font-bold text-white hover:bg-white/5 transition-colors focus:outline-none">
+            <span>Où sont stockés mes mots de passe ?</span>
+            <span class="text-blue-500 font-normal text-lg" id="faq-icon-3">+</span>
+          </button>
+          <div id="faq-ans-3" class="max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+            <div class="px-6 pb-5 pt-1 text-sm text-gray-400 leading-relaxed border-t border-white/5">
+              Contrairement aux autres navigateurs, vos identifiants ne sont jamais envoyés dans le cloud. Vos mots de
+              passe sont cryptés et stockés à 100% en local dans un coffre-fort hautement sécurisé sur votre propre
+              ordinateur.
             </div>
           </div>
         </div>
       </div>
     </div>
+  </div>
 
-    <script>
-      // Modal Logic
-      function openModal(type) {
-        const overlay = document.getElementById('modal-overlay');
-        const content = document.getElementById('modal-content');
-        const modals = ['privacy', 'terms', 'contact'];
-        
-        // Hide all modals content first
-        modals.forEach(m => document.getElementById(`modal-${m}`).classList.add('hidden'));
-        
-        // Show requested modal
-        document.getElementById(`modal-${type}`).classList.remove('hidden');
-        
-        // Show overlay with animation
-        overlay.classList.remove('hidden');
-        // Small delay to allow display:block to apply before opacity transition
-        setTimeout(() => {
-          overlay.classList.remove('opacity-0');
-          content.classList.remove('opacity-0', 'scale-95');
-          content.classList.add('scale-100');
-        }, 10);
-        
-        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+  <!-- Download Section -->
+  <div id="download" class="py-24 relative overflow-hidden border-t border-white/5">
+    <div class="absolute inset-0 bg-blue-600/5 z-0"></div>
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+      <h2 class="reveal text-3xl font-extrabold sm:text-4xl mb-6 text-white">
+        Prêt à explorer le web autrement ?
+      </h2>
+      <p class="reveal delay-100 text-lg text-gray-400 mb-10 max-w-lg mx-auto">
+        Rejoignez la modernité avec Explore et profitez d'une navigation accélérée et sécurisée.
+      </p>
+      <a href="#"
+        class="reveal delay-200 inline-flex items-center justify-center px-8 py-4 bg-white text-black hover:bg-gray-200 rounded-full font-bold text-lg transition-all transform hover:scale-105 shadow-xl">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+        Télécharger Explore pour Windows
+      </a>
+      <p class="reveal delay-300 mt-4 text-xs text-gray-500">
+        Compatible Windows 10/11. Versions macOS et Linux en cours de développement.
+      </p>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="bg-[#0b0b10] border-t border-white/5 py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center">
+      <div class="flex items-center gap-2 mb-4 md:mb-0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+          stroke-linejoin="round" class="w-5 h-5 text-blue-500">
+          <circle cx="12" cy="12" r="10" class="stroke-current opacity-20" />
+          <path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z" fill="#3b82f6" stroke="#2563eb" />
+          <path d="M12 2v2M12 20v2M2 12h2M20 12h2" class="stroke-current opacity-40" />
+        </svg>
+        <span class="font-bold text-lg text-white font-heading">Explore</span>
+      </div>
+      <div class="flex space-x-6 text-sm text-gray-400">
+        <a href="#" onclick="openModal('privacy')" class="hover:text-white transition-colors">Confidentialité</a>
+        <a href="#" onclick="openModal('terms')" class="hover:text-white transition-colors">Conditions</a>
+        <a href="#" onclick="openModal('contact')" class="hover:text-white transition-colors">Contact</a>
+      </div>
+      <div class="mt-4 md:mt-0 text-sm text-gray-500">
+        &copy; 2026 Explore Browser. Tous droits réservés.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modals -->
+  <div id="modal-overlay"
+    class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-opacity duration-300 opacity-0"
+    style="display: none;" onclick="closeModal()">
+    <div id="modal-content"
+      class="bg-[#14141f] rounded-3xl max-w-2xl w-full max-h-[80vh] overflow-y-auto transform scale-95 transition-all duration-300 opacity-0 border border-white/10 shadow-2xl"
+      onclick="event.stopPropagation()">
+      <!-- Privacy Modal -->
+      <div id="modal-privacy" class="hidden p-8">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold text-white font-heading">Politique de Confidentialité</h2>
+          <button onclick="closeModal()" class="text-gray-400 hover:text-white transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="prose prose-invert max-w-none text-gray-400 text-sm space-y-4">
+          <p>Dernière mise à jour : 19/05/2026</p>
+          <h3 class="text-lg font-bold text-white mt-4">1. Respect absolu de la vie privée</h3>
+          <p>Explore Browser est conçu pour respecter votre vie privée dès le premier démarrage. Nous ne collectons, ne
+            vendons et ne stockons aucune donnée de navigation, aucun historique, aucun cookie et aucun mot de passe sur
+            nos serveurs. Zéro traçage publicitaire, zéro télémétrie.</p>
+          <h3 class="text-lg font-bold text-white mt-4">2. Gestion locale des données</h3>
+          <p>Toutes vos données (historique de navigation, mots de passe cryptés, raccourcis, préférences) sont stockées
+            à 100% de manière locale sur votre ordinateur dans un répertoire sécurisé. Rien ne transite dans le cloud
+            sans votre consentement explicite.</p>
+          <h3 class="text-lg font-bold text-white mt-4">3. Synchronisation optionnelle et sécurisée</h3>
+          <p>Si vous décidez d'activer la synchronisation en ligne en créant un compte, seules les données strictement
+            essentielles à la synchronisation de votre profil et de vos favoris seront transmises de manière hautement
+            sécurisée et chiffrée. Cette option est 100% facultative.</p>
+          <h3 class="text-lg font-bold text-white mt-4">4. Mises à jour de sécurité</h3>
+          <p>Le navigateur vérifie automatiquement la présence de nouvelles versions via les releases officielles GitHub
+            afin de maintenir votre noyau Chromium toujours à jour des derniers correctifs de sécurité.</p>
+        </div>
+      </div>
+
+      <!-- Terms Modal -->
+      <div id="modal-terms" class="hidden p-8">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold text-white font-heading">Conditions d'Utilisation</h2>
+          <button onclick="closeModal()" class="text-gray-400 hover:text-white transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="prose prose-invert max-w-none text-gray-400 text-sm space-y-4">
+          <h3 class="text-lg font-bold text-white mt-4">1. Utilisation du logiciel</h3>
+          <p>Explore Browser est un navigateur web gratuit fourni sous licence open-source. Vous êtes libre de
+            l'utiliser pour tout usage légal, personnel ou professionnel, dans le respect de votre vie privée.</p>
+          <h3 class="text-lg font-bold text-white mt-4">2. Services en ligne optionnels</h3>
+          <p>Certains services optionnels (comme la synchronisation des données de profil via Supabase) requièrent un
+            compte utilisateur sécurisé. Seules les données essentielles nécessaires au bon fonctionnement de la
+            synchronisation sont traitées.</p>
+          <h3 class="text-lg font-bold text-white mt-4">3. Responsabilités</h3>
+          <p>Le logiciel est fourni "tel quel", sans garantie d'aucune sorte. Les développeurs ne peuvent être tenus
+            responsables d'éventuels dommages matériels, pertes de données ou interruptions de service.</p>
+        </div>
+      </div>
+
+      <!-- Contact Modal -->
+      <div id="modal-contact" class="hidden p-8">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold text-white font-heading">Contactez l'équipe Explore</h2>
+          <button onclick="closeModal()" class="text-gray-400 hover:text-white transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="text-gray-300 space-y-6 text-sm">
+          <p>Vous avez une question, une suggestion ou un bug à nous soumettre ? Nous sommes à votre écoute sur nos
+            différentes plateformes !</p>
+
+          <div class="bg-[#1a1a26] p-5 rounded-2xl border border-white/5 space-y-2">
+            <h3 class="font-bold text-white flex items-center gap-2">Discord Communautaire</h3>
+            <p class="text-xs text-gray-400">Échangez en direct avec notre équipe et d'autres passionnés.</p>
+            <a href="https://discord.gg/sjqwhXahtc" target="_blank"
+              class="inline-flex items-center text-blue-400 hover:text-blue-300 font-semibold mt-1">
+              Rejoindre le Discord
+              <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3">
+                </path>
+              </svg>
+            </a>
+          </div>
+
+          <div class="bg-[#1a1a26] p-5 rounded-2xl border border-white/5 space-y-2">
+            <h3 class="font-bold text-white flex items-center gap-2">Dépôt GitHub</h3>
+            <p class="text-xs text-gray-400">Signalez un bug ou demandez une fonctionnalité via notre tracker d'issues.
+            </p>
+            <a href="https://github.com/Julien0ff/explore-app/issues" target="_blank"
+              class="inline-flex items-center text-blue-400 hover:text-blue-300 font-semibold mt-1">
+              Ouvrir un ticket GitHub
+              <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3">
+                </path>
+              </svg>
+            </a>
+          </div>
+
+          <div class="text-center pt-2">
+            <p class="text-xs text-gray-500">Contact e-mail direct : contact@explore-browser.com</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Website Scripts -->
+  <script>
+    // Smooth FAQ Accordions
+    function toggleFaq(id) {
+      const answer = document.getElementById(`faq-ans-${id}`);
+      const icon = document.getElementById(`faq-icon-${id}`);
+
+      if (answer.style.maxHeight && answer.style.maxHeight !== '0px') {
+        answer.style.maxHeight = '0px';
+        icon.textContent = '+';
+      } else {
+        // Hide all other accordions first
+        [1, 2, 3].forEach(fid => {
+          document.getElementById(`faq-ans-${fid}`).style.maxHeight = '0px';
+          document.getElementById(`faq-icon-${fid}`).textContent = '+';
+        });
+
+        answer.style.maxHeight = answer.scrollHeight + 'px';
+        icon.textContent = '−';
       }
+    }
 
-      function closeModal() {
-        const overlay = document.getElementById('modal-overlay');
-        const content = document.getElementById('modal-content');
-        
-        // Start hiding animation
-        overlay.classList.add('opacity-0');
-        content.classList.add('opacity-0', 'scale-95');
-        content.classList.remove('scale-100');
-        
-        // Wait for animation to finish before hiding display
-        setTimeout(() => {
-          overlay.classList.add('hidden');
-          document.body.style.overflow = ''; // Restore scrolling
-        }, 300);
-      }
+    // Modal Logic
+    function openModal(type) {
+      const overlay = document.getElementById('modal-overlay');
+      const content = document.getElementById('modal-content');
+      const modals = ['privacy', 'terms', 'contact'];
 
-      // Close modal on escape key
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeModal();
-      });
+      // Hide all modals content first
+      modals.forEach(m => document.getElementById(`modal-${m}`).classList.add('hidden'));
 
-      // GitHub Release Configuration
-      const GITHUB_USERNAME = 'Julien0ff';
-      const GITHUB_REPO = 'explore-app';
-      
-      // Function to fetch latest release
-      async function updateDownloadLinks() {
-        try {
-          const response = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/releases/latest`);
-          const data = await response.json();
-          
-          if (data.assets && data.assets.length > 0) {
-            // Find the .exe asset
-            const exeAsset = data.assets.find(asset => asset.name.endsWith('.exe'));
-            
-            if (exeAsset) {
-              const downloadUrl = exeAsset.browser_download_url;
-              const version = data.tag_name;
-              
-              // Update all download buttons
-              document.querySelectorAll('a[href="#download"], a[href="#"]').forEach(link => {
-                if (link.textContent.includes('Télécharger')) {
-                  link.href = downloadUrl;
-                  // Optional: Add version tooltip or text update
-                  // link.title = `Télécharger ${version}`;
-                }
-              });
-              
-              // Update version badge if it exists
-              const versionBadge = document.querySelector('.text-blue-400.text-sm');
-              if (versionBadge && versionBadge.textContent.includes('Version')) {
-                versionBadge.innerHTML = `
-                  <span class="flex h-2 w-2 relative mr-2">
+      // Show requested modal
+      document.getElementById(`modal-${type}`).classList.remove('hidden');
+
+      // Show overlay with animation
+      overlay.style.display = 'flex';
+      setTimeout(() => {
+        overlay.classList.remove('opacity-0');
+        content.classList.remove('opacity-0', 'scale-95');
+        content.classList.add('scale-100');
+      }, 10);
+
+      document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    }
+
+    function closeModal() {
+      const overlay = document.getElementById('modal-overlay');
+      const content = document.getElementById('modal-content');
+
+      overlay.classList.add('opacity-0');
+      content.classList.add('opacity-0', 'scale-95');
+      content.classList.remove('scale-100');
+
+      setTimeout(() => {
+        overlay.style.display = 'none';
+        document.body.style.overflow = ''; // Restore scrolling
+      }, 300);
+    }
+
+    // Close modal on escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    // GitHub Release Configuration
+    const GITHUB_USERNAME = 'Julien0ff';
+    const GITHUB_REPO = 'explore-app';
+
+    // Function to fetch latest release
+    async function updateDownloadLinks() {
+      try {
+        const response = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/releases/latest`);
+        const data = await response.json();
+
+        if (data.assets && data.assets.length > 0) {
+          const exeAsset = data.assets.find(asset => asset.name.endsWith('.exe'));
+
+          if (exeAsset) {
+            const downloadUrl = exeAsset.browser_download_url;
+            const version = data.tag_name;
+
+            document.querySelectorAll('a[href="#download"], a[href="#"]').forEach(link => {
+              if (link.textContent.includes('Télécharger')) {
+                link.href = downloadUrl;
+              }
+            });
+
+            const versionBadge = document.querySelector('.text-blue-400.text-xs');
+            if (versionBadge && versionBadge.textContent.includes('Version')) {
+              versionBadge.innerHTML = `
+                  <span class="flex h-2.5 w-2.5 relative mr-2">
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
                   </span>
                   Version ${version} Disponible`;
-              }
             }
           }
-        } catch (error) {
-          console.error('Error fetching latest release:', error);
-          // Fallback is already handled by the default href or we can set a manual fallback here
         }
+      } catch (error) {
+        console.error('Error fetching latest release:', error);
       }
+    }
 
-      // Animation on scroll
-      document.addEventListener('DOMContentLoaded', () => {
-        // Initialize download links
-        updateDownloadLinks();
+    // Animation on scroll
+    document.addEventListener('DOMContentLoaded', () => {
+      updateDownloadLinks();
 
-        const observerOptions = {
-          threshold: 0.1,
-          rootMargin: '0px 0px -50px 0px'
-        };
+      const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+      };
 
-        const observer = new IntersectionObserver((entries) => {
-          entries.forEach(entry => {
-            if (entry.isIntersecting) {
-              entry.target.classList.add('active');
-              observer.unobserve(entry.target);
-            }
-          });
-        }, observerOptions);
-
-        document.querySelectorAll('.reveal').forEach(el => {
-          observer.observe(el);
-        });
-        
-        // Navbar scroll effect
-        window.addEventListener('scroll', () => {
-          const navbar = document.getElementById('navbar');
-          if (window.scrollY > 50) {
-            navbar.classList.add('bg-[#181825]/95', 'shadow-lg');
-            navbar.classList.remove('bg-[#181825]/80', 'border-white/5');
-            navbar.classList.add('border-transparent');
-          } else {
-            navbar.classList.remove('bg-[#181825]/95', 'shadow-lg', 'border-transparent');
-            navbar.classList.add('bg-[#181825]/80', 'border-white/5');
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('active');
+            observer.unobserve(entry.target);
           }
         });
+      }, observerOptions);
+
+      document.querySelectorAll('.reveal').forEach(el => {
+        observer.observe(el);
       });
-    </script>
-  </body>
+
+      // Navbar scroll effect
+      window.addEventListener('scroll', () => {
+        const navbar = document.getElementById('navbar');
+        if (window.scrollY > 50) {
+          navbar.classList.add('bg-[#0f0f15]/95', 'shadow-lg');
+          navbar.classList.remove('bg-[#0f0f15]/80', 'border-white/5');
+          navbar.classList.add('border-transparent');
+        } else {
+          navbar.classList.remove('bg-[#0f0f15]/95', 'shadow-lg', 'border-transparent');
+          navbar.classList.add('bg-[#0f0f15]/80', 'border-white/5');
+        }
+      });
+    });
+  </script>
+</body>
+
 </html>

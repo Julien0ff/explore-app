@@ -42,6 +42,8 @@ interface Window {
     getAdBlockEnabled: () => Promise<boolean>;
     setAdBlockEnabled: (enabled: boolean) => void;
     blockDomain: (domain: string) => void;
+    setProxy: (countryId: string) => Promise<boolean>;
+    disableProxy: () => Promise<boolean>;
     onDownloadUpdated: (callback: (data: unknown) => void) => void;
     onDownloadDone: (callback: (data: unknown) => void) => void;
     offDownloadUpdated: () => void;

@@ -29,6 +29,8 @@ interface SettingsModalProps {
   onOpenUrl: (url: string) => void;
   onImportBookmarks: () => void;
   onClearData: () => void;
+  ambientMode: boolean;
+  setAmbientMode: (val: boolean) => void;
 }
 
 export function SettingsModal({
@@ -48,7 +50,9 @@ export function SettingsModal({
   setShortcuts,
   onOpenUrl,
   onImportBookmarks,
-  onClearData
+  onClearData,
+  ambientMode,
+  setAmbientMode
 }: SettingsModalProps) {
   const colors = getAccentColorClass(accentColor, theme === 'dark');
   const [suggestion, setSuggestion] = React.useState('');
@@ -139,7 +143,7 @@ export function SettingsModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -218,7 +222,9 @@ export function SettingsModal({
                         { id: 'google', name: 'Google', url: 'https://www.google.com/s2/favicons?domain=google.com&sz=64' },
                         { id: 'bing', name: 'Bing', url: 'https://www.google.com/s2/favicons?domain=bing.com&sz=64' },
                         { id: 'duckduckgo', name: 'DuckDuckGo', url: 'https://www.google.com/s2/favicons?domain=duckduckgo.com&sz=64' },
-                        { id: 'ecosia', name: 'Ecosia', url: 'https://www.google.com/s2/favicons?domain=ecosia.org&sz=64' }
+                        { id: 'ecosia', name: 'Ecosia', url: 'https://www.google.com/s2/favicons?domain=ecosia.org&sz=64' },
+                        { id: 'qwant', name: 'Qwant', url: 'https://www.google.com/s2/favicons?domain=qwant.com&sz=64' },
+                        { id: 'perplexity', name: 'Perplexity', url: 'https://icons.duckduckgo.com/ip3/perplexity.ai.ico' }
                     ].map((engine) => (
                          <button
                             key={engine.id}
@@ -230,19 +236,21 @@ export function SettingsModal({
                                 : theme === 'dark' ? "border-white/10 hover:border-white/20" : "border-gray-200 hover:border-gray-300"
                             )}
                         >
-                            <img 
-                              src={engine.url} 
-                              alt={engine.name} 
-                              className="w-8 h-8" 
-                              onError={(e) => {
-                                const target = e.currentTarget;
-                                if (target.src.includes('google.com')) {
-                                  target.src = `https://icons.duckduckgo.com/ip3/${engine.id === 'google' ? 'google.com' : engine.id === 'bing' ? 'bing.com' : engine.id === 'duckduckgo' ? 'duckduckgo.com' : 'ecosia.org'}.ico`;
-                                } else {
-                                  target.style.display = 'none';
-                                }
-                              }}
-                            />
+                            <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center p-2 shadow-sm shrink-0">
+                                <img 
+                                  src={engine.url} 
+                                  alt={engine.name} 
+                                  className="w-8 h-8 object-contain rounded-md" 
+                                  onError={(e) => {
+                                    const target = e.currentTarget;
+                                    if (target.src.includes('google.com')) {
+                                      target.src = `https://icons.duckduckgo.com/ip3/${engine.id === 'google' ? 'google.com' : engine.id === 'bing' ? 'bing.com' : engine.id === 'duckduckgo' ? 'duckduckgo.com' : 'ecosia.org'}.ico`;
+                                    } else {
+                                      target.style.display = 'none';
+                                    }
+                                  }}
+                                />
+                            </div>
                             <span className={clsx("font-medium text-sm", theme === 'dark' ? "text-white" : "text-gray-900")}>{engine.name}</span>
                         </button>
                     ))}
@@ -315,6 +323,30 @@ export function SettingsModal({
                         <div className="w-16 h-12 bg-white rounded border border-gray-100 shadow-sm" />
                       </div>
                       <span className={clsx("font-medium text-sm", theme === 'dark' ? "text-white" : "text-gray-900")}>{language === 'fr' ? 'Mode Clair' : 'Light Mode'}</span>
+                    </button>
+                  </div>
+
+                  {/* Ambient Mode Toggle */}
+                  <div className={clsx("p-4 rounded-xl border flex items-center justify-between mb-4", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200")}>
+                    <div>
+                      <h4 className={clsx("font-medium", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                        {language === 'fr' ? 'Éclairage Ambiant' : 'Ambient Mode'}
+                      </h4>
+                      <p className={clsx("text-sm", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
+                        {language === 'fr' ? 'Diffuse la couleur du site web visité' : 'Diffuses the visited website color'}
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => setAmbientMode(!ambientMode)}
+                      className={clsx(
+                        "w-12 h-6 rounded-full transition-colors relative",
+                        ambientMode ? colors.bgSolid : (theme === 'dark' ? "bg-gray-600" : "bg-gray-300")
+                      )}
+                    >
+                      <div className={clsx(
+                        "absolute top-1 w-4 h-4 rounded-full bg-white transition-all shadow-sm",
+                        ambientMode ? "left-7" : "left-1"
+                      )} />
                     </button>
                   </div>
 

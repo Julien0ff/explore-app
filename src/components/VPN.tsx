@@ -20,13 +20,25 @@ export function VPN({ isOpen, onClose, theme, accentColor, language }: VPNProps)
   const [selectedLocation, setSelectedLocation] = useState(() => {
     return localStorage.getItem('vpn_location') || 'France';
   });
+  const [selectedLocationId, setSelectedLocationId] = useState(() => {
+    return localStorage.getItem('vpn_location_id') || 'fr';
+  });
   const [duration, setDuration] = useState(0);
   const [stats, setStats] = useState({ up: 0, down: 0 });
 
   useEffect(() => {
     localStorage.setItem('vpn_connected', String(isConnected));
     localStorage.setItem('vpn_location', selectedLocation);
-  }, [isConnected, selectedLocation]);
+    localStorage.setItem('vpn_location_id', selectedLocationId);
+  }, [isConnected, selectedLocation, selectedLocationId]);
+
+  useEffect(() => {
+    if (isConnected && window.electron) {
+      window.electron.setProxy(selectedLocationId);
+    } else if (!isConnected && window.electron) {
+      window.electron.disableProxy();
+    }
+  }, [isConnected, selectedLocationId]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -177,7 +189,10 @@ export function VPN({ isOpen, onClose, theme, accentColor, language }: VPNProps)
                   {locations.map(loc => (
                     <button
                       key={loc.id}
-                      onClick={() => setSelectedLocation(loc.name)}
+                      onClick={() => {
+                        setSelectedLocation(loc.name);
+                        setSelectedLocationId(loc.id);
+                      }}
                       className={clsx(
                         "w-full flex items-center gap-3 p-3 rounded-xl transition-all",
                         selectedLocation === loc.name 

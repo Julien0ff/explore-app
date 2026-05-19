@@ -66,7 +66,23 @@ const defaultBlockedDomains = [
     'ads.google.com',
     'analytics.google.com',
     'facebook.com/tr/',
-    'google-analytics.com'
+    'google-analytics.com',
+    'quantserve.com',
+    'scorecardresearch.com',
+    'zedo.com',
+    'adroll.com',
+    'carbonads.net',
+    'buysellads.com',
+    'moatads.com',
+    'adform.net',
+    'advertising.com',
+    'casalemedia.com',
+    'yieldmo.com',
+    'openx.net',
+    'smartadserver.com',
+    'popads.net',
+    'popcash.net',
+    'onclickads.net'
 ];
 let userBlockedDomains = [];
 const blockedDomainsPath = path_1.default.join(electron_1.app.getPath('userData'), 'blocked-domains.json');
@@ -81,49 +97,76 @@ catch (e) {
 function getAllBlockedDomains() {
     return [...defaultBlockedDomains, ...userBlockedDomains];
 }
-function setupSession() {
+// Simple mock proxy array to simulate VPN routing
+const openProxies = [
+    { id: 'fr', url: 'http://51.15.227.220:3128' }, // Mock IP
+    { id: 'us', url: 'http://198.27.74.14:80' },
+    { id: 'uk', url: 'http://8.26.94.3:80' },
+    { id: 'jp', url: 'http://163.43.24.116:8080' },
+    { id: 'de', url: 'http://78.46.200.216:3128' },
+    { id: 'ca', url: 'http://104.254.244.14:80' },
+    { id: 'au', url: 'http://103.111.53.146:80' }
+];
+const globalSessionConfig = {
+    proxyRules: ''
+};
+function setupSession(sess = electron_1.session.defaultSession) {
     const filter = {
         urls: ['*://*/*']
     };
-    // Apply to all sessions (default and any partition)
-    electron_1.app.on('session-created', (sess) => {
-        try {
-            // Ad Blocker
-            sess.webRequest.onBeforeRequest(filter, (details, callback) => {
-                const url = details.url.toLowerCase();
-                // Whitelist Google Favicons to prevent them from being blocked
-                if (url.includes('google.com/s2/favicons') ||
-                    url.includes('gstatic.com/favicon') ||
-                    url.includes('/favicon.ico')) {
-                    callback({ cancel: false });
-                    return;
-                }
-                const isAd = getAllBlockedDomains().some(domain => url.includes(domain));
-                if (isAd) {
-                    mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send('ad-blocked', url);
-                    callback({ cancel: true });
-                }
-                else {
-                    callback({ cancel: false });
-                }
-            });
-            // User Agent Spoofing
-            sess.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
-                const headers = details.requestHeaders;
-                // Force Chrome User Agent
-                headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
-                // Mock Client Hints to match Chrome
-                headers['Sec-Ch-Ua'] = '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"';
-                headers['Sec-Ch-Ua-Mobile'] = '?0';
-                headers['Sec-Ch-Ua-Platform'] = '"Windows"';
-                callback({ cancel: false, requestHeaders: headers });
-            });
+    try {
+        const bypassRules = '<local>;*.google.com;*.gstatic.com;*.duckduckgo.com;flagcdn.com';
+        if (globalSessionConfig.proxyRules) {
+            sess.setProxy({ proxyRules: globalSessionConfig.proxyRules, proxyBypassRules: bypassRules });
         }
-        catch (e) {
-            console.error('Failed to setup session:', e);
+        else {
+            sess.setProxy({ proxyRules: 'direct://' });
         }
-    });
+        // Ad Blocker
+        sess.webRequest.onBeforeRequest(filter, (details, callback) => {
+            if (!adBlockEnabled) {
+                callback({ cancel: false });
+                return;
+            }
+            const url = details.url.toLowerCase();
+            // Whitelist Google Favicons to prevent them from being blocked
+            if (url.includes('google.com/s2/favicons') ||
+                url.includes('gstatic.com/favicon') ||
+                url.includes('/favicon.ico') ||
+                url.includes('icons.duckduckgo.com') ||
+                url.includes('flagcdn.com')) {
+                callback({ cancel: false });
+                return;
+            }
+            const isAd = getAllBlockedDomains().some(domain => url.includes(domain));
+            if (isAd) {
+                mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send('ad-blocked', url);
+                callback({ cancel: true });
+            }
+            else {
+                callback({ cancel: false });
+            }
+        });
+        // User Agent Spoofing
+        sess.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
+            const headers = details.requestHeaders;
+            // Force Chrome User Agent
+            headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+            // Mock Client Hints to match Chrome
+            headers['Sec-Ch-Ua'] = '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"';
+            headers['Sec-Ch-Ua-Mobile'] = '?0';
+            headers['Sec-Ch-Ua-Platform'] = '"Windows"';
+            callback({ requestHeaders: headers });
+        });
+    }
+    catch (e) {
+        console.error('Failed to setup session:', e);
+    }
 }
+// App listeners for new sessions
+electron_1.app.on('session-created', (sess) => {
+    setupSession(sess);
+});
 const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 electron_1.app.userAgentFallback = userAgent;
 // Register IPC listeners once
@@ -398,6 +441,7 @@ function createMainWindow() {
         width: 1200,
         height: 800,
         show: false, // Hidden initially
+        transparent: false, // Revert transparency to fix webview rendering on Windows
         icon: path_1.default.join(__dirname, electron_1.app.isPackaged ? '../dist/icon.png' : '../public/icon.png'), // Set app icon
         webPreferences: {
             preload: path_1.default.join(__dirname, 'preload.js'),
@@ -406,18 +450,30 @@ function createMainWindow() {
             webviewTag: true,
         },
         frame: false, // Frameless window
-        backgroundColor: '#00000000', // Transparent background
+        backgroundColor: '#1e1e2e', // Use solid background for dark mode by default
         titleBarStyle: 'hidden',
+    });
+    const indexPath = path_1.default.join(__dirname, '../dist/index.html');
+    mainWindow.once('ready-to-show', () => {
+        setTimeout(() => {
+            if (splashWindow && !splashWindow.isDestroyed()) {
+                splashWindow.close();
+            }
+            mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.show();
+        }, 2000); // Minimum splash time
     });
     if (process.env.VITE_DEV_SERVER_URL) {
         mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
     }
     else {
-        mainWindow.loadFile(path_1.default.join(__dirname, '../dist/index.html'));
+        mainWindow.loadFile(indexPath);
     }
-    if (process.env.VITE_DEV_SERVER_URL) {
-        mainWindow.webContents.openDevTools();
-    }
+    // FORCE DevTools in Production for debugging v1.5.8
+    mainWindow.webContents.openDevTools({ mode: 'detach' });
+    // Debug webviews
+    mainWindow.webContents.on('did-attach-webview', (_, webContents) => {
+        webContents.openDevTools({ mode: 'detach' });
+    });
     // Handle downloads
     mainWindow.webContents.session.on('will-download', (_event, item) => {
         // Ensure we save to the user's Downloads folder by default if no path is set
@@ -474,22 +530,16 @@ function createMainWindow() {
             }
         });
     });
-    mainWindow.once('ready-to-show', () => {
-        setTimeout(() => {
-            if (splashWindow && !splashWindow.isDestroyed()) {
-                splashWindow.close();
-            }
-            mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.show();
-        }, 2000); // Minimum splash time
-    });
+    // Removed old ready-to-show listener from here as it was moved up
     mainWindow.on('closed', () => {
         mainWindow = null;
     });
 }
-// Global User Agent to avoid Google Sign-in issues
-electron_1.app.userAgentFallback = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
+// No changes needed here, just removing the redundant User-Agent block above if it exists
+// Checked later and it's handled by the single userAgent at the top
 electron_1.app.whenReady().then(() => {
     setupIPC();
+    setupSession(); // Initialize session before windows
     createSplashWindow();
     createMainWindow();
     // Check for deep link on startup (Windows/Linux)
@@ -503,6 +553,29 @@ electron_1.app.whenReady().then(() => {
     }
     // Check for updates
     try {
+        electron_updater_1.autoUpdater.on('update-available', () => {
+            electron_1.dialog.showMessageBox({
+                type: 'info',
+                title: 'Mise à jour disponible',
+                message: 'Une nouvelle version d\'Explore est disponible. Le téléchargement a commencé en arrière-plan...',
+                buttons: ['Ok']
+            });
+        });
+        electron_updater_1.autoUpdater.on('update-downloaded', () => {
+            electron_1.dialog.showMessageBox({
+                type: 'info',
+                title: 'Mise à jour prête',
+                message: 'La mise à jour a été téléchargée avec succès. Voulez-vous redémarrer le navigateur pour l\'installer maintenant ?',
+                buttons: ['Redémarrer', 'Plus tard']
+            }).then((result) => {
+                if (result.response === 0) {
+                    electron_updater_1.autoUpdater.quitAndInstall();
+                }
+            });
+        });
+        electron_updater_1.autoUpdater.on('error', (err) => {
+            console.error('Erreur lors de la mise à jour:', err);
+        });
         electron_updater_1.autoUpdater.checkForUpdatesAndNotify();
     }
     catch (e) {
@@ -526,6 +599,40 @@ electron_1.app.whenReady().then(() => {
             createMainWindow();
         }
     });
+    // VPN Handlers
+    electron_1.ipcMain.handle('set-proxy', (_, countryId) => __awaiter(void 0, void 0, void 0, function* () {
+        try {
+            const proxy = openProxies.find(p => p.id === countryId);
+            if (proxy) {
+                globalSessionConfig.proxyRules = proxy.url;
+            }
+            else {
+                globalSessionConfig.proxyRules = 'http://127.0.0.1:8080';
+            }
+            if (electron_1.session.defaultSession) {
+                const bypassRules = '<local>;*.google.com;*.gstatic.com;*.duckduckgo.com;flagcdn.com';
+                yield electron_1.session.defaultSession.setProxy({ proxyRules: globalSessionConfig.proxyRules, proxyBypassRules: bypassRules });
+            }
+            return true;
+        }
+        catch (e) {
+            console.error('Failed to set proxy:', e);
+            return false;
+        }
+    }));
+    electron_1.ipcMain.handle('disable-proxy', () => __awaiter(void 0, void 0, void 0, function* () {
+        try {
+            globalSessionConfig.proxyRules = '';
+            if (electron_1.session.defaultSession) {
+                yield electron_1.session.defaultSession.setProxy({ proxyRules: 'direct://' });
+            }
+            return true;
+        }
+        catch (e) {
+            console.error('Failed to disable proxy:', e);
+            return false;
+        }
+    }));
     // Setup Session (Ad Blocker & User Agent)
     setupSession();
     // Context Menu & Webview Handling

@@ -15,7 +15,7 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 export interface ContextMenuProps {
   isOpen: boolean;
@@ -68,7 +68,12 @@ export function ContextMenu({
   const adjustedY = y + menuHeight > window.innerHeight ? y - menuHeight : y;
 
   return (
-    <AnimatePresence>
+    <>
+      <div 
+        className="fixed inset-0 z-99 bg-transparent" 
+        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onClose(); }}
+        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onClose(); }}
+      />
       <motion.div
         ref={menuRef}
         initial={{ opacity: 0, scale: 0.95 }}
@@ -77,7 +82,7 @@ export function ContextMenu({
         transition={{ duration: 0.1 }}
         style={{ top: adjustedY, left: adjustedX }}
         className={clsx(
-          "fixed z-[100] w-[280px] rounded-xl shadow-2xl border overflow-hidden backdrop-blur-xl py-2",
+          "fixed z-100 w-[280px] rounded-xl shadow-2xl border overflow-hidden backdrop-blur-xl py-2",
           isDark ? "bg-[#1e1e2e]/95 border-white/10 text-gray-200" : "bg-white/95 border-gray-200 text-gray-800"
         )}
         onContextMenu={(e) => e.preventDefault()}
@@ -135,8 +140,12 @@ export function ContextMenu({
 
           {params.srcURL && params.mediaType === 'image' && (
             <>
-              <button onClick={() => onAction('open-new-tab', { url: params.srcURL })} className={clsx("flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm transition-colors", isDark ? "hover:bg-white/10" : "hover:bg-gray-100")}>
+              <button onClick={() => onAction('open-image', { url: params.srcURL })} className={clsx("flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm transition-colors", isDark ? "hover:bg-white/10" : "hover:bg-gray-100")}>
                 <ImageIcon className="w-4 h-4 text-gray-400" />
+                {language === 'fr' ? 'Ouvrir l\'image' : 'Open Image'}
+              </button>
+              <button onClick={() => onAction('open-new-tab', { url: params.srcURL })} className={clsx("flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm transition-colors", isDark ? "hover:bg-white/10" : "hover:bg-gray-100")}>
+                <ExternalLink className="w-4 h-4 text-gray-400" />
                 {language === 'fr' ? 'Ouvrir l\'image dans un nouvel onglet' : 'Open Image in New Tab'}
               </button>
               <button onClick={() => onAction('save-image', { url: params.srcURL })} className={clsx("flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm transition-colors", isDark ? "hover:bg-white/10" : "hover:bg-gray-100")}>
@@ -204,6 +213,6 @@ export function ContextMenu({
           
         </div>
       </motion.div>
-    </AnimatePresence>
+    </>
   );
 }

@@ -1,0 +1,5 @@
+
+Index path resolved to: C:\Users\Requin\Navigateur Explore\dist\win-unpacked\resources\app.asar\dist\index.html
+File exists: true
+Loading file: C:\Users\Requin\Navigateur Explore\dist\win-unpacked\resources\app.asar\dist\index.html
+Checking for update

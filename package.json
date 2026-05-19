@@ -1,7 +1,7 @@
 {
   "name": "navigateur-explore",
   "private": true,
-  "version": "1.5.0",
+  "version": "1.5.8",
   "description": "Navigateur Explore - Le web réinventé",
   "author": "Explore Team",
   "main": "dist-electron/main.js",
@@ -29,9 +29,6 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Explore Browser",
-      "installerIcon": "public/icon.png",
-      "uninstallerIcon": "public/icon.png",
-      "installerHeaderIcon": "public/icon.png",
       "deleteAppDataOnUninstall": true,
       "include": "build/installer.nsh"
     },

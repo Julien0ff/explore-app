@@ -8,19 +8,22 @@ import {
   Search,
   Settings,
   Star,
-  Book,
-  Minus,
-  Square,
-  Trash2,
   Shield,
-  FolderPlus,
   User as UserIcon,
+  Tv,
+  BookOpen,
+  Volume2,
+  Terminal,
+  Book,
   Key,
-  Globe
+  Globe,
+  FolderPlus,
+  Trash2
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Reorder } from 'framer-motion';
+import { Reorder, AnimatePresence, motion } from 'framer-motion';
+
 import { Logo } from './components/Logo';
 import { SettingsModal } from './components/SettingsModal';
 import { ConfirmModal } from './components/ConfirmModal';
@@ -38,6 +41,7 @@ import { Onboarding } from './components/Onboarding';
 import { NewTabPage } from './components/NewTabPage';
 import { DownloadsPopup } from './components/DownloadsPopup';
 import type { DownloadItem } from './components/DownloadsPopup';
+import { CommandPalette } from './components/CommandPalette';
 import { ContextMenu } from './components/ContextMenu';
 import { FileDown } from 'lucide-react';
 import { getAccentColorClass } from './lib/theme';
@@ -49,6 +53,8 @@ interface Tab {
   isLoading: boolean;
   canGoBack?: boolean;
   canGoForward?: boolean;
+  themeColor?: string;
+  isReaderMode?: boolean;
 }
 
 function App() {
@@ -58,6 +64,7 @@ function App() {
   const [activeTabId, setActiveTabId] = useState<string>('1');
   const [urlInput, setUrlInput] = useState<string>('https://www.google.com');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup' | 'forgot-password' | 'reset-password'>('login');
   const [user, setUser] = useState<User | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -65,6 +72,9 @@ function App() {
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [showPasswordManager, setShowPasswordManager] = useState(false);
   const [showVPN, setShowVPN] = useState(false);
+  const [adBlockEnabled, setAdBlockEnabled] = useState(true);
+  const [showAdBlockMenu, setShowAdBlockMenu] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   
   const [showBookmarksBar] = useState(() => {
     return localStorage.getItem('showBookmarksBar') === 'true';
@@ -77,10 +87,16 @@ function App() {
   // Settings State
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [tabPosition, setTabPosition] = useState<'left' | 'top' | 'bottom' | 'right'>('left');
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('dark');
+  const [theme, setTheme] = useState("dark" as "light" | "dark" | "system");
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return !localStorage.getItem('onboardingCompleted');
   });
+  const [ambientMode, setAmbientMode] = useState(() => {
+    return localStorage.getItem('ambientMode') !== 'false';
+  });
+  useEffect(() => {
+    localStorage.setItem('ambientMode', ambientMode.toString());
+  }, [ambientMode]);
   const [searchEngine, setSearchEngine] = useState(() => {
     return localStorage.getItem('searchEngine') || 'google';
   });
@@ -91,6 +107,27 @@ function App() {
   // Language state must be declared before it is used in initial state
   const [language, setLanguage] = useState<'fr' | 'en'>('fr');
   const languageRef = useRef(language);
+  const [isPrivate, setIsPrivate] = useState(false);
+  const urlInputRef = useRef<HTMLInputElement>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
+  const [shortcuts, setShortcuts] = useState(() => {
+    const saved = localStorage.getItem('explore_shortcuts_v1');
+    return saved ? JSON.parse(saved) : {
+      newTab: 'Ctrl+T',
+      closeTab: 'Ctrl+W',
+      focusUrl: 'Ctrl+L',
+      reloadTab: 'Ctrl+R',
+      togglePrivate: 'Ctrl+Shift+N',
+      saveSession: 'Ctrl+Shift+S',
+      restoreSession: 'Ctrl+Shift+R',
+      enablePiP: 'Ctrl+Shift+P',
+      toggleHistory: 'Ctrl+H',
+      toggleBookmarks: 'Ctrl+B',
+      openSettings: 'Ctrl+,',
+    };
+  });
 
   useEffect(() => {
     languageRef.current = language;
@@ -144,24 +181,159 @@ function App() {
   
   const webviewRefs = useRef<{ [key: string]: Electron.WebviewTag }>({});
 
-  const getSearchUrl = (query: string) => {
-    if (query.includes('.') && !query.includes(' ')) {
-      return query.startsWith('http') ? query : 'https://' + query;
+  function enableZenMode() {
+    const webview = webviewRefs.current[activeTabId];
+    if (!webview) return;
+    
+    const tab = tabs.find(t => t.id === activeTabId);
+    if (tab?.isReaderMode) {
+      webview.reload();
+      updateTab(activeTabId, { isReaderMode: false });
+      return;
+    }
+
+    updateTab(activeTabId, { isReaderMode: true });
+    webview.executeJavaScript(`
+      (() => {
+        try {
+          const contents = document.body.innerHTML; // basic fallback
+          const article = document.querySelector('article') || 
+                          document.querySelector('[role="main"]') || 
+                          document.querySelector('.main-content');
+          
+          let readerContent = article ? article.innerHTML : contents;
+          const readerTitle = document.title;
+          const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          
+          document.body.innerHTML = \`
+            <div id="reader-mode-container" style="
+              padding: 60px 24px; max-width: 720px; margin: 0 auto; 
+              font-family: sans-serif; line-height: 1.6; font-size: 19px;
+              color: \${isDark ? '#e2e8f0' : '#1a202c'};
+              background: \${isDark ? '#1a1b26' : '#ffffff'};
+            ">
+              <h1 style="margin-bottom: 32px; font-size: 36px;">\${readerTitle}</h1>
+              <div class="content-body">\${readerContent}</div>
+            </div>
+          \`;
+        } catch(e) { console.error('Reader Mode Error:', e); }
+      })();
+    `);
+  }
+
+  const enablePiP = React.useCallback(() => {
+    const webview = webviewRefs.current[activeTabId];
+    if (!webview) return;
+    webview.executeJavaScript(`
+      (async () => {
+        try {
+          const video = document.querySelector('video');
+          if (video) {
+            if (document.pictureInPictureElement) await document.exitPictureInPicture();
+            else await video.requestPictureInPicture();
+          }
+        } catch(e) {}
+      })();
+    `);
+  }, [activeTabId]);
+
+
+  const toggleMute = () => {
+    const webview = webviewRefs.current[activeTabId];
+    if (!webview) return;
+    const isMuted = webview.isAudioMuted();
+    webview.setAudioMuted(!isMuted);
+  };
+
+  const openDevTools = () => {
+    const webview = webviewRefs.current[activeTabId];
+    if (!webview) return;
+    webview.openDevTools();
+  };
+
+  function addTab() {
+    const newId = crypto.randomUUID();
+    const newTab: Tab = {
+      id: newId,
+      url: 'explore://newtab',
+      title: languageRef.current === 'fr' ? 'Nouvel onglet' : 'New Tab',
+      isLoading: false
+    };
+    setTabs(prev => [...prev, newTab]);
+    setActiveTabId(newId);
+  }
+
+  function closeTab(e: React.MouseEvent | { stopPropagation: () => void }, id: string) {
+    if (e) e.stopPropagation();
+    setTabs(prev => {
+      if (prev.length <= 1) return prev;
+      const idx = prev.findIndex(t => t.id === id);
+      const nextTabs = prev.filter(t => t.id !== id);
+      if (id === activeTabId) {
+        const nextActive = nextTabs[Math.max(0, idx - 1)]?.id || nextTabs[0].id;
+        setActiveTabId(nextActive);
+      }
+      return nextTabs;
+    });
+  }
+
+  function updateTab(id: string, updates: Partial<Tab>) {
+    if (updates.url && updates.url.toLowerCase() === 'explore://onboarding') {
+      setShowOnboarding(true);
+      return;
+    }
+    setTabs(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+  }
+
+  function getSearchUrl(query: string) {
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) return '';
+    const firstWord = trimmedQuery.split(' ')[0].toLowerCase();
+    
+    const bangs: { [key: string]: string } = {
+      '!yt': 'https://www.youtube.com/results?search_query=',
+      '!w': 'https://fr.wikipedia.org/wiki/Sp%C3%A9cial:Recherche?search=',
+      '!gmap': 'https://www.google.com/maps/search/',
+      '!r': 'https://www.reddit.com/search/?q=',
+      '!t': 'https://twitter.com/search?q=',
+      '!a': 'https://www.amazon.fr/s?k=',
+      '!g': 'https://github.com/search?q=',
+      '!so': 'https://stackoverflow.com/search?q=',
+      '!imdb': 'https://www.imdb.com/find?q=',
+      '!tr': 'https://translate.google.com/?sl=auto&tl=fr&text=',
+      '!maps': 'https://www.google.com/maps/search/',
+      '!ebay': 'https://www.ebay.com/sch/i.html?_nkw=',
+      '!medium': 'https://medium.com/search?q=',
+      '!gpt': 'https://chat.openai.com/?q='
+    };
+
+    if (bangs[firstWord]) {
+      const remainingQuery = trimmedQuery.slice(firstWord.length).trim();
+      if (remainingQuery) {
+        return `${bangs[firstWord]}${encodeURIComponent(remainingQuery)}`;
+      }
+    }
+
+    if (trimmedQuery.includes('.') && !trimmedQuery.includes(' ')) {
+      return trimmedQuery.startsWith('http') ? trimmedQuery : 'https://' + trimmedQuery;
     }
     
     const engines: { [key: string]: string } = {
       google: 'https://www.google.com/search?q=',
       bing: 'https://www.bing.com/search?q=',
       duckduckgo: 'https://duckduckgo.com/?q=',
-      ecosia: 'https://www.ecosia.org/search?q='
+      ecosia: 'https://www.ecosia.org/search?q=',
+      qwant: 'https://www.qwant.com/?q=',
+      perplexity: 'https://www.perplexity.ai/search?q='
     };
 
     const engineKey = searchEngine?.trim().toLowerCase();
+    console.log('Using engine key:', engineKey);
     const baseUrl = engines[engineKey] || engines.google;
-    const finalUrl = `${baseUrl}${encodeURIComponent(query)}`;
-    console.log('Generated search URL:', finalUrl, 'for engine:', searchEngine);
-    return finalUrl;
-  };
+    console.log('Base URL:', baseUrl);
+    return `${baseUrl}${encodeURIComponent(trimmedQuery)}`;
+  }
+
 
   const handleCreateFolder = async (title?: string) => {
     if (!title) return;
@@ -287,11 +459,12 @@ function App() {
 
     window.electron.onDownloadUpdated(handleDownloadUpdate);
     window.electron.onDownloadDone(handleDownloadDone);
+    
     if (window.electron.onContextMenuRequest) {
       window.electron.onContextMenuRequest(handleContextMenuRequest);
     }
     
-    // Handle new tab requests from main process (e.g., context menu)
+    // Handle new tab requests from main process
     window.electron.onNewTab((url: string) => {
       const newId = crypto.randomUUID();
       const newTab: Tab = {
@@ -309,7 +482,6 @@ function App() {
       setBlockedAdsCount(prev => prev + 1);
     };
     
-    // Check if onAdBlocked is available (it might be added recently)
     if (window.electron.onAdBlocked) {
       window.electron.onAdBlocked(handleAdBlocked);
     }
@@ -318,24 +490,18 @@ function App() {
     if (window.electron.onDeepLink) {
       window.electron.onDeepLink(async (url: string) => {
         console.log('Received deep link:', url);
-        // Extract tokens from URL
-        // Supabase URL format: explore://auth/callback#access_token=...&refresh_token=...&...
         try {
           const urlObj = new URL(url);
-          
-          // Check hash first (Implicit flow)
           let params = new URLSearchParams(urlObj.hash.substring(1));
           let accessToken = params.get('access_token');
           let refreshToken = params.get('refresh_token');
           
-          // If not in hash, check search params (PKCE or other flows)
           if (!accessToken) {
              params = new URLSearchParams(urlObj.search);
              accessToken = params.get('access_token');
              refreshToken = params.get('refresh_token');
           }
 
-          // Handle PKCE code flow if present (code=...)
           const code = params.get('code');
           if (code && !accessToken) {
              console.log('Received PKCE code, exchanging for session...');
@@ -343,8 +509,13 @@ function App() {
              if (error) {
                 console.error('Error exchanging code for session:', error);
              } else if (data.session) {
-                console.log('Session exchanged successfully');
-                setIsAuthModalOpen(false);
+                const type = params.get('type');
+                if (type === 'recovery') {
+                  setAuthModalMode('reset-password');
+                  setIsAuthModalOpen(true);
+                } else {
+                  setIsAuthModalOpen(false);
+                }
                 if (data.user) {
                    const { user } = data;
                    const metadata = user.user_metadata || {};
@@ -355,39 +526,42 @@ function App() {
                       avatar: metadata.avatar_url || metadata.picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`
                    });
                 }
-                return; // Done
+                return;
              }
           }
           
           if (accessToken && refreshToken) {
-            supabase.auth.setSession({
+            const { data, error } = await supabase.auth.setSession({
               access_token: accessToken,
               refresh_token: refreshToken
-            }).then(({ data, error }) => {
-              if (error) {
-                console.error('Error setting session:', error);
-              } else {
-                console.log('Session set successfully');
-                setIsAuthModalOpen(false);
-                // Force user update
-                if (data.user) {
-                   const { user } = data;
-                   const metadata = user.user_metadata || {};
-                   setUser({
-                      id: user.id,
-                      email: user.email!,
-                      name: metadata.full_name || metadata.name || user.email!.split('@')[0],
-                      avatar: metadata.avatar_url || metadata.picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`
-                   });
-                }
-              }
             });
+            
+            if (error) {
+              console.error('Error setting session:', error);
+            } else if (data.user) {
+              const type = params.get('type');
+              if (type === 'recovery') {
+                setAuthModalMode('reset-password');
+                setIsAuthModalOpen(true);
+              } else {
+                setIsAuthModalOpen(false);
+              }
+              const { user } = data;
+              const metadata = user.user_metadata || {};
+              setUser({
+                id: user.id,
+                email: user.email!,
+                name: metadata.full_name || metadata.name || user.email!.split('@')[0],
+                avatar: metadata.avatar_url || metadata.picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`
+              });
+            }
           }
         } catch (e) {
           console.error('Error parsing deep link:', e);
         }
       });
     }
+
     if (window.electron.onOAuthCallback) {
       window.electron.onOAuthCallback(async (url: string) => {
         try {
@@ -396,20 +570,19 @@ function App() {
           const code = params.get('code');
           const accessToken = params.get('access_token');
           const refreshToken = params.get('refresh_token');
+
           if (code && !accessToken) {
             const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-            if (!error && data.session) {
+            if (!error && data.session && data.user) {
               setIsAuthModalOpen(false);
-              if (data.user) {
-                const { user } = data;
-                const metadata = user.user_metadata || {};
-                setUser({
-                  id: user.id,
-                  email: user.email!,
-                  name: metadata.full_name || metadata.name || user.email!.split('@')[0],
-                  avatar: metadata.avatar_url || metadata.picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`
-                });
-              }
+              const { user } = data;
+              const metadata = user.user_metadata || {};
+              setUser({
+                id: user.id,
+                email: user.email!,
+                name: metadata.full_name || metadata.name || user.email!.split('@')[0],
+                avatar: metadata.avatar_url || metadata.picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`
+              });
             }
           } else if (accessToken && refreshToken) {
             const { data, error } = await supabase.auth.setSession({
@@ -438,20 +611,33 @@ function App() {
       window.electron.offDownloadUpdated();
       window.electron.offDownloadDone();
       window.electron.offNewTab();
-      if (window.electron.offAdBlocked) {
-        window.electron.offAdBlocked();
-      }
-      if (window.electron.offContextMenuRequest) {
-        window.electron.offContextMenuRequest();
-      }
-      if (window.electron.offDeepLink) {
-        window.electron.offDeepLink();
-      }
-      if (window.electron.offOAuthCallback) {
-        window.electron.offOAuthCallback();
-      }
+      if (window.electron.offAdBlocked) window.electron.offAdBlocked();
+      if (window.electron.offContextMenuRequest) window.electron.offContextMenuRequest();
+      if (window.electron.offDeepLink) window.electron.offDeepLink();
+      if (window.electron.offOAuthCallback) window.electron.offOAuthCallback();
     };
   }, []);
+
+  // Keyboard Shortcuts (Command Palette, New Tab, Close Tab)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen(v => !v);
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 't') {
+        e.preventDefault();
+        addTab();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'w') {
+        e.preventDefault();
+        if (tabs.length > 1) {
+          closeTab({ stopPropagation: () => {} } as React.MouseEvent, activeTabId);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabs, activeTabId]);
 
   const handleContextMenuAction = (action: string, params?: { url?: string; text?: string; selectionText?: string }) => {
     setContextMenu(null);
@@ -506,14 +692,13 @@ function App() {
         }
         break;
       case 'save-image':
-        // This requires main process handling usually, but we can try downloading it
         if (params?.url) {
-           const link = document.createElement('a');
-           link.href = params.url;
-           link.download = '';
-           document.body.appendChild(link);
-           link.click();
-           document.body.removeChild(link);
+           webview.downloadURL(params.url);
+        }
+        break;
+      case 'open-image':
+        if (params?.url) {
+           webview.loadURL(params.url);
         }
         break;
       case 'copy-image-url':
@@ -596,8 +781,16 @@ function App() {
   };
 
   const activeTab = tabs.find(t => t.id === activeTabId);
+  const activeThemeColor = activeTab?.url === 'explore://newtab' 
+    ? colors.hex 
+    : activeTab?.themeColor;
 
   useEffect(() => {
+    // Check initial adblock state
+    if (window.electron?.getAdBlockEnabled) {
+      window.electron.getAdBlockEnabled().then((enabled: unknown) => setAdBlockEnabled(!!enabled));
+    }
+
     // Check active session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -726,59 +919,7 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab?.url]);
 
-  const addTab = () => {
-    const newId = crypto.randomUUID();
-    const newTab: Tab = {
-      id: newId,
-      url: 'explore://newtab',
-      title: language === 'fr' ? 'Nouvel onglet' : 'New Tab',
-      isLoading: false
-    };
-    setTabs([...tabs, newTab]);
-    setActiveTabId(newId);
-  };
 
-  const closeTab = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    if (tabs.length === 1) return; // Don't close last tab
-    
-    const newTabs = tabs.filter(t => t.id !== id);
-    setTabs(newTabs);
-    
-    if (activeTabId === id) {
-      setActiveTabId(newTabs[newTabs.length - 1].id);
-    }
-  };
-
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
-  const urlInputRef = useRef<HTMLInputElement | null>(null);
-  const [isPrivate, setIsPrivate] = useState(false);
-
-  type ShortcutMap = {
-    newTab: string;
-    closeTab: string;
-    focusUrl: string;
-    reloadTab: string;
-    togglePrivate: string;
-    saveSession: string;
-    restoreSession: string;
-    enablePiP: string;
-  };
-  const [shortcuts, setShortcuts] = useState<ShortcutMap>(() => {
-    const saved = localStorage.getItem('explore_shortcuts_v1');
-    return saved ? JSON.parse(saved) : {
-      newTab: 'Ctrl+T',
-      closeTab: 'Ctrl+W',
-      focusUrl: 'Ctrl+L',
-      reloadTab: 'Ctrl+R',
-      togglePrivate: 'Ctrl+Shift+N',
-      saveSession: 'Ctrl+Shift+S',
-      restoreSession: 'Ctrl+Shift+R',
-      enablePiP: 'Ctrl+Shift+P',
-    };
-  });
 
   useEffect(() => {
     localStorage.setItem('explore_shortcuts_v1', JSON.stringify(shortcuts));
@@ -848,23 +989,26 @@ function App() {
         }
       } else if (matches(e, shortcuts.enablePiP)) {
         e.preventDefault();
-        const w = webviewRefs.current[activeTabId];
-        w?.executeJavaScript(`
-          (async () => {
-            const v = document.querySelector('video');
-            if (v && document.pictureInPictureEnabled) {
-              try { await v.requestPictureInPicture(); } catch(e) {}
-            }
-          })();
-        `);
+        enablePiP();
+      } else if (matches(e, shortcuts.toggleHistory)) {
+        e.preventDefault();
+        setShowHistory(prev => !prev);
+        setShowBookmarks(false);
+      } else if (matches(e, shortcuts.toggleBookmarks)) {
+        e.preventDefault();
+        setShowBookmarks(prev => !prev);
+        setShowHistory(false);
+      } else if (matches(e, shortcuts.openSettings)) {
+        e.preventDefault();
+        setIsSettingsOpen(true);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [shortcuts, activeTabId, matches, tabs]);
+  }, [shortcuts, activeTabId, matches, tabs, enablePiP]);
 
   // Function to fetch suggestions
-  const fetchSuggestions = async (query: string) => {
+  const fetchSuggestions = React.useCallback(async (query: string) => {
     if (!query || query.startsWith('http') || query.startsWith('explore://')) {
       setSuggestions([]);
       return;
@@ -873,7 +1017,6 @@ function App() {
     if (window.electron?.getSearchSuggestions) {
       try {
         const results = await window.electron.getSearchSuggestions(query);
-        console.log('Search suggestions:', results);
         setSuggestions(results);
       } catch (error) {
         console.error('Failed to fetch suggestions:', error);
@@ -881,7 +1024,6 @@ function App() {
       }
     } else {
       try {
-        // Fallback for browser dev mode (might fail due to CORS)
         const response = await fetch(`https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(query)}`);
         const data = await response.json();
         setSuggestions(data[1] || []);
@@ -890,14 +1032,16 @@ function App() {
         setSuggestions([]);
       }
     }
-  };
+  }, []);
+
 
   useEffect(() => {
     const timer = setTimeout(() => {
       if (urlInput.trim()) fetchSuggestions(urlInput);
     }, 300);
     return () => clearTimeout(timer);
-  }, [urlInput]);
+  }, [urlInput, fetchSuggestions]);
+
 
   const handleNavigate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -912,8 +1056,16 @@ function App() {
     setSelectedSuggestionIndex(-1);
     setUrlInput(url); // Update input to match selected URL
 
+    if (url.toLowerCase() === 'explore://onboarding') {
+      setShowOnboarding(true);
+      setUrlInput(activeTab?.url || 'explore://newtab');
+      return;
+    }
+
     if (!url.startsWith('http') && !url.startsWith('explore://')) {
+       console.log('Generating search URL for:', url);
        url = getSearchUrl(url);
+       console.log('Search URL:', url);
     }
     
     updateTab(activeTabId, { url, title: url, isLoading: true });
@@ -931,9 +1083,6 @@ function App() {
     }
   };
 
-  const updateTab = (id: string, updates: Partial<Tab>) => {
-    setTabs(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
-  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -1001,6 +1150,7 @@ function App() {
   };
 
   const getFaviconUrl = (url: string) => {
+    if (url === 'explore://newtab') return 'explore-logo';
     try {
       return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}`;
     } catch {
@@ -1014,8 +1164,69 @@ function App() {
     }
   };
 
+  const renderWindowControls = () => {
+    return (
+      <div className="flex items-center gap-2 no-drag px-2 py-1 group">
+        <button 
+          onClick={() => handleWindowControl('close')} 
+          className="w-3 h-3 rounded-full bg-[#ff5f56] flex items-center justify-center text-[9px] font-extrabold text-[#4c0002] transition-all duration-150 cursor-pointer active:brightness-90 relative"
+          title={language === 'fr' ? 'Fermer' : 'Close'}
+        >
+          <span className="opacity-0 group-hover:opacity-100 transition-opacity select-none" style={{ marginTop: '-2px' }}>×</span>
+        </button>
+        <button 
+          onClick={() => handleWindowControl('minimize')} 
+          className="w-3 h-3 rounded-full bg-[#febc2e] flex items-center justify-center text-[9px] font-extrabold text-[#5c3e00] transition-all duration-150 cursor-pointer active:brightness-90 relative"
+          title={language === 'fr' ? 'Réduire' : 'Minimize'}
+        >
+          <span className="opacity-0 group-hover:opacity-100 transition-opacity select-none" style={{ marginTop: '-3px' }}>−</span>
+        </button>
+        <button 
+          onClick={() => handleWindowControl('maximize')} 
+          className="w-3 h-3 rounded-full bg-[#28c840] flex items-center justify-center text-[8px] font-extrabold text-[#006504] transition-all duration-150 cursor-pointer active:brightness-90 relative"
+          title={language === 'fr' ? 'Agrandir' : 'Maximize'}
+        >
+          <span className="opacity-0 group-hover:opacity-100 transition-opacity select-none" style={{ marginTop: '-2px' }}>+</span>
+        </button>
+      </div>
+    );
+  };
+
   return (
-    <div className={clsx("flex h-screen w-full overflow-hidden transition-colors duration-300", theme === 'dark' ? "bg-[#1e1e2e] text-white" : "bg-gray-100 text-gray-900")}>
+    <div className={clsx("flex h-screen w-full overflow-hidden transition-colors duration-1000 relative", theme === 'dark' ? "bg-[#14141d] text-white" : "bg-gray-100 text-gray-900")}>
+      
+      {ambientMode && activeThemeColor && (
+        <>
+          {/* Main Ambient Glow */}
+          <div 
+            className="absolute inset-0 z-0 pointer-events-none transition-all duration-1000 ease-in-out"
+            style={{
+              background: activeTab?.url === 'explore://newtab'
+                ? `radial-gradient(circle at 50% 50%, ${activeThemeColor}2b 0%, ${activeThemeColor}0f 45%, ${activeThemeColor}05 75%, transparent 100%)`
+                : `radial-gradient(circle at 50% 0%, ${activeThemeColor} 0%, ${activeThemeColor}15 35%, transparent 75%)`,
+              opacity: activeTab?.url === 'explore://newtab' 
+                ? (theme === 'dark' ? 0.95 : 0.75) 
+                : (theme === 'dark' ? 0.5 : 0.4)
+            }}
+          />
+          {/* Subtle Secondary Glow for Depth */}
+          <div 
+            className="absolute inset-0 z-0 pointer-events-none transition-all duration-1500 ease-in-out mix-blend-screen"
+            style={{
+              background: `radial-gradient(circle at 100% 0%, ${activeThemeColor}10 0%, transparent 50%)`,
+              opacity: theme === 'dark' ? 0.3 : 0.15
+            }}
+          />
+          {/* Bottom Bloom */}
+          <div 
+            className="absolute inset-0 z-0 pointer-events-none transition-all duration-1000 ease-in-out"
+            style={{
+              background: `linear-gradient(to top, ${activeThemeColor}05 0%, transparent 20%)`,
+              opacity: activeTab?.url === 'explore://newtab' ? 0 : 1
+            }}
+          />
+        </>
+      )}
       
       {showOnboarding && (
         <Onboarding 
@@ -1033,118 +1244,134 @@ function App() {
       
       {/* Sidebar (Left or Right Position) */}
       {(tabPosition === 'left' || tabPosition === 'right') && (
-        <div className={clsx(
-          "w-44 flex flex-col transition-colors duration-300",
-          theme === 'dark' ? "bg-[#181825] border-white/10" : "bg-white border-gray-200",
-          tabPosition === 'left' ? "border-r order-first" : "border-l order-last"
-        )}>
-          <div className="p-4 flex items-center justify-between drag-region">
-            <div className={clsx("flex items-center gap-2 font-bold text-lg", colors.text)}>
-              <Logo className="w-6 h-6" />
-              <span>Explore</span>
-            </div>
-            <div className="flex items-center gap-1 no-drag">
-               <button 
-                onClick={() => setIsAuthModalOpen(true)}
-                className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
-              >
-                {user ? (
-                  <img 
-                    src={user.avatar} 
-                    className="w-5 h-5 rounded-full bg-white/10" 
-                    alt="" 
-                    onError={(e) => {
-                      e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`;
-                    }}
-                  />
-                ) : (
-                  <UserIcon className="w-4 h-4 text-gray-400" />
-                )}
-              </button>
+        <div 
+          className={clsx(
+            "w-20 flex flex-col transition-colors duration-1000 relative z-10",
+            tabPosition === 'left' ? "border-r order-first" : "border-l order-last"
+          )}
+          style={{
+            backgroundColor: ambientMode && activeThemeColor 
+              ? (theme === 'dark' ? `${activeThemeColor}1A` : `${activeThemeColor}0F`)
+              : (theme === 'dark' ? "#181825" : "#ffffff"),
+            backdropFilter: ambientMode && activeThemeColor ? "blur(40px)" : "none",
+            borderColor: theme === 'dark' ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"
+          }}
+        >
+          <div className="p-4 flex flex-col items-center justify-center drag-region">
+            <div className="flex items-center justify-center py-4 border-b border-white/5 w-full">
+              <Logo className="w-8 h-8" />
             </div>
           </div>
 
           <div className="px-3 pb-2">
             <button 
               onClick={addTab}
-              className={clsx("w-full flex items-center justify-center gap-2 text-white py-2 rounded-lg transition-all shadow-lg font-medium text-sm", colors.bgSolid, colors.bgHover, colors.shadow)}
+              className={clsx("w-full flex items-center justify-center gap-2 text-white py-2 rounded-xl transition-all shadow-lg font-medium", colors.bgSolid, colors.bgHover, colors.shadow)}
+              title={language === 'fr' ? 'Nouvel onglet' : 'New Tab'}
             >
-              <Plus className="w-4 h-4" />
-                {language === 'fr' ? 'Nouvel onglet' : 'New Tab'}
-              </button>
+              <Plus className="w-5 h-5" />
+            </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1">
-            <div className="text-xs font-semibold text-gray-500 px-2 py-1 uppercase tracking-wider">
-              {language === 'fr' ? 'Onglets ouverts' : 'Open Tabs'}
+          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+            <div className="text-[10px] font-bold text-gray-500 px-1 py-1 uppercase tracking-[0.2em] mb-1 text-center">
+              {language === 'fr' ? 'Onglets' : 'Tabs'}
             </div>
             {tabs.map(tab => (
               <div
                 key={tab.id}
-                onClick={() => setActiveTabId(tab.id)}
-                className={twMerge(
-                  "group flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all border border-transparent",
-                  activeTabId === tab.id 
-                    ? clsx(colors.bg, colors.text, colors.borderSubtle, "shadow-sm")
-                    : clsx("text-gray-400 hover:bg-white/5", colors.textHover)
-                )}
+                className="relative group w-full"
               >
-                <div className={clsx("min-w-4 w-4 h-4 rounded-full flex items-center justify-center text-[10px]", activeTabId === tab.id ? clsx(colors.borderSubtle, colors.text) : "bg-white/10 text-gray-400")}>
-                  {tab.isLoading ? (
-                    <RotateCw className={clsx("w-3 h-3 animate-spin", activeTabId === tab.id ? colors.text : "text-gray-400")} />
-                  ) : (
-                    <img 
-                      src={getFaviconUrl(tab.url)} 
-                      className="w-3 h-3 rounded-sm"
-                      alt=""
-                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                    />
+                <div
+                  onClick={() => setActiveTabId(tab.id)}
+                  className={twMerge(
+                    "flex items-center justify-center w-full h-10 rounded-xl cursor-pointer transition-all border border-transparent mb-1",
+                    activeTabId === tab.id 
+                      ? clsx(colors.bg, colors.text, colors.borderSubtle, "shadow-lg")
+                      : clsx("text-gray-400 hover:bg-white/5", colors.textHover)
                   )}
-                </div>
-                <span className="truncate text-sm flex-1">{tab.title || (language === 'fr' ? 'Chargement...' : 'Loading...')}</span>
-                <button
-                  onClick={(e) => closeTab(e, tab.id)}
-                  className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-white/20 rounded-md transition-all"
+                  title={tab.title}
                 >
-                  <X className="w-3 h-3" />
-                </button>
+                  <div className={clsx("w-5 h-5 rounded-full flex items-center justify-center text-[10px]", activeTabId === tab.id ? clsx(colors.borderSubtle, colors.text) : "bg-white/10 text-gray-400")}>
+                    {tab.isLoading ? (
+                      <RotateCw className={clsx("w-3.5 h-3.5 animate-spin", activeTabId === tab.id ? colors.text : "text-gray-400")} />
+                    ) : tab.url === 'explore://newtab' ? (
+                       <Logo className={clsx("w-3.5 h-3.5", activeTabId === tab.id ? colors.text : "text-gray-400")} />
+                    ) : (
+                      <img 
+                        src={getFaviconUrl(tab.url)} 
+                        className="w-3.5 h-3.5 rounded-sm"
+                        alt=""
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                    )}
+                  </div>
+                </div>
+                {tabs.length > 1 && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); closeTab(e, tab.id); }}
+                    className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20 shadow-sm"
+                  >
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                )}
               </div>
             ))}
           </div>
 
-          <div className={clsx("p-4 border-t", theme === 'dark' ? "border-white/5" : "border-gray-200")}>
+          <div className={clsx("p-4 border-t flex flex-col items-center gap-2", theme === 'dark' ? "border-white/5" : "border-gray-200")}>
             <button 
-              onClick={() => setIsSettingsOpen(true)}
-              className={clsx("w-full flex items-center justify-center gap-2 p-2 rounded-lg transition-colors", theme === 'dark' ? "hover:bg-white/5 text-gray-400" : "hover:bg-gray-100 text-gray-600")}
+              onClick={() => setIsAuthModalOpen(true)}
+              className="p-2 hover:bg-white/10 rounded-xl transition-colors flex items-center justify-center text-gray-400 hover:text-white"
+              title={user ? user.name : (language === 'fr' ? 'Connexion' : 'Sign In')}
             >
-              <Settings className="w-5 h-5" />
-              <span className="font-medium">{language === 'fr' ? 'Paramètres' : 'Settings'}</span>
+              {user ? (
+                <img 
+                  src={user.avatar} 
+                  className="w-6 h-6 rounded-full bg-white/10" 
+                  alt="" 
+                  onError={(e) => {
+                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`;
+                  }}
+                />
+              ) : (
+                <UserIcon className="w-6 h-6" />
+              )}
+            </button>
+            <button 
+              onClick={() => updateTab(activeTabId, { url: 'explore://settings' })}
+              className={clsx("w-full flex items-center justify-center p-2.5 rounded-xl transition-colors", theme === 'dark' ? "hover:bg-white/5 text-gray-400" : "hover:bg-gray-100 text-gray-600")}
+              title={language === 'fr' ? 'Paramètres' : 'Settings'}
+            >
+              <Settings className="w-6 h-6" />
             </button>
           </div>
         </div>
       )}
 
       {/* Main Content Area */}
-      <div className={clsx("flex-1 flex flex-col relative transition-colors duration-300", theme === 'dark' ? "bg-[#1e1e2e]" : "bg-white")}>
+      <div className={clsx("flex-1 flex flex-col relative transition-colors duration-1000", 
+          (ambientMode && activeThemeColor) ? "bg-transparent" : (theme === 'dark' ? "bg-[#1e1e2e]" : "bg-white")
+      )}>
         
         {/* Window Controls for Bottom Tab Position */}
         {tabPosition === 'bottom' && (
-          <div className="absolute top-0 right-0 p-2 z-50 flex items-center gap-1 no-drag">
-            <button onClick={() => handleWindowControl('minimize')} className="p-1.5 hover:bg-white/10 rounded-lg text-gray-400 bg-black/20 backdrop-blur-sm">
-              <Minus className="w-4 h-4" />
-            </button>
-            <button onClick={() => handleWindowControl('maximize')} className="p-1.5 hover:bg-white/10 rounded-lg text-gray-400 bg-black/20 backdrop-blur-sm">
-              <Square className="w-3 h-3" />
-            </button>
-            <button onClick={() => handleWindowControl('close')} className="p-1.5 hover:bg-red-500/20 hover:text-red-500 rounded-lg text-gray-400 bg-black/20 backdrop-blur-sm">
-              <X className="w-4 h-4" />
-            </button>
+          <div className="absolute top-2 right-2 z-50">
+            {renderWindowControls()}
           </div>
         )}
 
         {/* Top Bar (if tabPosition is top) */}
         {tabPosition === 'top' && (
-          <div className={clsx("flex items-center gap-2 px-2 pt-2 pb-2 mb-2 drag-region", theme === 'dark' ? "bg-[#181825]" : "bg-white")}>
+          <div 
+            className={clsx("flex items-center gap-2 px-2 pt-1 pb-1 drag-region w-full min-w-0 transition-colors duration-1000 relative z-10")}
+            style={{
+              backgroundColor: ambientMode && activeThemeColor 
+                ? (theme === 'dark' ? `${activeThemeColor}1A` : `${activeThemeColor}0F`)
+                : (theme === 'dark' ? "#181825" : "#ffffff"),
+              backdropFilter: ambientMode && activeThemeColor ? "blur(40px)" : "none"
+            }}
+          >
             <div className={clsx("flex items-center gap-2 px-4 font-bold text-lg no-drag", colors.text)}>
               <Logo className="w-6 h-6" />
             </div>
@@ -1152,7 +1379,7 @@ function App() {
               axis="x" 
               values={tabs} 
               onReorder={setTabs} 
-              className="flex-1 flex overflow-x-auto no-drag gap-1 custom-scrollbar"
+              className="flex-1 flex flex-nowrap overflow-x-auto overflow-y-hidden min-w-0 no-drag gap-2 px-2 custom-scrollbar pb-1 pt-1 items-center"
             >
               {tabs.map(tab => (
                 <Reorder.Item
@@ -1160,14 +1387,14 @@ function App() {
                   value={tab}
                   layout
                   className={twMerge(
-                    "group flex items-center gap-2 px-3 py-2 rounded-t-2xl hover:rounded-t-3xl cursor-pointer transition-all border-t border-x min-w-[32px] max-w-[200px] flex-1",
+                    "group relative flex items-center gap-2 px-3 py-2 rounded-2xl cursor-pointer transition-all border border-transparent min-w-[140px] max-w-[240px] shrink-0",
                     activeTabId === tab.id 
-                      ? clsx(colors.bg, colors.text, colors.borderSubtle, "shadow-sm")
-                      : clsx("text-gray-400 hover:bg-white/5", colors.textHover)
+                      ? clsx(colors.bg, colors.text, "shadow-lg relative overflow-hidden after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5", colors.bgSolid.replace("bg-", "after:bg-"), "border-white/5")
+                      : clsx("text-gray-400 hover:bg-white/10 dark:hover:bg-white/5", colors.textHover)
                   )}
                   onPointerDown={() => setActiveTabId(tab.id)}
                 >
-                   <div className={clsx("min-w-4 w-4 h-4 rounded-full flex items-center justify-center text-[10px]", activeTabId === tab.id ? clsx(colors.borderSubtle, colors.text) : "bg-white/10 text-gray-400")}>
+                   <div className={clsx("min-w-4 w-4 h-4 rounded-full flex items-center justify-center text-[10px] shrink-0", activeTabId === tab.id ? clsx(colors.borderSubtle, colors.text) : "bg-white/10 text-gray-400")}>
                     {tab.isLoading ? (
                       <RotateCw className={clsx("w-3 h-3 animate-spin", activeTabId === tab.id ? colors.text : "text-gray-400")} />
                     ) : (
@@ -1182,7 +1409,7 @@ function App() {
                   <span className={clsx("truncate text-sm flex-1 select-none transition-all", tabs.length > 10 && "hidden lg:block")}>{tab.title || (language === 'fr' ? 'Chargement...' : 'Loading...')}</span>
                   <button
                     onClick={(e) => closeTab(e, tab.id)}
-                    className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-white/20 rounded-md transition-all"
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-black/10 dark:hover:bg-white/20 rounded-full transition-all shrink-0"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -1194,23 +1421,14 @@ function App() {
                 </button>
               </div>
             </Reorder.Group>
-             <div className="flex items-center gap-1 no-drag px-2 pl-4 border-l border-white/5">
-                {/* Window Controls */}
-                <button onClick={() => handleWindowControl('minimize')} className="p-1.5 hover:bg-white/10 rounded-lg text-gray-400">
-                  <Minus className="w-4 h-4" />
-                </button>
-                <button onClick={() => handleWindowControl('maximize')} className="p-1.5 hover:bg-white/10 rounded-lg text-gray-400">
-                  <Square className="w-3 h-3" />
-                </button>
-                <button onClick={() => handleWindowControl('close')} className="p-1.5 hover:bg-red-500/20 hover:text-red-500 rounded-lg text-gray-400">
-                  <X className="w-4 h-4" />
-                </button>
+             <div className="flex items-center no-drag ml-auto">
+                {renderWindowControls()}
 
-                <div className="w-[1px] h-4 bg-white/10 mx-1" />
+                <div className="w-px h-4 bg-white/10 mx-1" />
 
                 {/* Profile / Settings */}
                 <button 
-                  onClick={() => setIsSettingsOpen(true)}
+                  onClick={() => updateTab(activeTabId, { url: 'explore://settings' })}
                   className={clsx("p-1.5 hover:bg-white/10 rounded-lg transition-colors", colors.textHover)}
                   title={language === 'fr' ? 'Paramètres' : 'Settings'}
                 >
@@ -1240,7 +1458,19 @@ function App() {
         )}
 
         {/* Navigation Bar & Window Controls */}
-        <div className={clsx("h-12 flex items-center px-2 gap-2 border-b drag-region", theme === 'dark' ? "bg-[#1e1e2e] border-white/5" : "bg-white border-gray-200", tabPosition === 'bottom' && "order-last border-t border-b-0")}>
+        <div 
+          className={clsx(
+            "h-12 flex items-center px-4 gap-3 border-b drag-region relative z-30 transition-colors duration-1000", 
+            tabPosition === 'bottom' && "order-last border-t border-b-0"
+          )}
+          style={{
+            backgroundColor: ambientMode && activeThemeColor 
+              ? (theme === 'dark' ? `${activeThemeColor}20` : `${activeThemeColor}15`)
+              : (theme === 'dark' ? "#1e1e2e" : "#ffffff"),
+            backdropFilter: ambientMode && activeThemeColor ? "blur(40px)" : "none",
+            borderColor: theme === 'dark' ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.1)"
+          }}
+        >
           
           <div className="flex items-center gap-1 no-drag">
             <button 
@@ -1263,9 +1493,9 @@ function App() {
             </button>
           </div>
 
-          <form onSubmit={handleNavigate} className="flex-1 max-w-3xl mx-auto no-drag relative z-50">
+          <form onSubmit={handleNavigate} className="flex-1 max-w-2xl mx-auto no-drag relative z-50 px-4">
             <div className="relative group">
-              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+              <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
                 <Search className={clsx("w-4 h-4 text-gray-500 transition-colors", `group-focus-within:${colors.text}`)} />
               </div>
               <input
@@ -1284,25 +1514,123 @@ function App() {
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                 ref={urlInputRef}
                 className={clsx(
-                    "w-full border rounded-xl py-1.5 pl-10 pr-24 text-sm focus:outline-none focus:ring-2 transition-all shadow-sm",
+                    "w-full border rounded-2xl py-1.5 pl-11 pr-32 text-sm focus:outline-none focus:ring-2 transition-all shadow-sm",
                     colors.ring,
-                    theme === 'dark' 
-                      ? "bg-[#181825] border-white/5 text-gray-200 placeholder-gray-600" 
-                      : "bg-gray-50 border-gray-200 text-gray-800 placeholder-gray-400"
+                    ambientMode && activeThemeColor
+                      ? (theme === 'dark' ? "bg-black/20 border-white/5 text-gray-200 placeholder-gray-600" : "bg-white/40 border-black/5 text-gray-800 placeholder-gray-400")
+                      : (theme === 'dark' ? "bg-[#181825] border-white/5 text-gray-200 placeholder-gray-600 shadow-inner" : "bg-gray-50 border-gray-200 text-gray-800 placeholder-gray-400")
                   )}
                 placeholder={language === 'fr' ? "Rechercher ou entrer une URL" : "Search or enter URL"}
               />
                <div className="absolute inset-y-0 right-2 flex items-center gap-2">
-                 {/* Ad Blocker Indicator */}
-                 <div 
-                  className={clsx("flex items-center gap-1 px-2 py-1 rounded-lg transition-colors cursor-help", 
-                    colors.bg, colors.text
-                  )}
-                  title={language === 'fr' ? `${blockedAdsCount} publicités bloquées` : `${blockedAdsCount} ads blocked`}
-                 >
-                   <Shield className="w-3.5 h-3.5" />
-                   <span className="text-xs font-medium">{blockedAdsCount}</span>
+                 {/* Ad Blocker Menu Indicator */}
+                 <div className="relative flex items-center">
+                   <button 
+                    type="button"
+                    onClick={() => setShowAdBlockMenu(!showAdBlockMenu)}
+                    className={clsx("flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-all cursor-pointer", 
+                      adBlockEnabled ? "bg-green-500/10 text-green-600 dark:text-green-500 hover:bg-green-500/20" : "bg-gray-500/10 text-gray-500 hover:bg-gray-500/20"
+                    )}
+                    title={language === 'fr' ? 'Bloqueur de publicités' : 'Ad Blocker'}
+                   >
+                     <Shield className="w-4 h-4" />
+                     {adBlockEnabled && blockedAdsCount > 0 && <span className="text-xs font-bold">{blockedAdsCount}</span>}
+                   </button>
+
+                   <AnimatePresence>
+                     {showAdBlockMenu && (
+                       <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                        className={clsx(
+                          "absolute top-[calc(100%+12px)] right-0 w-80 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border p-5 z-50 overflow-hidden",
+                          theme === 'dark' ? "bg-[#181825] border-white/20 text-white" : "bg-white border-gray-200 text-gray-900"
+                        )}
+                       >
+                         <div className="flex items-center gap-3 mb-4">
+                            <div className={clsx("w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-colors", adBlockEnabled ? "bg-green-500/20 text-green-500" : "bg-gray-500/20 text-gray-400")}>
+                               <Shield className="w-5 h-5" />
+                            </div>
+                            <div>
+                               <h4 className="font-bold text-sm tracking-tight">{language === 'fr' ? 'Bloqueur de pubs' : 'Ad Blocker'}</h4>
+                               <p className="text-xs opacity-60">
+                                 {adBlockEnabled 
+                                    ? (language === 'fr' ? `${blockedAdsCount} éléments bloqués` : `${blockedAdsCount} items blocked`) 
+                                    : (language === 'fr' ? 'Désactivé sur cette session' : 'Disabled for session')}
+                               </p>
+                            </div>
+                         </div>
+                         
+                         <div className={clsx("p-3 rounded-lg mb-4 flex items-center justify-between", theme === 'dark' ? "bg-white/5" : "bg-gray-50")}>
+                            <span className="text-sm font-medium">{language === 'fr' ? 'Protection de Navigation' : 'Browsing Protection'}</span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const newVal = !adBlockEnabled;
+                                setAdBlockEnabled(newVal);
+                                if (window.electron?.setAdBlockEnabled) {
+                                  window.electron.setAdBlockEnabled(newVal);
+                                  // Recharge juste l'onglet actif si nécessaire
+                                  webviewRefs.current[activeTabId]?.reload();
+                                }
+                              }}
+                              className={clsx(
+                                "relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0",
+                                adBlockEnabled ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
+                              )}
+                            >
+                              <span className={clsx("inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform", adBlockEnabled ? "translate-x-6" : "translate-x-1")} />
+                            </button>
+                         </div>
+                         <button type="button" onClick={() => setShowAdBlockMenu(false)} className="w-full py-1.5 text-xs font-semibold uppercase tracking-wider text-center bg-transparent opacity-50 hover:opacity-100 transition-opacity rounded-md">
+                            {language === 'fr' ? 'Fermer' : 'Close'}
+                         </button>
+                       </motion.div>
+                     )}
+                   </AnimatePresence>
                  </div>
+                 {activeTab?.url?.startsWith('http') && (
+                   <button 
+                    type="button"
+                    onClick={enableZenMode}
+                    className="p-1 hover:bg-white/10 text-gray-400 rounded transition-colors"
+                    title={language === 'fr' ? 'Mode Lecture' : 'Reader Mode'}
+                   >
+                     <BookOpen className="w-4 h-4" />
+                   </button>
+                 )}
+                 {activeTab?.url?.startsWith('http') && (
+                   <button 
+                    type="button"
+                    onClick={enablePiP}
+                    className="p-1 hover:bg-white/10 text-gray-400 rounded transition-colors"
+                    title={language === 'fr' ? 'Lecteur Flottant (PiP)' : 'Picture in Picture'}
+                   >
+                     <Tv className="w-4 h-4" />
+                   </button>
+                 )}
+                 {activeTab?.url?.startsWith('http') && (
+                   <button 
+                    type="button"
+                    onClick={toggleMute}
+                    className="p-1 hover:bg-white/10 text-gray-400 rounded transition-colors"
+                    title={language === 'fr' ? 'Couper/Activer le son' : 'Mute/Unmute audio'}
+                   >
+                     <Volume2 className="w-4 h-4" />
+                   </button>
+                 )}
+                 {activeTab?.url?.startsWith('http') && (
+                   <button 
+                    type="button"
+                    onClick={openDevTools}
+                    className="p-1 hover:bg-white/10 text-gray-400 rounded transition-colors"
+                    title={language === 'fr' ? 'Inspecter la page' : 'Developer Tools'}
+                   >
+                     <Terminal className="w-4 h-4" />
+                   </button>
+                 )}
                  <button 
                   type="button"
                   className={clsx("p-1 hover:bg-white/10 rounded transition-colors", bookmarks.some(b => b.url === activeTab?.url) ? "text-yellow-400" : "text-gray-400")}
@@ -1402,21 +1730,21 @@ function App() {
               )}
             </button>
              <button 
-              className={clsx("p-1.5 hover:bg-white/10 rounded-lg transition-colors", showBookmarks ? clsx(colors.text, "bg-white/10") : "text-gray-400")}
+              className={clsx("p-1.5 hover:bg-white/10 rounded-lg transition-colors", activeTab?.url === 'explore://bookmarks' ? clsx(colors.text, "bg-white/10") : "text-gray-400")}
               onClick={() => { 
-                setShowBookmarks(!showBookmarks); 
-                setShowHistory(false); 
-                setIsDownloadsOpen(false);
+                updateTab(activeTabId, { url: 'explore://bookmarks' }); 
+                 
+                
               }}
             >
               <Book className="w-4 h-4" />
             </button>
              <button 
-              className={clsx("p-1.5 hover:bg-white/10 rounded-lg transition-colors", showHistory ? clsx(colors.text, "bg-white/10") : "text-gray-400")}
+              className={clsx("p-1.5 hover:bg-white/10 rounded-lg transition-colors", activeTab?.url === 'explore://history' ? clsx(colors.text, "bg-white/10") : "text-gray-400")}
               onClick={() => { 
-                setShowHistory(!showHistory); 
-                setShowBookmarks(false); 
-                setIsDownloadsOpen(false);
+                updateTab(activeTabId, { url: 'explore://history' }); 
+                 
+                
               }}
             >
               <div className="w-4 h-4 flex items-center justify-center font-bold text-xs">H</div>
@@ -1449,16 +1777,8 @@ function App() {
           
           {/* Window Controls for Left/Right Tab Position */}
           {(tabPosition === 'left' || tabPosition === 'right') && (
-             <div className="flex items-center gap-1 no-drag ml-2 pl-2 border-l border-white/10">
-                <button onClick={() => handleWindowControl('minimize')} className="p-1.5 hover:bg-white/10 rounded-lg text-gray-400">
-                  <Minus className="w-4 h-4" />
-                </button>
-                <button onClick={() => handleWindowControl('maximize')} className="p-1.5 hover:bg-white/10 rounded-lg text-gray-400">
-                  <Square className="w-3 h-3" />
-                </button>
-                <button onClick={() => handleWindowControl('close')} className="p-1.5 hover:bg-red-500/20 hover:text-red-500 rounded-lg text-gray-400">
-                  <X className="w-4 h-4" />
-                </button>
+             <div className="flex items-center no-drag ml-auto">
+                {renderWindowControls()}
              </div>
           )}
 
@@ -1480,7 +1800,15 @@ function App() {
 
         {/* Bottom Bar (if tabPosition is bottom) */}
         {tabPosition === 'bottom' && (
-          <div className={clsx("flex items-center gap-2 px-2 pb-2 order-last border-t drag-region", theme === 'dark' ? "bg-[#181825] border-white/5" : "bg-gray-100 border-gray-200")}>
+          <div 
+            className={clsx("flex items-center gap-2 px-2 pt-1 pb-1 order-last drag-region w-full min-w-0 transition-colors duration-1000 relative z-10")}
+            style={{
+              backgroundColor: ambientMode && activeThemeColor 
+                ? (theme === 'dark' ? `${activeThemeColor}1A` : `${activeThemeColor}0F`)
+                : (theme === 'dark' ? "#181825" : "#ffffff"),
+              backdropFilter: ambientMode && activeThemeColor ? "blur(40px)" : "none"
+            }}
+          >
             <div className={clsx("flex items-center gap-2 px-4 font-bold text-lg no-drag", colors.text)}>
               <Logo className="w-6 h-6" />
             </div>
@@ -1488,23 +1816,26 @@ function App() {
               axis="x" 
               values={tabs} 
               onReorder={setTabs} 
-              className="flex-1 flex overflow-x-auto no-drag gap-1 custom-scrollbar"
+              className="flex-1 flex flex-nowrap overflow-x-auto overflow-y-hidden min-w-0 no-drag gap-2 px-2 custom-scrollbar pb-1 pt-1 items-center"
             >
               {tabs.map(tab => (
                 <Reorder.Item
                   key={tab.id}
                   value={tab}
+                  layout
                   className={twMerge(
-                    "group flex items-center gap-2 px-3 py-2 rounded-b-lg cursor-pointer transition-all border-b border-x min-w-[150px] max-w-[200px]",
+                    "group relative flex items-center gap-2 px-3 py-1.5 rounded-2xl cursor-pointer transition-all border border-transparent min-w-[140px] max-w-[240px] shrink-0",
                     activeTabId === tab.id 
-                      ? clsx(colors.bg, colors.text, colors.borderSubtle, "shadow-sm")
-                      : clsx("text-gray-400 hover:bg-white/5", colors.textHover)
+                      ? clsx(colors.bg, colors.text, "shadow-lg relative overflow-hidden after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5", colors.bgSolid.replace("bg-", "after:bg-"), "border-white/5")
+                      : clsx("text-gray-400 hover:bg-white/10 dark:hover:bg-white/5", colors.textHover)
                   )}
                   onPointerDown={() => setActiveTabId(tab.id)}
                 >
-                   <div className={clsx("min-w-4 w-4 h-4 rounded-full flex items-center justify-center text-[10px]", activeTabId === tab.id ? clsx(colors.bg, colors.text) : "bg-white/10 text-gray-400")}>
+                   <div className={clsx("min-w-4 w-4 h-4 rounded-full flex items-center justify-center text-[10px] shrink-0", activeTabId === tab.id ? clsx(colors.borderSubtle, colors.text) : "bg-white/10 text-gray-400")}>
                     {tab.isLoading ? (
                       <RotateCw className={clsx("w-3 h-3 animate-spin", activeTabId === tab.id ? colors.text : "text-gray-400")} />
+                    ) : tab.url === 'explore://newtab' ? (
+                       <Logo className={clsx("w-3 h-3", activeTabId === tab.id ? colors.text : "text-gray-400")} />
                     ) : (
                       <img 
                       src={getFaviconUrl(tab.url)} 
@@ -1514,10 +1845,10 @@ function App() {
                     />
                     )}
                   </div>
-                  <span className="truncate text-sm flex-1 select-none">{tab.title || (language === 'fr' ? 'Chargement...' : 'Loading...')}</span>
+                  <span className={clsx("truncate text-sm flex-1 select-none transition-all", tabs.length > 10 && "hidden lg:block")}>{tab.title || (language === 'fr' ? 'Chargement...' : 'Loading...')}</span>
                   <button
                     onClick={(e) => closeTab(e, tab.id)}
-                    className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-white/20 rounded-md transition-all"
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-black/10 dark:hover:bg-white/20 rounded-full transition-all shrink-0"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -1529,13 +1860,16 @@ function App() {
                 </button>
               </div>
             </Reorder.Group>
-             <div className="flex items-center gap-1 no-drag px-2">
+             <div className="flex items-center gap-1 no-drag px-2 shrink-0 border-l border-white/10 pl-2">
                {/* Profile Button in Bottom Bar */}
-               <button 
-                onClick={() => setIsAuthModalOpen(true)}
-                className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-2"
-                title={user ? user.name : "Guest User"}
-              >
+                <button 
+                 onClick={() => {
+                   setAuthModalMode('login');
+                   setIsAuthModalOpen(true);
+                 }}
+                 className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-2"
+                 title={user ? user.name : "Guest User"}
+               >
                 {user ? (
                    <img src={user.avatar} className="w-5 h-5 rounded-full" alt="" />
                 ) : (
@@ -1650,7 +1984,9 @@ function App() {
           </div>
         )}
 
-      <div className="flex-1 relative bg-white dark:bg-[#1e1e2e]">
+      <div className={clsx("flex-1 relative transition-colors duration-1000",
+        (ambientMode && activeThemeColor) ? "bg-transparent" : "bg-white dark:bg-[#1e1e2e]"
+      )}>
         {tabs.map(tab => (
           <div
             key={tab.id}
@@ -1660,14 +1996,15 @@ function App() {
             )}
           >
             {tab.url.startsWith('explore://') ? (
-              <div className={clsx("w-full h-full", theme === 'dark' ? "bg-[#1e1e2e]" : "bg-white")}>
+              <div className={clsx("w-full h-full transition-colors duration-1000", 
+                 (ambientMode && activeThemeColor) ? "bg-transparent" : (theme === 'dark' ? "bg-[#1e1e2e]" : "bg-white")
+              )}>
                 {tab.url === 'explore://newtab' && (
                   <NewTabPage 
                     theme={theme} 
                     accentColor={accentColor}
                     onSearch={(query) => {
                       const url = getSearchUrl(query);
-                      console.log('Searching for:', query, 'URL:', url);
                       updateTab(tab.id, { url, title: url, isLoading: true });
                     }} 
                     onQueryChange={(query) => {
@@ -1676,7 +2013,117 @@ function App() {
                     }}
                     suggestions={suggestions}
                     language={language}
+                    blockedAdsCount={blockedAdsCount}
+                    adBlockEnabled={adBlockEnabled}
                   />
+                )}
+                {tab.url === 'explore://settings' && (
+                  <div className="w-full h-full overflow-y-auto bg-transparent p-12">
+                     <SettingsModal 
+                        isOpen={true}
+                        onClose={() => updateTab(tab.id, { url: 'explore://newtab' })}
+                        tabPosition={tabPosition}
+                        setTabPosition={setTabPosition}
+                        theme={theme}
+                        setTheme={setTheme}
+                        searchEngine={searchEngine}
+                        setSearchEngine={setSearchEngine}
+                        language={language}
+                        setLanguage={setLanguage}
+                        accentColor={accentColor}
+                        setAccentColor={setAccentColor}
+                        shortcuts={shortcuts}
+                        setShortcuts={setShortcuts}
+                        onOpenUrl={(url) => updateTab(activeTabId, { url })}
+                        onImportBookmarks={handleImportBookmarks}
+                        onClearData={deleteHistory}
+                        ambientMode={ambientMode}
+                        setAmbientMode={setAmbientMode}
+                     />
+                  </div>
+                )}
+                {tab.url === 'explore://history' && (
+                   <div className="w-full h-full overflow-y-auto bg-transparent p-12 max-w-4xl mx-auto">
+                      <h2 className="text-3xl font-bold mb-8 flex items-center gap-3">
+                         <div className={clsx("w-12 h-12 rounded-2xl flex items-center justify-center", colors.bgSolid, "text-white")}>H</div>
+                         {language === 'fr' ? 'Historique' : 'History'}
+                      </h2>
+                      <div className="grid gap-3">
+                         {history.map(item => (
+                            <div 
+                               key={item.id}
+                               onClick={() => updateTab(tab.id, { url: item.url })}
+                               className={clsx(
+                                  "p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between group",
+                                  theme === 'dark' ? "bg-white/5 border-white/10 hover:bg-white/10" : "bg-white border-gray-100 hover:bg-gray-50 shadow-sm"
+                               )}
+                            >
+                               <div className="flex items-center gap-4 min-w-0">
+                                  <img src={getFaviconUrl(item.url)} className="w-5 h-5 shrink-0" alt="" />
+                                  <div className="min-w-0">
+                                     <div className="font-bold truncate">{item.title}</div>
+                                     <div className="text-xs opacity-50 truncate">{item.url}</div>
+                                  </div>
+                               </div>
+                               <div className="text-xs opacity-40 shrink-0">{new Date(item.visited_at).toLocaleString()}</div>
+                            </div>
+                         ))}
+                      </div>
+                   </div>
+                )}
+                {tab.url === 'explore://bookmarks' && (
+                   <div className="w-full h-full overflow-y-auto bg-transparent p-12 max-w-6xl mx-auto">
+                      <div className="flex items-center justify-between mb-8">
+                         <h2 className="text-3xl font-bold flex items-center gap-3">
+                            <div className={clsx("w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg", colors.bgSolid, "text-white")}>
+                               <Star className="w-6 h-6 fill-current" />
+                            </div>
+                            {language === 'fr' ? 'Favoris' : 'Bookmarks'}
+                         </h2>
+                         <button 
+                            onClick={createFolder}
+                            className={clsx("px-4 py-2 rounded-xl text-white font-medium transition-all hover:scale-105 active:scale-95 shadow-md", colors.bgSolid)}
+                         >
+                            {language === 'fr' ? '+ Nouveau dossier' : '+ New Folder'}
+                         </button>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                         {bookmarks.map(bookmark => (
+                            <div 
+                               key={bookmark.id}
+                               onClick={() => bookmark.url && updateTab(tab.id, { url: bookmark.url })}
+                               className={clsx(
+                                  "group relative aspect-4/3 rounded-3xl border overflow-hidden transition-all cursor-pointer hover:shadow-2xl hover:-translate-y-1",
+                                  theme === 'dark' ? "bg-white/5 border-white/10" : "bg-white border-gray-100 shadow-sm"
+                               )}
+                            >
+                               <div className={clsx("absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity", colors.bgSolid)} />
+                               <div className="absolute inset-0 p-6 flex flex-col justify-between">
+                                  <div className="flex justify-between items-start">
+                                     <div className={clsx("w-12 h-12 rounded-2xl flex items-center justify-center shadow-md", theme === 'dark' ? "bg-white/10" : "bg-gray-100")}>
+                                        {bookmark.type === 'folder' ? (
+                                           <div className="text-2xl">📁</div>
+                                        ) : (
+                                           <img src={getFaviconUrl(bookmark.url)} className="w-6 h-6" alt="" />
+                                        )}
+                                     </div>
+                                     <button 
+                                        onClick={(e) => { e.stopPropagation(); confirmDeleteBookmark(bookmark.id); }}
+                                        className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white rounded-xl transition-all"
+                                     >
+                                        <Trash2 className="w-4 h-4" />
+                                     </button>
+                                  </div>
+                                  <div>
+                                     <div className="font-bold text-lg leading-tight mb-1 truncate">{bookmark.title}</div>
+                                     <div className="text-xs opacity-50 truncate">{bookmark.url || (language === 'fr' ? 'Dossier' : 'Folder')}</div>
+                                  </div>
+                               </div>
+                            </div>
+                         ))}
+                      </div>
+                   </div>
                 )}
               </div>
             ) : (
@@ -1700,6 +2147,7 @@ function App() {
                       });
                       el.addEventListener('dom-ready', () => {
                         updateTab(tab.id, { title: el.getTitle(), canGoBack: el.canGoBack(), canGoForward: el.canGoForward() });
+                        
                         // Inject theme CSS
                         if (theme === 'dark') {
                            el.insertCSS(`
@@ -1708,6 +2156,90 @@ function App() {
                             }
                           `);
                         }
+
+                        // Image Viewer & Zoom
+                        if (/\\.(jpe?g|png|gif|webp|svg|bmp|ico)$/i.test(el.getURL())) {
+                          el.executeJavaScript(`
+                            (function() {
+                              const img = document.querySelector('img');
+                              if (!img) return;
+                              document.body.style.display = 'flex';
+                              document.body.style.justifyContent = 'center';
+                              document.body.style.alignItems = 'center';
+                              document.body.style.height = '100vh';
+                              document.body.style.backgroundColor = '#000';
+                              document.body.style.margin = '0';
+                              document.body.style.overflow = 'hidden';
+                              
+                              let scale = 1;
+                              document.addEventListener('wheel', (e) => {
+                                if (e.ctrlKey || true) {
+                                  e.preventDefault();
+                                  scale += e.deltaY * -0.005;
+                                  scale = Math.min(Math.max(0.1, scale), 10);
+                                  img.style.transform = \`scale(\${scale})\`;
+                                  img.style.transition = 'transform 0.1s ease-out';
+                                }
+                              }, { passive: false });
+                            })();
+                          `).catch(console.error);
+                        }
+
+                        // Ambient Theme Color Extraction
+                        el.executeJavaScript(`
+                          (function() {
+                            // 1. Try meta theme-color
+                            const meta = document.querySelector('meta[name="theme-color"]');
+                            if (meta && meta.content) return meta.content;
+
+                            // 2. Try OpenGraph / Twitter meta colors
+                            const ogColor = document.querySelector('meta[property="og:color"]');
+                            if (ogColor && ogColor.content) return ogColor.content;
+
+                            const appleColor = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+                            if (appleColor && appleColor.content && appleColor.content.startsWith('#')) return appleColor.content;
+
+                            // 3. Try to find dominant color of the body or a large header
+                            const getElementColor = (el) => {
+                               if (!el) return null;
+                               const bg = window.getComputedStyle(el).backgroundColor;
+                               if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent' && bg !== 'rgb(255, 255, 255)') {
+                                  return bg;
+                               }
+                               return null;
+                            };
+
+                            const bodyColor = getElementColor(document.body);
+                            if (bodyColor) return bodyColor;
+
+                            const header = document.querySelector('header') || document.querySelector('nav') || document.querySelector('#header') || document.querySelector('#masthead-container');
+                            const headerColor = getElementColor(header);
+                            if (headerColor) return headerColor;
+
+                            // 5. Special check for YouTube
+                            if (window.location.hostname.includes('youtube.com')) {
+                               const ytHeader = document.querySelector('ytd-masthead');
+                               if (ytHeader) return getComputedStyle(ytHeader).backgroundColor;
+                            }
+
+                            return null;
+                          })();
+                        `).then((color) => {
+                          if (color && typeof color === 'string') {
+                            // Convert non-hex colors to hex if possible
+                            if (color.startsWith('rgb')) {
+                               const rgbMatch = color.match(/^rgb(?:a)?\\((\\d+),\\s*(\\d+),\\s*(\\d+)(?:,\\s*[\\d.]+)?\\)$/);
+                               if (rgbMatch) {
+                                  const r = parseInt(rgbMatch[1]).toString(16).padStart(2, '0');
+                                  const g = parseInt(rgbMatch[2]).toString(16).padStart(2, '0');
+                                  const b = parseInt(rgbMatch[3]).toString(16).padStart(2, '0');
+                                  updateTab(tab.id, { themeColor: '#' + r + g + b });
+                                  return;
+                               }
+                            }
+                            updateTab(tab.id, { themeColor: color });
+                          }
+                        }).catch(() => {});
                       });
                         el.addEventListener('new-window', (e) => {
                           const event = e as Event & { url: string };
@@ -1727,7 +2259,7 @@ function App() {
                 }}
                 className={clsx("w-full h-full bg-transparent")}
                 allowpopups={true}
-                partition={isPrivate ? "private" : undefined}
+                partition={isPrivate ? "private" : "persist:explore"}
                 webpreferences="contextIsolation=true, nodeIntegration=false"
               />
             )}
@@ -1761,6 +2293,7 @@ function App() {
         language={language}
         theme={theme}
         accentColor={accentColor}
+        initialMode={authModalMode}
       />
 
       <DownloadsPopup 
@@ -1797,6 +2330,8 @@ function App() {
         shortcuts={shortcuts}
         setShortcuts={setShortcuts}
         onImportBookmarks={handleImportBookmarks}
+        ambientMode={ambientMode}
+        setAmbientMode={setAmbientMode}
         onClearData={() => {
           setConfirmModal({
             isOpen: true,
@@ -1851,6 +2386,21 @@ function App() {
             language={language}
           />
       )}
+
+      <CommandPalette 
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onNavigate={(url) => {
+          if (!url.startsWith('http') && !url.startsWith('explore://')) {
+             updateTab(activeTabId, { url: getSearchUrl(url), title: url, isLoading: true });
+          } else {
+             updateTab(activeTabId, { url, title: url, isLoading: true });
+          }
+        }}
+        theme={theme}
+        language={language}
+        history={history}
+      />
     </div>
   );
 }

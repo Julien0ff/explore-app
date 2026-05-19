@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Logo } from './Logo';
-import { Search, Plus, X } from 'lucide-react';
+import { Search, Plus, X, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 
@@ -13,6 +13,8 @@ interface NewTabPageProps {
   language: 'fr' | 'en';
   onQueryChange?: (query: string) => void;
   suggestions?: string[];
+  blockedAdsCount?: number;
+  adBlockEnabled?: boolean;
 }
 
 interface QuickLink {
@@ -21,7 +23,7 @@ interface QuickLink {
   url: string;
 }
 
-export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChange, suggestions = [] }: NewTabPageProps) {
+export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChange, suggestions = [], blockedAdsCount = 0, adBlockEnabled = false }: NewTabPageProps) {
   const colors = getAccentColorClass(accentColor, theme === 'dark');
   const [query, setQuery] = useState('');
   const [greeting, setGreeting] = useState('');
@@ -36,13 +38,13 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
       
       // Set greeting
       if (language === 'fr') {
-        if (hour < 12) setGreeting('Bonjour.');
-        else if (hour < 18) setGreeting('Bon après-midi.');
-        else setGreeting('Bonsoir.');
+        if (hour < 12) setGreeting('Bonjour');
+        else if (hour < 18) setGreeting('Bon après-midi');
+        else setGreeting('Bonsoir');
       } else {
-        if (hour < 12) setGreeting('Good Morning.');
-        else if (hour < 18) setGreeting('Good Afternoon.');
-        else setGreeting('Good Evening.');
+        if (hour < 12) setGreeting('Good Morning');
+        else if (hour < 18) setGreeting('Good Afternoon');
+        else setGreeting('Good Evening');
       }
 
       // Set time
@@ -56,6 +58,12 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, [language]);
+
+  const [notes, setNotes] = useState(() => localStorage.getItem('explore_quick_notes') || '');
+
+  useEffect(() => {
+    localStorage.setItem('explore_quick_notes', notes);
+  }, [notes]);
 
   const [quickLinks, setQuickLinks] = useState<QuickLink[]>(() => {
     const saved = localStorage.getItem('explore_quicklinks_v4');
@@ -132,42 +140,42 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className={clsx(
-        "flex flex-col items-center justify-center h-full w-full",
-        theme === 'dark' ? "bg-[#1e1e2e] text-white" : "bg-white text-gray-900"
+        "flex flex-col items-center h-full w-full overflow-y-auto custom-scrollbar",
+        theme === 'dark' ? "bg-transparent text-white" : "bg-transparent text-gray-900"
       )}
     >
-      <div className="flex flex-col items-center gap-8 -mt-20 w-full max-w-2xl px-4">
+      <div className="flex flex-col items-center gap-6 w-full max-w-3xl px-6 py-8 min-h-full justify-center">
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 0.1 }}
-          className="flex flex-col items-center gap-2"
+          className="flex flex-col items-center gap-4"
         >
-          <Logo className="w-24 h-24" />
-          <div className={clsx("text-2xl font-light", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
-            {time}
+          <div className="relative">
+            <Logo className="w-16 h-16 relative z-10" />
           </div>
+            <div className="text-6xl font-extrabold tracking-tighter mb-2 bg-linear-to-r from-blue-400 to-blue-700 bg-clip-text text-transparent pr-3 pb-1">
+              {time}
+            </div>
+            <motion.h1 
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className={clsx(
+                "text-3xl font-extralight tracking-tight",
+                theme === 'dark' ? "text-gray-400" : "text-gray-500"
+              )}
+            >
+              {greeting}
+            </motion.h1>
         </motion.div>
-        
-        <motion.h1 
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className={clsx(
-            "text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r text-center pb-2",
-            colors.gradientFrom,
-            colors.gradientTo
-          )}
-        >
-          {greeting}
-        </motion.h1>
         
         <motion.form 
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.3 }}
           onSubmit={handleSubmit} 
-          className="w-full relative group"
+          className="w-full relative group z-20"
         >
           <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
             <Search className={clsx(
@@ -229,7 +237,7 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.4 }}
-          className="grid grid-cols-4 gap-4 w-full"
+          className="flex flex-wrap justify-center gap-4 sm:gap-6 w-full max-w-2xl mx-auto mt-4"
         >
           {quickLinks.map((link) => (
             <div
@@ -239,7 +247,7 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
                 onSearch(link.url);
               }}
               className={clsx(
-                "group flex flex-col items-center gap-3 p-4 rounded-xl transition-all relative cursor-pointer",
+                "group flex flex-col items-center gap-3 p-3 w-24 rounded-2xl transition-all relative cursor-pointer",
                 theme === 'dark' ? "hover:bg-white/5" : "hover:bg-gray-100"
               )}
             >
@@ -277,7 +285,7 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
           <button
             onClick={() => setIsAddingLink(true)}
             className={clsx(
-              "flex flex-col items-center gap-3 p-4 rounded-xl transition-all group",
+              "flex flex-col items-center gap-3 p-3 w-24 rounded-2xl transition-all group",
               theme === 'dark' ? "hover:bg-white/5 text-gray-500 hover:text-white" : "hover:bg-gray-100 text-gray-400 hover:text-gray-900",
               colors.textHover
             )}
@@ -291,6 +299,56 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
             <span className="text-sm font-medium">{language === 'fr' ? "Ajouter un raccourci" : "Add Shortcut"}</span>
           </button>
         </motion.div>
+
+        {/* Notes Widget */}
+        <motion.div
+           initial={{ y: 20, opacity: 0 }}
+           animate={{ y: 0, opacity: 1 }}
+           transition={{ delay: 0.5 }}
+           className="w-full mt-4 max-w-xl mx-auto"
+        >
+          <div className={clsx(
+            "p-6 rounded-4xl border backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] transition-all focus-within:shadow-[0_8px_32px_rgba(0,0,0,0.2)] focus-within:border-white/20",
+            theme === 'dark' ? "bg-[#181825]/60 border-white/10" : "bg-white/60 border-gray-200"
+          )}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] pl-1">
+                <span className={clsx("w-1.5 h-1.5 rounded-full animate-pulse", theme === 'dark' ? "bg-yellow-500" : "bg-yellow-400")} />
+                {language === 'fr' ? 'Notes Rapides' : 'Quick Notes'}
+              </div>
+            </div>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder={language === 'fr' ? "Écrivez quelque chose à ne pas oublier..." : "Write something to remember..."}
+              className={clsx(
+                "w-full h-28 bg-transparent border-none outline-none resize-none text-[16px] leading-relaxed custom-scrollbar px-1", 
+                theme === 'dark' ? "placeholder-gray-600 text-gray-200" : "placeholder-gray-400 text-gray-700"
+              )}
+            />
+          </div>
+          
+          {/* AdBlock Stats Badge */}
+          {adBlockEnabled && blockedAdsCount > 0 && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.6 }}
+              className="mt-6 flex justify-center"
+            >
+              <div className={clsx(
+                "flex items-center gap-2 px-4 py-2 rounded-full border shadow-sm backdrop-blur-md text-[13px] font-medium transition-colors",
+                theme === 'dark' ? "bg-green-500/10 border-green-500/20 text-green-400" : "bg-green-50 border-green-200 text-green-700"
+              )}>
+                <Shield className="w-4 h-4" />
+                {language === 'fr' 
+                  ? `${blockedAdsCount.toLocaleString()} publicités et traqueurs bloqués` 
+                  : `${blockedAdsCount.toLocaleString()} ads and trackers blocked`}
+              </div>
+            </motion.div>
+          )}
+        </motion.div>
+
       </div>
 
       <AnimatePresence>
