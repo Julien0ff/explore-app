@@ -14,7 +14,6 @@ import {
   BookOpen,
   Volume2,
   Terminal,
-  Book,
   Key,
   Globe,
   FolderPlus,
@@ -75,6 +74,26 @@ function App() {
   const [adBlockEnabled, setAdBlockEnabled] = useState(true);
   const [showAdBlockMenu, setShowAdBlockMenu] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+
+  const [historySearchQuery, setHistorySearchQuery] = useState('');
+  const [bookmarkSearchQuery, setBookmarkSearchQuery] = useState('');
+  const [bookmarkContextMenu, setBookmarkContextMenu] = useState<{
+    isOpen: boolean;
+    x: number;
+    y: number;
+    bookmarkId: string;
+    bookmarkUrl?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const handleGlobalClick = () => {
+      if (bookmarkContextMenu?.isOpen) {
+        setBookmarkContextMenu(null);
+      }
+    };
+    document.addEventListener('click', handleGlobalClick);
+    return () => document.removeEventListener('click', handleGlobalClick);
+  }, [bookmarkContextMenu]);
   
   const [showBookmarksBar] = useState(() => {
     return localStorage.getItem('showBookmarksBar') === 'true';
@@ -152,6 +171,84 @@ function App() {
     
     document.documentElement.style.setProperty('--scrollbar-rgb', hexToRgb(colors.hex));
   }, [theme, colors.hex]);
+
+  // Auto Updater State
+  const [updateState, setUpdateState] = useState<{
+    status: 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'not-available' | 'error';
+    progress?: number;
+    error?: string;
+    showModal: boolean;
+  }>({
+    status: 'idle',
+    showModal: false,
+  });
+
+  useEffect(() => {
+    if (!window.electron) return;
+
+    const onChecking = () => {
+      console.log('Renderer: update_checking received');
+      setUpdateState(prev => ({ ...prev, status: 'checking', showModal: true, error: undefined }));
+    };
+
+    const onAvailable = () => {
+      console.log('Renderer: update_available received');
+      setUpdateState(prev => ({ ...prev, status: 'available', showModal: true }));
+    };
+
+    const onNotAvailable = () => {
+      console.log('Renderer: update_not_available received');
+      setUpdateState(prev => {
+        if (prev.status === 'checking') {
+          return { ...prev, status: 'not-available' };
+        }
+        return prev;
+      });
+      // Auto hide after 3 seconds if not-available
+      setTimeout(() => {
+        setUpdateState(prev => prev.status === 'not-available' ? { ...prev, showModal: false, status: 'idle' } : prev);
+      }, 3000);
+    };
+
+    const onDownloaded = () => {
+      console.log('Renderer: update_downloaded received');
+      setUpdateState(prev => ({ ...prev, status: 'downloaded', showModal: true }));
+    };
+
+    const onProgress = (percent: number) => {
+      console.log('Renderer: download_progress received', percent);
+      setUpdateState(prev => ({ ...prev, status: 'downloading', progress: percent, showModal: true }));
+    };
+
+    const onError = (error: string) => {
+      console.error('Renderer: update_error received', error);
+      setUpdateState(prev => ({ ...prev, status: 'error', error, showModal: true }));
+    };
+
+    window.electron.onUpdateChecking(onChecking);
+    window.electron.onUpdateAvailable(onAvailable);
+    window.electron.onUpdateNotAvailable(onNotAvailable);
+    window.electron.onUpdateDownloaded(onDownloaded);
+    window.electron.onDownloadProgress(onProgress);
+    window.electron.onUpdateError(onError);
+
+    return () => {
+      if (window.electron) {
+        window.electron.offUpdateChecking();
+        window.electron.offUpdateAvailable();
+        window.electron.offUpdateNotAvailable();
+        window.electron.offUpdateDownloaded();
+        window.electron.offDownloadProgress();
+        window.electron.offUpdateError();
+      }
+    };
+  }, []);
+
+  const handleCheckForUpdates = () => {
+    if (window.electron?.checkForUpdate) {
+      window.electron.checkForUpdate();
+    }
+  };
 
   useEffect(() => {
     localStorage.setItem('searchEngine', searchEngine);
@@ -251,16 +348,18 @@ function App() {
     webview.openDevTools();
   };
 
-  function addTab() {
+  function addTab(url = 'explore://newtab', focus = true) {
     const newId = crypto.randomUUID();
     const newTab: Tab = {
       id: newId,
-      url: 'explore://newtab',
-      title: languageRef.current === 'fr' ? 'Nouvel onglet' : 'New Tab',
+      url,
+      title: url === 'explore://newtab' ? (languageRef.current === 'fr' ? 'Nouvel onglet' : 'New Tab') : url,
       isLoading: false
     };
     setTabs(prev => [...prev, newTab]);
-    setActiveTabId(newId);
+    if (focus) {
+      setActiveTabId(newId);
+    }
   }
 
   function closeTab(e: React.MouseEvent | { stopPropagation: () => void }, id: string) {
@@ -1098,6 +1197,13 @@ function App() {
     }
   };
 
+  const deleteHistoryItem = async (id: string) => {
+    setHistory(prev => prev.filter(item => item.id !== id));
+    if (user) {
+      await supabase.from('history').delete().eq('id', id);
+    }
+  };
+
   const handleImportBookmarks = async () => {
     if (!window.electron?.importBookmarks) return;
     
@@ -1265,7 +1371,7 @@ function App() {
 
           <div className="px-3 pb-2">
             <button 
-              onClick={addTab}
+              onClick={() => addTab()}
               className={clsx("w-full flex items-center justify-center gap-2 text-white py-2 rounded-xl transition-all shadow-lg font-medium", colors.bgSolid, colors.bgHover, colors.shadow)}
               title={language === 'fr' ? 'Nouvel onglet' : 'New Tab'}
             >
@@ -1273,9 +1379,11 @@ function App() {
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
-            <div className="text-[10px] font-bold text-gray-500 px-1 py-1 uppercase tracking-[0.2em] mb-1 text-center">
-              {language === 'fr' ? 'Onglets' : 'Tabs'}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-none px-3 py-2 space-y-1">
+            <div className="w-full flex justify-center mb-1 py-1">
+              <div className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] pl-[0.2em]">
+                {language === 'fr' ? 'Onglets' : 'Tabs'}
+              </div>
             </div>
             {tabs.map(tab => (
               <div
@@ -1379,7 +1487,7 @@ function App() {
               axis="x" 
               values={tabs} 
               onReorder={setTabs} 
-              className="flex-1 flex flex-nowrap overflow-x-auto overflow-y-hidden min-w-0 no-drag gap-2 px-2 custom-scrollbar pb-1 pt-1 items-center"
+              className="flex-1 flex flex-nowrap overflow-x-auto overflow-y-hidden min-w-0 no-drag gap-2 px-2 scrollbar-none pb-1 pt-1 items-center"
             >
               {tabs.map(tab => (
                 <Reorder.Item
@@ -1394,7 +1502,7 @@ function App() {
                   )}
                   onPointerDown={() => setActiveTabId(tab.id)}
                 >
-                   <div className={clsx("min-w-4 w-4 h-4 rounded-full flex items-center justify-center text-[10px] shrink-0", activeTabId === tab.id ? clsx(colors.borderSubtle, colors.text) : "bg-white/10 text-gray-400")}>
+                   <div className={clsx("min-w-5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0", activeTabId === tab.id ? clsx(colors.borderSubtle, colors.text) : "bg-white/10 text-gray-400")}>
                     {tab.isLoading ? (
                       <RotateCw className={clsx("w-3 h-3 animate-spin", activeTabId === tab.id ? colors.text : "text-gray-400")} />
                     ) : (
@@ -1406,17 +1514,17 @@ function App() {
                     />
                     )}
                   </div>
-                  <span className={clsx("truncate text-sm flex-1 select-none transition-all", tabs.length > 10 && "hidden lg:block")}>{tab.title || (language === 'fr' ? 'Chargement...' : 'Loading...')}</span>
+                  <span className={clsx("truncate text-sm flex-1 text-center select-none transition-all", tabs.length > 10 && "hidden lg:block")}>{tab.title || (language === 'fr' ? 'Chargement...' : 'Loading...')}</span>
                   <button
                     onClick={(e) => closeTab(e, tab.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-black/10 dark:hover:bg-white/20 rounded-full transition-all shrink-0"
+                    className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/20 rounded-full transition-all shrink-0"
                   >
                     <X className="w-3 h-3" />
                   </button>
                 </Reorder.Item>
               ))}
               <div className="flex items-center">
-                <button onClick={addTab} className="p-2 hover:bg-white/10 rounded-lg text-gray-400">
+                <button onClick={() => addTab()} className="p-2 hover:bg-white/10 rounded-lg text-gray-400">
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
@@ -1460,7 +1568,7 @@ function App() {
         {/* Navigation Bar & Window Controls */}
         <div 
           className={clsx(
-            "h-12 flex items-center px-4 gap-3 border-b drag-region relative z-30 transition-colors duration-1000", 
+            "h-12 grid grid-cols-3 items-center px-4 border-b drag-region relative z-30 transition-colors duration-1000", 
             tabPosition === 'bottom' && "order-last border-t border-b-0"
           )}
           style={{
@@ -1472,7 +1580,7 @@ function App() {
           }}
         >
           
-          <div className="flex items-center gap-1 no-drag">
+          <div className="flex items-center gap-1 no-drag justify-start">
             <button 
               className={clsx("p-1.5 hover:bg-white/10 rounded-lg text-gray-400 transition-colors disabled:opacity-30", colors.textHover)}
               onClick={() => webviewRefs.current[activeTabId]?.goBack()}
@@ -1493,8 +1601,8 @@ function App() {
             </button>
           </div>
 
-          <form onSubmit={handleNavigate} className="flex-1 max-w-2xl mx-auto no-drag relative z-50 px-4">
-            <div className="relative group">
+          <form onSubmit={handleNavigate} className="w-full max-w-2xl mx-auto no-drag relative z-50 px-4 flex justify-center">
+            <div className="relative group w-full">
               <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
                 <Search className={clsx("w-4 h-4 text-gray-500 transition-colors", `group-focus-within:${colors.text}`)} />
               </div>
@@ -1514,7 +1622,7 @@ function App() {
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                 ref={urlInputRef}
                 className={clsx(
-                    "w-full border rounded-2xl py-1.5 pl-11 pr-32 text-sm focus:outline-none focus:ring-2 transition-all shadow-sm",
+                    "w-full border rounded-2xl py-1.5 pl-11 pr-44 text-sm focus:outline-none focus:ring-2 transition-all shadow-sm overflow-hidden text-ellipsis whitespace-nowrap",
                     colors.ring,
                     ambientMode && activeThemeColor
                       ? (theme === 'dark' ? "bg-black/20 border-white/5 text-gray-200 placeholder-gray-600" : "bg-white/40 border-black/5 text-gray-800 placeholder-gray-400")
@@ -1522,19 +1630,19 @@ function App() {
                   )}
                 placeholder={language === 'fr' ? "Rechercher ou entrer une URL" : "Search or enter URL"}
               />
-               <div className="absolute inset-y-0 right-2 flex items-center gap-2">
+               <div className="absolute inset-y-0 right-2 flex items-center gap-1 flex-nowrap">
                  {/* Ad Blocker Menu Indicator */}
-                 <div className="relative flex items-center">
+                 <div className="relative flex items-center shrink-0">
                    <button 
                     type="button"
                     onClick={() => setShowAdBlockMenu(!showAdBlockMenu)}
-                    className={clsx("flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-all cursor-pointer", 
+                    className={clsx("flex items-center gap-1 px-1.5 py-1 rounded-lg transition-all cursor-pointer shrink-0", 
                       adBlockEnabled ? "bg-green-500/10 text-green-600 dark:text-green-500 hover:bg-green-500/20" : "bg-gray-500/10 text-gray-500 hover:bg-gray-500/20"
                     )}
                     title={language === 'fr' ? 'Bloqueur de publicités' : 'Ad Blocker'}
                    >
-                     <Shield className="w-4 h-4" />
-                     {adBlockEnabled && blockedAdsCount > 0 && <span className="text-xs font-bold">{blockedAdsCount}</span>}
+                     <Shield className="w-3.5 h-3.5 shrink-0" />
+                     {adBlockEnabled && blockedAdsCount > 0 && <span className="text-[10px] font-bold leading-none">{blockedAdsCount}</span>}
                    </button>
 
                    <AnimatePresence>
@@ -1644,7 +1752,7 @@ function App() {
             {/* Search Suggestions Dropdown */}
             {showSuggestions && suggestions.length > 0 && (
               <div className={clsx(
-                "absolute top-full left-0 right-0 mt-1 rounded-xl shadow-xl border overflow-hidden z-50",
+                "absolute top-full left-4 right-4 mt-1 rounded-xl shadow-xl border overflow-hidden z-50",
                 theme === 'dark' ? "bg-[#1e1e2e] border-white/10" : "bg-white border-gray-100"
               )}>
                 {suggestions.map((suggestion, index) => (
@@ -1680,7 +1788,7 @@ function App() {
             )}
           </form>
 
-          <div className="flex items-center gap-1 no-drag">
+          <div className="flex items-center gap-1.5 no-drag justify-end ml-auto">
              <button 
               onClick={() => {
                 setIsDownloadsOpen(!isDownloadsOpen);
@@ -1730,57 +1838,40 @@ function App() {
               )}
             </button>
              <button 
-              className={clsx("p-1.5 hover:bg-white/10 rounded-lg transition-colors", activeTab?.url === 'explore://bookmarks' ? clsx(colors.text, "bg-white/10") : "text-gray-400")}
-              onClick={() => { 
-                updateTab(activeTabId, { url: 'explore://bookmarks' }); 
-                 
-                
-              }}
-            >
-              <Book className="w-4 h-4" />
-            </button>
-             <button 
               className={clsx("p-1.5 hover:bg-white/10 rounded-lg transition-colors", activeTab?.url === 'explore://history' ? clsx(colors.text, "bg-white/10") : "text-gray-400")}
               onClick={() => { 
                 updateTab(activeTabId, { url: 'explore://history' }); 
-                 
-                
               }}
+              title={language === 'fr' ? 'Historique' : 'History'}
             >
               <div className="w-4 h-4 flex items-center justify-center font-bold text-xs">H</div>
             </button>
              <button 
-              className={clsx("p-1.5 hover:bg-white/10 rounded-lg transition-colors", showPasswordManager ? clsx(colors.text, "bg-white/10") : "text-gray-400")}
+              className={clsx("p-1.5 hover:bg-white/10 rounded-lg transition-colors", activeTab?.url === 'explore://passwords' ? clsx(colors.text, "bg-white/10") : "text-gray-400")}
               onClick={() => { 
-                setShowPasswordManager(true);
-                setShowHistory(false); 
-                setShowBookmarks(false); 
-                setIsDownloadsOpen(false);
+                updateTab(activeTabId, { url: 'explore://passwords' }); 
               }}
               title={language === 'fr' ? 'Mots de passe' : 'Passwords'}
             >
               <Key className="w-4 h-4" />
             </button>
              <button 
-              className={clsx("p-1.5 hover:bg-white/10 rounded-lg transition-colors", showVPN ? clsx(colors.text, "bg-white/10") : "text-gray-400")}
+              className={clsx("p-1.5 hover:bg-white/10 rounded-lg transition-colors", activeTab?.url === 'explore://vpn' ? clsx(colors.text, "bg-white/10") : "text-gray-400")}
               onClick={() => { 
-                setShowVPN(true);
-                setShowHistory(false); 
-                setShowBookmarks(false); 
-                setIsDownloadsOpen(false);
+                updateTab(activeTabId, { url: 'explore://vpn' }); 
               }}
               title={language === 'fr' ? 'VPN' : 'VPN'}
             >
               <Globe className="w-4 h-4" />
             </button>
+            
+            {/* Window Controls for Left/Right Tab Position */}
+            {(tabPosition === 'left' || tabPosition === 'right') && (
+               <div className="flex items-center no-drag ml-1.5 border-l border-white/10 pl-1.5">
+                  {renderWindowControls()}
+               </div>
+            )}
           </div>
-          
-          {/* Window Controls for Left/Right Tab Position */}
-          {(tabPosition === 'left' || tabPosition === 'right') && (
-             <div className="flex items-center no-drag ml-auto">
-                {renderWindowControls()}
-             </div>
-          )}
 
         </div>
 
@@ -1816,7 +1907,7 @@ function App() {
               axis="x" 
               values={tabs} 
               onReorder={setTabs} 
-              className="flex-1 flex flex-nowrap overflow-x-auto overflow-y-hidden min-w-0 no-drag gap-2 px-2 custom-scrollbar pb-1 pt-1 items-center"
+              className="flex-1 flex flex-nowrap overflow-x-auto overflow-y-hidden min-w-0 no-drag gap-2 px-2 scrollbar-none pb-1 pt-1 items-center"
             >
               {tabs.map(tab => (
                 <Reorder.Item
@@ -1831,7 +1922,7 @@ function App() {
                   )}
                   onPointerDown={() => setActiveTabId(tab.id)}
                 >
-                   <div className={clsx("min-w-4 w-4 h-4 rounded-full flex items-center justify-center text-[10px] shrink-0", activeTabId === tab.id ? clsx(colors.borderSubtle, colors.text) : "bg-white/10 text-gray-400")}>
+                   <div className={clsx("min-w-5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0", activeTabId === tab.id ? clsx(colors.borderSubtle, colors.text) : "bg-white/10 text-gray-400")}>
                     {tab.isLoading ? (
                       <RotateCw className={clsx("w-3 h-3 animate-spin", activeTabId === tab.id ? colors.text : "text-gray-400")} />
                     ) : tab.url === 'explore://newtab' ? (
@@ -1845,17 +1936,17 @@ function App() {
                     />
                     )}
                   </div>
-                  <span className={clsx("truncate text-sm flex-1 select-none transition-all", tabs.length > 10 && "hidden lg:block")}>{tab.title || (language === 'fr' ? 'Chargement...' : 'Loading...')}</span>
+                  <span className={clsx("truncate text-sm flex-1 text-center select-none transition-all", tabs.length > 10 && "hidden lg:block")}>{tab.title || (language === 'fr' ? 'Chargement...' : 'Loading...')}</span>
                   <button
                     onClick={(e) => closeTab(e, tab.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-black/10 dark:hover:bg-white/20 rounded-full transition-all shrink-0"
+                    className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/20 rounded-full transition-all shrink-0"
                   >
                     <X className="w-3 h-3" />
                   </button>
                 </Reorder.Item>
               ))}
               <div className="flex items-center">
-                <button onClick={addTab} className="p-2 hover:bg-white/10 rounded-lg text-gray-400">
+                <button onClick={() => addTab()} className="p-2 hover:bg-white/10 rounded-lg text-gray-400">
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
@@ -1996,9 +2087,10 @@ function App() {
             )}
           >
             {tab.url.startsWith('explore://') ? (
-              <div className={clsx("w-full h-full transition-colors duration-1000", 
-                 (ambientMode && activeThemeColor) ? "bg-transparent" : (theme === 'dark' ? "bg-[#1e1e2e]" : "bg-white")
-              )}>
+              activeTabId === tab.id ? (
+                <div className={clsx("w-full h-full transition-colors duration-1000", 
+                   (ambientMode && activeThemeColor) ? "bg-transparent" : (theme === 'dark' ? "bg-[#1e1e2e]" : "bg-white")
+                )}>
                 {tab.url === 'explore://newtab' && (
                   <NewTabPage 
                     theme={theme} 
@@ -2015,12 +2107,14 @@ function App() {
                     language={language}
                     blockedAdsCount={blockedAdsCount}
                     adBlockEnabled={adBlockEnabled}
+                    bookmarks={bookmarks}
                   />
                 )}
                 {tab.url === 'explore://settings' && (
                   <div className="w-full h-full overflow-y-auto bg-transparent p-12">
                      <SettingsModal 
                         isOpen={true}
+                        isFullPage={true}
                         onClose={() => updateTab(tab.id, { url: 'explore://newtab' })}
                         tabPosition={tabPosition}
                         setTabPosition={setTabPosition}
@@ -2039,93 +2133,274 @@ function App() {
                         onClearData={deleteHistory}
                         ambientMode={ambientMode}
                         setAmbientMode={setAmbientMode}
+                        checkForUpdates={handleCheckForUpdates}
                      />
                   </div>
                 )}
                 {tab.url === 'explore://history' && (
-                   <div className="w-full h-full overflow-y-auto bg-transparent p-12 max-w-4xl mx-auto">
-                      <h2 className="text-3xl font-bold mb-8 flex items-center gap-3">
-                         <div className={clsx("w-12 h-12 rounded-2xl flex items-center justify-center", colors.bgSolid, "text-white")}>H</div>
-                         {language === 'fr' ? 'Historique' : 'History'}
-                      </h2>
-                      <div className="grid gap-3">
-                         {history.map(item => (
-                            <div 
-                               key={item.id}
-                               onClick={() => updateTab(tab.id, { url: item.url })}
-                               className={clsx(
-                                  "p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between group",
-                                  theme === 'dark' ? "bg-white/5 border-white/10 hover:bg-white/10" : "bg-white border-gray-100 hover:bg-gray-50 shadow-sm"
-                               )}
-                            >
-                               <div className="flex items-center gap-4 min-w-0">
-                                  <img src={getFaviconUrl(item.url)} className="w-5 h-5 shrink-0" alt="" />
-                                  <div className="min-w-0">
-                                     <div className="font-bold truncate">{item.title}</div>
-                                     <div className="text-xs opacity-50 truncate">{item.url}</div>
-                                  </div>
-                               </div>
-                               <div className="text-xs opacity-40 shrink-0">{new Date(item.visited_at).toLocaleString()}</div>
+                   <div className="w-full h-full overflow-y-auto bg-transparent p-12 max-w-4xl mx-auto animate-fadeIn">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                         <h2 className="text-3xl font-black flex items-center gap-3">
+                            <div className={clsx("w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg", colors.bgSolid)}>
+                               H
                             </div>
-                         ))}
+                            {language === 'fr' ? 'Historique de navigation' : 'Browsing History'}
+                         </h2>
+                         <div className="flex items-center gap-3">
+                            <div className="relative flex-1 md:w-64 group">
+                               <Search className={clsx("absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors", theme === 'dark' ? "text-gray-500 group-focus-within:text-blue-400" : "text-gray-400 group-focus-within:text-blue-500")} />
+                               <input
+                                  type="text"
+                                  placeholder={language === 'fr' ? 'Rechercher...' : 'Search...'}
+                                  value={historySearchQuery}
+                                  onChange={(e) => setHistorySearchQuery(e.target.value)}
+                                  className={clsx(
+                                     "w-full pl-10 pr-4 py-2.5 rounded-2xl border text-sm outline-none transition-all",
+                                     theme === 'dark' ? "bg-white/5 border-white/10 focus:bg-white/10 focus:border-blue-500/50" : "bg-white border-gray-200 focus:border-blue-500/50 shadow-sm"
+                                  )}
+                               />
+                            </div>
+                            <button
+                               onClick={() => {
+                                  if (confirm(language === 'fr' ? 'Voulez-vous vraiment effacer tout votre historique ?' : 'Are you sure you want to clear all your history?')) {
+                                     deleteHistory();
+                                  }
+                               }}
+                               className="px-4 py-2.5 rounded-2xl bg-red-500/10 text-red-500 hover:bg-red-500/20 font-bold text-sm transition-all hover:scale-105 active:scale-95 shadow-sm"
+                            >
+                               {language === 'fr' ? 'Effacer tout' : 'Clear all'}
+                            </button>
+                         </div>
                       </div>
+
+                      {(() => {
+                         const filteredHistory = history.filter(item => 
+                            item.title.toLowerCase().includes(historySearchQuery.toLowerCase()) || 
+                            item.url.toLowerCase().includes(historySearchQuery.toLowerCase())
+                         );
+
+                         if (filteredHistory.length === 0) {
+                            return (
+                               <div className="text-center py-20 opacity-50 border border-dashed border-white/10 rounded-3xl bg-white/2">
+                                  <div className="text-4xl mb-3">🕒</div>
+                                  <p className="font-semibold text-lg">{language === 'fr' ? 'Aucun historique trouvé' : 'No history found'}</p>
+                                  <p className="text-xs opacity-50 mt-1">{language === 'fr' ? 'Les sites que vous visitez s\'afficheront ici.' : 'Websites you visit will be listed here.'}</p>
+                               </div>
+                            );
+                         }
+
+                         const today = new Date();
+                         today.setHours(0,0,0,0);
+                         const yesterday = new Date();
+                         yesterday.setDate(yesterday.getDate() - 1);
+                         yesterday.setHours(0,0,0,0);
+
+                         const groups: { title: string; items: HistoryItem[] }[] = [
+                            { title: language === 'fr' ? "Aujourd'hui" : "Today", items: [] },
+                            { title: language === 'fr' ? "Hier" : "Yesterday", items: [] },
+                            { title: language === 'fr' ? "Plus ancien" : "Older", items: [] }
+                         ];
+
+                         filteredHistory.forEach(item => {
+                            const d = new Date(item.visited_at);
+                            d.setHours(0,0,0,0);
+                            if (d.getTime() === today.getTime()) {
+                               groups[0].items.push(item);
+                            } else if (d.getTime() === yesterday.getTime()) {
+                               groups[1].items.push(item);
+                            } else {
+                               groups[2].items.push(item);
+                            }
+                         });
+
+                         return (
+                            <div className="space-y-8">
+                               {groups.map(group => {
+                                  if (group.items.length === 0) return null;
+                                  return (
+                                     <div key={group.title} className="space-y-3">
+                                        <h3 className={clsx("text-sm font-bold uppercase tracking-wider opacity-60 flex items-center gap-2 px-1", theme === 'dark' ? "text-white" : "text-gray-700")}>
+                                           <span>{group.title}</span>
+                                           <span className={clsx("text-[10px] px-2 py-0.5 rounded-full border", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-100 border-gray-200")}>{group.items.length}</span>
+                                        </h3>
+                                        <div className="grid gap-2">
+                                           {group.items.map(item => (
+                                              <div 
+                                                 key={item.id}
+                                                 onClick={() => updateTab(tab.id, { url: item.url })}
+                                                 className={clsx(
+                                                    "p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between group/item hover:translate-x-0.5",
+                                                    theme === 'dark' ? "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20" : "bg-white border-gray-100 hover:bg-gray-50 shadow-sm"
+                                                 )}
+                                              >
+                                                 <div className="flex items-center gap-4 min-w-0">
+                                                    <div className={clsx("w-9 h-9 rounded-xl flex items-center justify-center p-1.5 shrink-0 shadow-xs", theme === 'dark' ? "bg-white/5" : "bg-gray-50")}>
+                                                       <img 
+                                                          src={getFaviconUrl(item.url)} 
+                                                          className="w-full h-full object-contain" 
+                                                          alt=""
+                                                          onError={(e) => { e.currentTarget.src = `https://icons.duckduckgo.com/ip3/${new URL(item.url).hostname}.ico`; }}
+                                                       />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                       <div className="font-bold text-sm truncate leading-tight group-hover/item:text-blue-400 transition-colors">{item.title}</div>
+                                                       <div className="text-[10px] opacity-40 truncate mt-1">{item.url}</div>
+                                                    </div>
+                                                 </div>
+                                                 <div className="flex items-center gap-4 shrink-0">
+                                                    <div className="text-[10px] font-mono opacity-40">{new Date(item.visited_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                                    <button 
+                                                       onClick={(e) => { e.stopPropagation(); deleteHistoryItem(item.id); }}
+                                                       className={clsx(
+                                                          "p-2 opacity-0 group-hover/item:opacity-100 rounded-xl transition-all hover:bg-red-500/10 text-red-500"
+                                                       )}
+                                                       title={language === 'fr' ? 'Supprimer' : 'Delete'}
+                                                    >
+                                                       <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                 </div>
+                                              </div>
+                                           ))}
+                                        </div>
+                                     </div>
+                                  );
+                               })}
+                            </div>
+                         );
+                      })()}
                    </div>
                 )}
                 {tab.url === 'explore://bookmarks' && (
-                   <div className="w-full h-full overflow-y-auto bg-transparent p-12 max-w-6xl mx-auto">
-                      <div className="flex items-center justify-between mb-8">
-                         <h2 className="text-3xl font-bold flex items-center gap-3">
-                            <div className={clsx("w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg", colors.bgSolid, "text-white")}>
+                   <div className="w-full h-full overflow-y-auto bg-transparent p-12 max-w-6xl mx-auto animate-fadeIn relative">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                         <h2 className="text-3xl font-black flex items-center gap-3">
+                            <div className={clsx("w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg", colors.bgSolid)}>
                                <Star className="w-6 h-6 fill-current" />
                             </div>
-                            {language === 'fr' ? 'Favoris' : 'Bookmarks'}
+                            {language === 'fr' ? 'Mes Favoris' : 'My Bookmarks'}
                          </h2>
-                         <button 
-                            onClick={createFolder}
-                            className={clsx("px-4 py-2 rounded-xl text-white font-medium transition-all hover:scale-105 active:scale-95 shadow-md", colors.bgSolid)}
-                         >
-                            {language === 'fr' ? '+ Nouveau dossier' : '+ New Folder'}
-                         </button>
+                         <div className="flex items-center gap-3">
+                            <div className="relative flex-1 md:w-64 group">
+                               <Search className={clsx("absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors", theme === 'dark' ? "text-gray-500 group-focus-within:text-blue-400" : "text-gray-400 group-focus-within:text-blue-500")} />
+                               <input
+                                  type="text"
+                                  placeholder={language === 'fr' ? 'Filtrer les favoris...' : 'Search bookmarks...'}
+                                  value={bookmarkSearchQuery}
+                                  onChange={(e) => setBookmarkSearchQuery(e.target.value)}
+                                  className={clsx(
+                                     "w-full pl-10 pr-4 py-2.5 rounded-2xl border text-sm outline-none transition-all",
+                                     theme === 'dark' ? "bg-white/5 border-white/10 focus:bg-white/10 focus:border-blue-500/50" : "bg-white border-gray-200 focus:border-blue-500/50 shadow-sm"
+                                  )}
+                               />
+                            </div>
+                            <button 
+                               onClick={createFolder}
+                               className={clsx("px-5 py-2.5 rounded-2xl text-white font-bold text-sm transition-all hover:scale-105 active:scale-95 shadow-md flex items-center gap-2 shrink-0", colors.bgSolid)}
+                            >
+                               <FolderPlus className="w-4 h-4" />
+                               {language === 'fr' ? 'Nouveau dossier' : 'New Folder'}
+                            </button>
+                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                         {bookmarks.map(bookmark => (
-                            <div 
-                               key={bookmark.id}
-                               onClick={() => bookmark.url && updateTab(tab.id, { url: bookmark.url })}
-                               className={clsx(
-                                  "group relative aspect-4/3 rounded-3xl border overflow-hidden transition-all cursor-pointer hover:shadow-2xl hover:-translate-y-1",
-                                  theme === 'dark' ? "bg-white/5 border-white/10" : "bg-white border-gray-100 shadow-sm"
-                               )}
-                            >
-                               <div className={clsx("absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity", colors.bgSolid)} />
-                               <div className="absolute inset-0 p-6 flex flex-col justify-between">
-                                  <div className="flex justify-between items-start">
-                                     <div className={clsx("w-12 h-12 rounded-2xl flex items-center justify-center shadow-md", theme === 'dark' ? "bg-white/10" : "bg-gray-100")}>
-                                        {bookmark.type === 'folder' ? (
-                                           <div className="text-2xl">📁</div>
-                                        ) : (
-                                           <img src={getFaviconUrl(bookmark.url)} className="w-6 h-6" alt="" />
-                                        )}
-                                     </div>
-                                     <button 
-                                        onClick={(e) => { e.stopPropagation(); confirmDeleteBookmark(bookmark.id); }}
-                                        className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white rounded-xl transition-all"
-                                     >
-                                        <Trash2 className="w-4 h-4" />
-                                     </button>
-                                  </div>
-                                  <div>
-                                     <div className="font-bold text-lg leading-tight mb-1 truncate">{bookmark.title}</div>
-                                     <div className="text-xs opacity-50 truncate">{bookmark.url || (language === 'fr' ? 'Dossier' : 'Folder')}</div>
-                                  </div>
+                      {(() => {
+                         const filteredBookmarks = bookmarks.filter(bookmark => 
+                            bookmark.title.toLowerCase().includes(bookmarkSearchQuery.toLowerCase()) || 
+                            (bookmark.url && bookmark.url.toLowerCase().includes(bookmarkSearchQuery.toLowerCase()))
+                         );
+
+                         if (filteredBookmarks.length === 0) {
+                            return (
+                               <div className="text-center py-20 opacity-50 border border-dashed border-white/10 rounded-3xl bg-white/2">
+                                  <Star className="w-16 h-16 mx-auto mb-4 opacity-25 text-gray-400" />
+                                  <p className="font-semibold text-lg">{language === 'fr' ? 'Aucun favori trouvé' : 'No bookmarks found'}</p>
+                                  <p className="text-xs opacity-50 mt-1">{language === 'fr' ? 'Ajoutez vos sites préférés pour y accéder rapidement.' : 'Add your favorite websites for quick access.'}</p>
                                </div>
+                            );
+                         }
+
+                         return (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                               {filteredBookmarks.map(bookmark => (
+                                  <div 
+                                     key={bookmark.id}
+                                     onClick={() => bookmark.url && updateTab(tab.id, { url: bookmark.url })}
+                                     onContextMenu={(e) => {
+                                        e.preventDefault();
+                                        setBookmarkContextMenu({
+                                           isOpen: true,
+                                           x: e.clientX,
+                                           y: e.clientY,
+                                           bookmarkId: bookmark.id,
+                                           bookmarkUrl: bookmark.url
+                                        });
+                                     }}
+                                     className={clsx(
+                                        "group relative aspect-4/3 rounded-3xl border overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-2xl hover:-translate-y-1 hover:border-blue-500/20",
+                                        theme === 'dark' ? "bg-white/5 border-white/10" : "bg-white border-gray-150 shadow-sm"
+                                     )}
+                                  >
+                                     <div className={clsx("absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity bg-linear-to-tr from-blue-500 to-purple-500")} />
+                                     <div className="absolute inset-0 p-6 flex flex-col justify-between">
+                                        <div className="flex justify-between items-start">
+                                           <div className={clsx("w-12 h-12 rounded-2xl flex items-center justify-center shadow-md transition-transform group-hover:scale-105", theme === 'dark' ? "bg-white/10" : "bg-gray-100")}>
+                                              {bookmark.type === 'folder' ? (
+                                                 <span className="text-2xl select-none">📁</span>
+                                              ) : (
+                                                 <img 
+                                                    src={getFaviconUrl(bookmark.url)} 
+                                                    className="w-6 h-6 object-contain" 
+                                                    alt="" 
+                                                    onError={(e) => { e.currentTarget.src = `https://icons.duckduckgo.com/ip3/${new URL(bookmark.url || '').hostname}.ico`; }}
+                                                 />
+                                              )}
+                                           </div>
+                                           <button 
+                                              onClick={(e) => { e.stopPropagation(); confirmDeleteBookmark(bookmark.id); }}
+                                              className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white rounded-xl transition-all"
+                                              title={language === 'fr' ? 'Supprimer' : 'Delete'}
+                                           >
+                                              <Trash2 className="w-4 h-4" />
+                                           </button>
+                                        </div>
+                                        <div>
+                                           <div className="font-bold text-base leading-tight mb-1 truncate group-hover:text-blue-400 transition-colors">{bookmark.title}</div>
+                                           <div className="text-[10px] opacity-40 truncate">{bookmark.url || (language === 'fr' ? 'Dossier favoris' : 'Bookmarks Folder')}</div>
+                                        </div>
+                                     </div>
+                                  </div>
+                               ))}
                             </div>
-                         ))}
-                      </div>
+                         );
+                      })()}
                    </div>
                 )}
-              </div>
+                {tab.url === 'explore://passwords' && (
+                  <div className="w-full h-full overflow-y-auto bg-transparent p-12 max-w-5xl mx-auto animate-fadeIn">
+                    <PasswordManager
+                      isOpen={true}
+                      isFullPage={true}
+                      onClose={() => updateTab(tab.id, { url: 'explore://newtab' })}
+                      theme={theme}
+                      accentColor={accentColor}
+                      language={language}
+                    />
+                  </div>
+                )}
+                {tab.url === 'explore://vpn' && (
+                  <div className="w-full h-full overflow-y-auto bg-transparent p-12 max-w-5xl mx-auto animate-fadeIn">
+                    <VPN
+                      isOpen={true}
+                      isFullPage={true}
+                      onClose={() => updateTab(tab.id, { url: 'explore://newtab' })}
+                      theme={theme}
+                      accentColor={accentColor}
+                      language={language}
+                    />
+                  </div>
+                )}
+                </div>
+              ) : null
             ) : (
               <webview
                 src={tab.url}
@@ -2185,61 +2460,79 @@ function App() {
                           `).catch(console.error);
                         }
 
-                        // Ambient Theme Color Extraction
-                        el.executeJavaScript(`
-                          (function() {
-                            // 1. Try meta theme-color
-                            const meta = document.querySelector('meta[name="theme-color"]');
-                            if (meta && meta.content) return meta.content;
+                        // Ambient Theme Color Extraction - helper function
+                        const extractAmbientColor = () => {
+                          el.executeJavaScript(`
+                            (function() {
+                              // 1. Try meta theme-color
+                              const meta = document.querySelector('meta[name="theme-color"]');
+                              if (meta && meta.content) return meta.content;
 
-                            // 2. Try OpenGraph / Twitter meta colors
-                            const ogColor = document.querySelector('meta[property="og:color"]');
-                            if (ogColor && ogColor.content) return ogColor.content;
+                              // 2. YouTube: extract the dominant color from the video player ambient
+                              if (window.location.hostname.includes('youtube.com')) {
+                                // YouTube uses a cinematic lighting effect with computed ambient colors
+                                const ambientEl = document.querySelector('#cinematics canvas');
+                                if (ambientEl) {
+                                  try {
+                                    const ctx = ambientEl.getContext('2d');
+                                    if (ctx) {
+                                      const w = ambientEl.width;
+                                      const h = ambientEl.height;
+                                      const data = ctx.getImageData(Math.floor(w/2), Math.floor(h/4), 1, 1).data;
+                                      if (data[3] > 50) {
+                                        return 'rgb(' + data[0] + ', ' + data[1] + ', ' + data[2] + ')';
+                                      }
+                                    }
+                                  } catch(e) {}
+                                }
+                                // Fallback: try the video thumbnail dominant color
+                                const playerBg = document.querySelector('#player');
+                                if (playerBg) {
+                                  const bg = window.getComputedStyle(playerBg).backgroundColor;
+                                  if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent' && bg !== 'rgb(0, 0, 0)') return bg;
+                                }
+                                // YouTube dark mode fallback
+                                return 'rgb(15, 15, 15)';
+                              }
 
-                            const appleColor = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
-                            if (appleColor && appleColor.content && appleColor.content.startsWith('#')) return appleColor.content;
-
-                            // 3. Try to find dominant color of the body or a large header
-                            const getElementColor = (el) => {
-                               if (!el) return null;
-                               const bg = window.getComputedStyle(el).backgroundColor;
-                               if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent' && bg !== 'rgb(255, 255, 255)') {
+                              // 3. Try to find dominant color of the body or html
+                              const getElementColor = (el) => {
+                                if (!el) return null;
+                                const bg = window.getComputedStyle(el).backgroundColor;
+                                if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
                                   return bg;
-                               }
-                               return null;
-                            };
+                                }
+                                return null;
+                              };
 
-                            const bodyColor = getElementColor(document.body);
-                            if (bodyColor) return bodyColor;
-
-                            const header = document.querySelector('header') || document.querySelector('nav') || document.querySelector('#header') || document.querySelector('#masthead-container');
-                            const headerColor = getElementColor(header);
-                            if (headerColor) return headerColor;
-
-                            // 5. Special check for YouTube
-                            if (window.location.hostname.includes('youtube.com')) {
-                               const ytHeader = document.querySelector('ytd-masthead');
-                               if (ytHeader) return getComputedStyle(ytHeader).backgroundColor;
-                            }
-
-                            return null;
-                          })();
-                        `).then((color) => {
-                          if (color && typeof color === 'string') {
-                            // Convert non-hex colors to hex if possible
-                            if (color.startsWith('rgb')) {
-                               const rgbMatch = color.match(/^rgb(?:a)?\\((\\d+),\\s*(\\d+),\\s*(\\d+)(?:,\\s*[\\d.]+)?\\)$/);
-                               if (rgbMatch) {
+                              return getElementColor(document.body) || getElementColor(document.documentElement) || null;
+                            })();
+                          `).then((color: string | null) => {
+                            if (color && typeof color === 'string') {
+                              if (color.startsWith('rgb')) {
+                                const rgbMatch = color.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+                                if (rgbMatch) {
                                   const r = parseInt(rgbMatch[1]).toString(16).padStart(2, '0');
                                   const g = parseInt(rgbMatch[2]).toString(16).padStart(2, '0');
                                   const b = parseInt(rgbMatch[3]).toString(16).padStart(2, '0');
                                   updateTab(tab.id, { themeColor: '#' + r + g + b });
                                   return;
-                               }
+                                }
+                              }
+                              updateTab(tab.id, { themeColor: color });
                             }
-                            updateTab(tab.id, { themeColor: color });
-                          }
-                        }).catch(() => {});
+                          }).catch(() => {});
+                        };
+
+                        // Extract once on load
+                        extractAmbientColor();
+
+                        // For dynamic sites like YouTube, re-extract periodically
+                        const ambientInterval = setInterval(() => {
+                          try { extractAmbientColor(); } catch { /* ignore */ }
+                        }, 3000);
+                        el.addEventListener('will-navigate', () => clearInterval(ambientInterval));
+                        el.addEventListener('destroyed', () => clearInterval(ambientInterval));
                       });
                         el.addEventListener('new-window', (e) => {
                           const event = e as Event & { url: string };
@@ -2359,6 +2652,7 @@ function App() {
           setActiveTabId(newId);
           setIsSettingsOpen(false);
         }}
+        checkForUpdates={handleCheckForUpdates}
       />
 
       <ConfirmModal 
@@ -2401,6 +2695,167 @@ function App() {
         language={language}
         history={history}
       />
+
+      {/* Interactive Glassmorphic Auto-Updater Modal */}
+      <AnimatePresence>
+        {updateState.showModal && (
+          <div className="fixed inset-0 z-200 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: -20 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              className="w-full max-w-md p-6 rounded-2xl border border-white/10 backdrop-blur-xl bg-[#1e1e2e]/90 shadow-2xl flex flex-col items-center text-center relative overflow-hidden"
+            >
+              {/* Decorative background glow */}
+              <div className="absolute -top-24 -left-24 w-48 h-48 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
+
+              {/* Glowing Top Icon */}
+              <div className="relative mb-4 flex items-center justify-center w-16 h-16 rounded-full bg-linear-to-tr from-blue-500 to-purple-600 shadow-lg text-white">
+                <RotateCw className={clsx("w-8 h-8", updateState.status === 'checking' || updateState.status === 'downloading' ? "animate-spin" : "")} />
+                <div className="absolute inset-0 rounded-full bg-linear-to-tr from-blue-500 to-purple-600 blur-md opacity-50 -z-10 animate-pulse" />
+              </div>
+
+              {/* Title based on status */}
+              <h3 className="text-xl font-bold mb-2 bg-linear-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                {updateState.status === 'checking' && (language === 'fr' ? 'Recherche de mises à jour...' : 'Checking for updates...')}
+                {updateState.status === 'available' && (language === 'fr' ? 'Nouvelle version disponible !' : 'New version available!')}
+                {updateState.status === 'downloading' && (language === 'fr' ? 'Téléchargement de la mise à jour' : 'Downloading update')}
+                {updateState.status === 'downloaded' && (language === 'fr' ? 'Mise à jour prête !' : 'Update is ready!')}
+                {updateState.status === 'not-available' && (language === 'fr' ? 'Navigateur à jour !' : 'Up to date!')}
+                {updateState.status === 'error' && (language === 'fr' ? 'Erreur de mise à jour' : 'Update error')}
+              </h3>
+
+              {/* Subtitle / details */}
+              <p className="text-sm text-slate-400 mb-6 px-2">
+                {updateState.status === 'checking' && (language === 'fr' ? 'Nous recherchons si une nouvelle version majeure de Navigateur Explore est disponible.' : 'We are checking if a new major version of Navigateur Explore is available.')}
+                {updateState.status === 'available' && (language === 'fr' ? 'Une version 1.6.1 est disponible avec de superbes fonctionnalités. Le téléchargement va démarrer...' : 'Version 1.6.1 is available with stunning new features. Starting download...')}
+                {updateState.status === 'downloading' && (language === 'fr' ? 'Récupération des derniers fichiers système. Veuillez ne pas éteindre le navigateur.' : 'Fetching the latest system files. Please do not close the browser.')}
+                {updateState.status === 'downloaded' && (language === 'fr' ? 'La version 1.6.1 a été téléchargée avec succès. Redémarrez maintenant pour en profiter.' : 'Version 1.6.1 has been successfully downloaded. Restart now to apply.')}
+                {updateState.status === 'not-available' && (language === 'fr' ? 'Vous utilisez déjà la toute dernière version stable de Navigateur Explore.' : 'You are already running the latest stable version of Navigateur Explore.')}
+                {updateState.status === 'error' && (updateState.error || (language === 'fr' ? 'Une erreur est survenue lors de la vérification ou du téléchargement.' : 'An error occurred while checking or downloading.'))}
+              </p>
+
+              {/* Progress bar for downloading */}
+              {updateState.status === 'downloading' && (
+                <div className="w-full px-4 mb-6">
+                  <div className="flex justify-between text-xs text-slate-400 mb-2">
+                    <span>{language === 'fr' ? 'Téléchargement...' : 'Downloading...'}</span>
+                    <span className="font-semibold">{Math.round(updateState.progress || 0)}%</span>
+                  </div>
+                  <div className="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden border border-white/5 relative">
+                    <motion.div
+                      className="h-full bg-linear-to-r from-blue-500 to-purple-600 rounded-full animate-pulse"
+                      initial={{ width: "0%" }}
+                      animate={{ width: `${updateState.progress || 0}%` }}
+                      transition={{ duration: 0.1 }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Controls */}
+              <div className="flex gap-3 justify-center w-full mt-2">
+                {updateState.status === 'downloaded' && (
+                  <>
+                    <button
+                      onClick={() => {
+                        if (window.electron?.restartApp) {
+                          window.electron.restartApp();
+                        }
+                      }}
+                      className="flex-1 px-4 py-2.5 rounded-xl text-white font-semibold text-sm bg-linear-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 active:scale-[0.98] transition-all shadow-lg hover:shadow-purple-500/20"
+                    >
+                      {language === 'fr' ? 'Installer & Redémarrer' : 'Install & Restart'}
+                    </button>
+                    <button
+                      onClick={() => setUpdateState(prev => ({ ...prev, showModal: false }))}
+                      className="px-4 py-2.5 rounded-xl border border-white/10 text-slate-300 font-semibold text-sm hover:bg-white/5 active:scale-[0.98] transition-all"
+                    >
+                      {language === 'fr' ? 'Plus tard' : 'Later'}
+                    </button>
+                  </>
+                )}
+                {(updateState.status === 'error' || updateState.status === 'not-available') && (
+                  <button
+                    onClick={() => setUpdateState(prev => ({ ...prev, showModal: false, status: 'idle' }))}
+                    className="w-full max-w-[200px] px-4 py-2.5 rounded-xl text-white font-semibold text-sm bg-white/10 hover:bg-white/15 active:scale-[0.98] transition-all border border-white/5"
+                  >
+                    {language === 'fr' ? 'Fermer' : 'Close'}
+                  </button>
+                )}
+                {updateState.status === 'checking' && (
+                  <button
+                    onClick={() => setUpdateState(prev => ({ ...prev, showModal: false, status: 'idle' }))}
+                    className="w-full max-w-[200px] px-4 py-2.5 rounded-xl text-slate-400 font-semibold text-sm border border-white/5 hover:bg-white/5 transition-all"
+                  >
+                    {language === 'fr' ? 'Annuler' : 'Cancel'}
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Bookmarks Page Right-Click Context Menu */}
+      {bookmarkContextMenu && bookmarkContextMenu.isOpen && (
+         <div 
+            className={clsx(
+               "fixed z-100 py-1.5 rounded-2xl border shadow-2xl backdrop-blur-xl w-56 flex flex-col overflow-hidden animate-fadeIn text-xs font-bold",
+               theme === 'dark' ? "bg-[#181825]/90 border-white/10 text-white" : "bg-white/95 border-gray-200 text-gray-900"
+            )}
+            style={{ top: bookmarkContextMenu.y, left: bookmarkContextMenu.x }}
+            onClick={(e) => e.stopPropagation()}
+         >
+            {bookmarkContextMenu.bookmarkUrl ? (
+               <>
+                  <button 
+                     onClick={() => {
+                        const activeTab = tabs.find(t => t.id === activeTabId);
+                        if (activeTab) {
+                           updateTab(activeTab.id, { url: bookmarkContextMenu.bookmarkUrl });
+                        }
+                        setBookmarkContextMenu(null);
+                     }}
+                     className={clsx("px-4 py-2.5 text-left flex items-center gap-2 transition-colors", theme === 'dark' ? "hover:bg-white/5" : "hover:bg-gray-100")}
+                  >
+                     {language === 'fr' ? 'Ouvrir dans cet onglet' : 'Open in this tab'}
+                  </button>
+                  <button 
+                     onClick={() => {
+                        addTab(bookmarkContextMenu.bookmarkUrl, true);
+                        setBookmarkContextMenu(null);
+                     }}
+                     className={clsx("px-4 py-2.5 text-left flex items-center gap-2 transition-colors", theme === 'dark' ? "hover:bg-white/5" : "hover:bg-gray-100")}
+                  >
+                     {language === 'fr' ? 'Ouvrir dans un nouvel onglet' : 'Open in new tab'}
+                  </button>
+                  <button 
+                     onClick={() => {
+                        addTab(bookmarkContextMenu.bookmarkUrl, false);
+                        setBookmarkContextMenu(null);
+                     }}
+                     className={clsx("px-4 py-2.5 text-left flex items-center gap-2 transition-colors", theme === 'dark' ? "hover:bg-white/5" : "hover:bg-gray-100")}
+                  >
+                     {language === 'fr' ? 'Ouvrir en arrière-plan' : 'Open in background'}
+                  </button>
+                  <div className="h-px my-1 bg-white/5" />
+               </>
+            ) : null}
+            <button 
+               onClick={() => {
+                  confirmDeleteBookmark(bookmarkContextMenu.bookmarkId);
+                  setBookmarkContextMenu(null);
+               }}
+               className="px-4 py-2.5 text-left hover:bg-red-500 hover:text-white text-red-400 flex items-center gap-2 transition-colors"
+            >
+               <Trash2 className="w-4 h-4 shrink-0" />
+               {language === 'fr' ? 'Supprimer' : 'Delete'}
+            </button>
+         </div>
+      )}
     </div>
   );
 }

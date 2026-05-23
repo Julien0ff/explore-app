@@ -1,10 +1,139 @@
 import React, { useState, useEffect } from 'react';
 import { Logo } from './Logo';
-import { Search, Plus, X, Shield } from 'lucide-react';
+import { Search, Plus, X, Shield, Star, Folder, FolderOpen, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 
 import { getAccentColorClass } from '../lib/theme';
+import type { Bookmark } from '../types';
+
+interface BookmarkTreeItemProps {
+  item: Bookmark;
+  bookmarks: Bookmark[];
+  expandedFolders: Record<string, boolean>;
+  toggleFolder: (id: string) => void;
+  onOpen: (url: string) => void;
+  depth: number;
+  theme: 'dark' | 'light' | 'system';
+}
+
+function BookmarkTreeItem({ 
+  item, 
+  bookmarks, 
+  expandedFolders, 
+  toggleFolder, 
+  onOpen, 
+  depth, 
+  theme 
+}: BookmarkTreeItemProps) {
+  const isFolder = item.type === 'folder';
+  const isExpanded = expandedFolders[item.id] || false;
+  const children = bookmarks.filter(b => b.parent_id === item.id);
+
+  if (isFolder) {
+    return (
+      <div className="w-full select-none">
+        <button
+          onClick={() => toggleFolder(item.id)}
+          className={clsx(
+            "w-full flex items-center gap-2 py-1.5 px-2 rounded-xl transition-all duration-200 text-left group",
+            theme === 'dark' 
+              ? "hover:bg-white/5 text-gray-400 hover:text-white" 
+              : "hover:bg-gray-100 text-gray-500 hover:text-gray-900"
+          )}
+          style={{ paddingLeft: `${depth * 12 + 8}px` }}
+        >
+          <ChevronRight 
+            className={clsx(
+              "w-3.5 h-3.5 transition-transform duration-200 shrink-0", 
+              isExpanded && "rotate-90 text-blue-500"
+            )} 
+          />
+          {isExpanded ? (
+            <FolderOpen className="w-4 h-4 text-yellow-500 fill-yellow-500/20 shrink-0" />
+          ) : (
+            <Folder className="w-4 h-4 text-yellow-500 fill-yellow-500/20 shrink-0" />
+          )}
+          <span className="font-semibold text-xs tracking-wide truncate uppercase flex-1 pl-1">
+            {item.title}
+          </span>
+          <span className="text-[10px] opacity-40 group-hover:opacity-75 transition-opacity pr-1">
+            ({children.length})
+          </span>
+        </button>
+
+        {isExpanded && children.length > 0 && (
+          <div className="relative">
+            <div 
+              className={clsx(
+                "absolute top-0 bottom-0 w-px transition-colors left-4",
+                theme === 'dark' ? "bg-white/10" : "bg-gray-200"
+              )}
+              style={{ left: `${depth * 12 + 15}px` }}
+            />
+            <div className="space-y-0.5 mt-0.5">
+              {children.map(child => (
+                <BookmarkTreeItem
+                  key={child.id}
+                  item={child}
+                  bookmarks={bookmarks}
+                  expandedFolders={expandedFolders}
+                  toggleFolder={toggleFolder}
+                  onOpen={onOpen}
+                  depth={depth + 1}
+                  theme={theme}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+        {isExpanded && children.length === 0 && (
+          <div 
+            className={clsx(
+              "text-[11px] italic py-1 opacity-55",
+              theme === 'dark' ? "text-gray-500" : "text-gray-400"
+            )}
+            style={{ paddingLeft: `${(depth + 1) * 12 + 20}px` }}
+          >
+            Dossier vide
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => onOpen(item.url)}
+      className={clsx(
+        "w-full flex items-center gap-2.5 py-1.5 px-3 rounded-xl transition-all duration-200 text-left group",
+        theme === 'dark' 
+          ? "hover:bg-[#1e1e2e] text-gray-300 hover:text-white" 
+          : "hover:bg-gray-50 text-gray-600 hover:text-gray-900 shadow-xs"
+      )}
+      style={{ paddingLeft: `${depth * 12 + 22}px` }}
+    >
+      <div className={clsx(
+        "w-5 h-5 rounded-md flex items-center justify-center shrink-0 text-[10px] font-bold overflow-hidden shadow-xs",
+        theme === 'dark' ? "bg-white/5 border border-white/5" : "bg-white border border-gray-100"
+      )}>
+        <img 
+          src={`https://www.google.com/s2/favicons?domain=${item.url}&sz=32`} 
+          className="w-3.5 h-3.5"
+          alt=""
+          onError={(e) => { 
+            e.currentTarget.style.display = 'none'; 
+            e.currentTarget.parentElement!.innerText = item.title.charAt(0).toUpperCase();
+          }} 
+        />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-xs font-medium truncate leading-normal">{item.title}</div>
+        <div className="text-[9px] opacity-40 truncate leading-none mt-0.5">{item.url}</div>
+      </div>
+    </button>
+  );
+}
 
 interface NewTabPageProps {
   onSearch: (query: string) => void;
@@ -15,6 +144,7 @@ interface NewTabPageProps {
   suggestions?: string[];
   blockedAdsCount?: number;
   adBlockEnabled?: boolean;
+  bookmarks?: Bookmark[];
 }
 
 interface QuickLink {
@@ -23,9 +153,25 @@ interface QuickLink {
   url: string;
 }
 
-export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChange, suggestions = [], blockedAdsCount = 0, adBlockEnabled = false }: NewTabPageProps) {
+export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChange, suggestions = [], blockedAdsCount = 0, adBlockEnabled = false, bookmarks = [] }: NewTabPageProps) {
   const colors = getAccentColorClass(accentColor, theme === 'dark');
   const [query, setQuery] = useState('');
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
+
+  const toggleFolder = (id: string) => {
+    setExpandedFolders(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  const filteredBookmarks = bookmarks.filter(b => {
+    if (!searchQuery.trim()) return false;
+    return b.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+           (b.url && b.url.toLowerCase().includes(searchQuery.toLowerCase()));
+  });
   const [greeting, setGreeting] = useState('');
   const [time, setTime] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -140,10 +286,170 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className={clsx(
-        "flex flex-col items-center h-full w-full overflow-y-auto custom-scrollbar",
+        "flex flex-col items-center h-full w-full overflow-y-auto custom-scrollbar relative",
         theme === 'dark' ? "bg-transparent text-white" : "bg-transparent text-gray-900"
       )}
     >
+      {/* Floating Toggle Button */}
+      <button
+        onClick={() => setIsDrawerOpen(true)}
+        className={clsx(
+          "absolute top-6 left-6 p-3 rounded-2xl border transition-all duration-300 z-40 group hover:scale-110 shadow-lg",
+          theme === 'dark' 
+            ? "bg-[#181825]/60 border-white/10 text-gray-400 hover:text-yellow-400 hover:border-yellow-400/30 hover:shadow-[0_0_20px_rgba(250,204,21,0.2)]" 
+            : "bg-white/60 border-gray-200 text-gray-500 hover:text-yellow-500 hover:border-yellow-500/30 hover:shadow-lg hover:shadow-gray-200"
+        )}
+        title={language === 'fr' ? 'Favoris' : 'Bookmarks'}
+      >
+        <Star className="w-5 h-5 transition-transform group-hover:rotate-12" />
+      </button>
+
+      {/* Favorites Drawer & Backdrop */}
+      <AnimatePresence>
+        {isDrawerOpen && (
+          <>
+            {/* Click-away backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsDrawerOpen(false)}
+              className="absolute inset-0 bg-black/40 backdrop-blur-xs z-40"
+            />
+            
+            {/* Lateral Drawer */}
+            <motion.div
+              initial={{ x: '-100%', opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: '-100%', opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className={clsx(
+                "absolute top-0 left-0 bottom-0 w-80 z-50 h-full flex flex-col border-r shadow-2xl backdrop-blur-2xl text-left",
+                theme === 'dark' 
+                  ? "bg-[#12121e]/85 border-white/10 text-white" 
+                  : "bg-white/85 border-gray-200 text-gray-900"
+              )}
+            >
+              {/* Header */}
+              <div className="p-5 border-b border-white/5 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
+                    <Star className="w-4 h-4 fill-current" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm tracking-tight leading-none">
+                      {language === 'fr' ? 'Volet des Favoris' : 'Favorites Sidebar'}
+                    </h3>
+                    <p className="text-[10px] opacity-40 mt-1 leading-none">
+                      {language === 'fr' ? 'Explore Bookmarks' : 'Explore Bookmarks'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsDrawerOpen(false)}
+                  className={clsx(
+                    "p-1.5 rounded-lg transition-colors",
+                    theme === 'dark' ? "hover:bg-white/10 text-gray-400 hover:text-white" : "hover:bg-gray-100 text-gray-500 hover:text-gray-900"
+                  )}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Search Box */}
+              <div className="p-4">
+                <div className="relative group">
+                  <Search className={clsx(
+                    "absolute left-3.5 top-2.5 w-4 h-4 transition-colors",
+                    theme === 'dark' ? "text-gray-500 group-focus-within:text-blue-400" : "text-gray-400 group-focus-within:text-blue-500"
+                  )} />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={language === 'fr' ? 'Rechercher un favori...' : 'Search bookmarks...'}
+                    className={clsx(
+                      "w-full pl-10 pr-8 py-2 text-xs rounded-xl outline-none border transition-all duration-300",
+                      theme === 'dark'
+                        ? "bg-[#181825] border-white/5 text-white placeholder-gray-600 focus:border-blue-500/50 focus:bg-[#1e1e2e]"
+                        : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-blue-500/50 focus:bg-white"
+                    )}
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-2.5 text-gray-400 hover:text-white"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Favorites Tree / Search Results */}
+              <div className="flex-1 overflow-y-auto px-3 pb-6 custom-scrollbar space-y-1">
+                {searchQuery.trim() ? (
+                  // Search Results (Flat list)
+                  <div className="space-y-1.5">
+                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-2 mb-2">
+                      {language === 'fr' ? 'Résultats de recherche' : 'Search Results'}
+                    </div>
+                    {filteredBookmarks.length === 0 ? (
+                      <div className="text-center py-8 text-xs text-gray-500 italic">
+                        {language === 'fr' ? 'Aucun favori trouvé' : 'No bookmarks found'}
+                      </div>
+                    ) : (
+                      filteredBookmarks.map(item => (
+                        <BookmarkTreeItem
+                          key={item.id}
+                          item={item}
+                          bookmarks={bookmarks}
+                          expandedFolders={expandedFolders}
+                          toggleFolder={toggleFolder}
+                          onOpen={(url) => {
+                            onSearch(url);
+                            setIsDrawerOpen(false);
+                          }}
+                          depth={0}
+                          theme={theme}
+                        />
+                      ))
+                    )}
+                  </div>
+                ) : (
+                  // Normal hierarchical tree
+                  <div className="space-y-1">
+                    {bookmarks.filter(b => b.parent_id === undefined || b.parent_id === null).length === 0 ? (
+                      <div className="text-center py-12 text-xs text-gray-500 italic">
+                        {language === 'fr' ? 'Aucun favori enregistré' : 'No bookmarks saved yet'}
+                      </div>
+                    ) : (
+                      bookmarks
+                        .filter(b => b.parent_id === undefined || b.parent_id === null)
+                        .map(item => (
+                          <BookmarkTreeItem
+                            key={item.id}
+                            item={item}
+                            bookmarks={bookmarks}
+                            expandedFolders={expandedFolders}
+                            toggleFolder={toggleFolder}
+                            onOpen={(url) => {
+                              onSearch(url);
+                              setIsDrawerOpen(false);
+                            }}
+                            depth={0}
+                            theme={theme}
+                          />
+                        ))
+                    )}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       <div className="flex flex-col items-center gap-6 w-full max-w-3xl px-6 py-8 min-h-full justify-center">
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
@@ -247,8 +553,10 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
                 onSearch(link.url);
               }}
               className={clsx(
-                "group flex flex-col items-center gap-3 p-3 w-24 rounded-2xl transition-all relative cursor-pointer",
-                theme === 'dark' ? "hover:bg-white/5" : "hover:bg-gray-100"
+                "group flex flex-col items-center gap-3 p-3 w-24 rounded-2xl transition-all duration-300 relative cursor-pointer hover:scale-110 hover:-translate-y-1.5 border border-transparent select-none",
+                theme === 'dark' 
+                  ? "hover:bg-white/5 hover:border-white/10 hover:shadow-[0_0_25px_rgba(59,130,246,0.25)]" 
+                  : "hover:bg-gray-50 hover:border-gray-200/50 hover:shadow-lg hover:shadow-gray-200/50"
               )}
             >
               <button
@@ -258,8 +566,8 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
                 <X className="w-3 h-3 pointer-events-none" />
               </button>
               <div className={clsx(
-                "w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold transition-transform group-hover:scale-110",
-                theme === 'dark' ? "bg-[#181825] text-white" : "bg-white text-gray-900 shadow-md"
+                "w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold transition-all duration-300 group-hover:shadow-md",
+                theme === 'dark' ? "bg-[#181825] text-white" : "bg-white text-gray-900 shadow-sm"
               )}>
                 <img 
                   src={`https://www.google.com/s2/favicons?domain=${link.url}&sz=64`}
@@ -278,7 +586,12 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
                   }}
                 />
               </div>
-              <span className={clsx("text-sm font-medium transition-colors", theme === 'dark' ? "text-gray-400 group-hover:text-white" : "text-gray-600 group-hover:text-gray-900", colors.textHover)}>{link.title}</span>
+              <span className={clsx(
+                "text-xs font-semibold w-full text-center wrap-break-word whitespace-normal line-clamp-2 min-h-8 flex items-center justify-center px-1 transition-colors select-none", 
+                theme === 'dark' ? "text-gray-400 group-hover:text-white" : "text-gray-500 group-hover:text-gray-900"
+              )}>
+                {link.title}
+              </span>
             </div>
           ))}
           

@@ -129,9 +129,17 @@ function setupSession(sess = electron_1.session.defaultSession) {
                 return;
             }
             const url = details.url.toLowerCase();
-            // Whitelist Google Favicons to prevent them from being blocked
-            if (url.includes('google.com/s2/favicons') ||
-                url.includes('gstatic.com/favicon') ||
+            // Whitelist all main Google domain requests (except ad subdomains) to ensure search never breaks
+            const isGoogleMain = (url.startsWith('https://www.google.com') ||
+                url.startsWith('https://www.google.fr') ||
+                url.startsWith('https://google.com') ||
+                url.startsWith('https://google.fr') ||
+                url.startsWith('http://www.google.com') ||
+                url.startsWith('http://www.google.fr'));
+            const isGoogleAdSubdomain = (url.includes('ads.google.com') ||
+                url.includes('adservice.google.com'));
+            if ((isGoogleMain && !isGoogleAdSubdomain) ||
+                url.includes('gstatic.com') ||
                 url.includes('/favicon.ico') ||
                 url.includes('icons.duckduckgo.com') ||
                 url.includes('flagcdn.com')) {
@@ -146,17 +154,6 @@ function setupSession(sess = electron_1.session.defaultSession) {
             else {
                 callback({ cancel: false });
             }
-        });
-        // User Agent Spoofing
-        sess.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
-            const headers = details.requestHeaders;
-            // Force Chrome User Agent
-            headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
-            // Mock Client Hints to match Chrome
-            headers['Sec-Ch-Ua'] = '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"';
-            headers['Sec-Ch-Ua-Mobile'] = '?0';
-            headers['Sec-Ch-Ua-Platform'] = '"Windows"';
-            callback({ requestHeaders: headers });
         });
     }
     catch (e) {
@@ -173,19 +170,39 @@ electron_1.app.userAgentFallback = userAgent;
 function setupIPC() {
     // Auto Updater Events
     electron_1.ipcMain.on('restart_app', () => {
+        console.log('Main: quitAndInstall triggered');
         electron_updater_1.autoUpdater.quitAndInstall();
     });
     electron_1.ipcMain.on('check_for_update', () => {
-        electron_updater_1.autoUpdater.checkForUpdates();
+        console.log('Main: checkForUpdates triggered manually');
+        electron_updater_1.autoUpdater.checkForUpdates().catch(err => {
+            console.error('Failed to check for updates manually:', err);
+            mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send('update_error', (err === null || err === void 0 ? void 0 : err.message) || String(err));
+        });
+    });
+    electron_updater_1.autoUpdater.on('checking-for-update', () => {
+        console.log('Updater: checking-for-update');
+        mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send('update_checking');
     });
     electron_updater_1.autoUpdater.on('update-available', () => {
+        console.log('Updater: update-available');
         mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send('update_available');
     });
-    electron_updater_1.autoUpdater.on('update-downloaded', () => {
-        mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send('update_downloaded');
+    electron_updater_1.autoUpdater.on('update-not-available', () => {
+        console.log('Updater: update-not-available');
+        mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send('update_not_available');
+    });
+    electron_updater_1.autoUpdater.on('error', (err) => {
+        console.error('Updater error:', err);
+        mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send('update_error', (err === null || err === void 0 ? void 0 : err.message) || String(err));
     });
     electron_updater_1.autoUpdater.on('download-progress', (progressObj) => {
+        console.log(`Updater progress: ${progressObj.percent}%`);
         mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send('download_progress', progressObj.percent);
+    });
+    electron_updater_1.autoUpdater.on('update-downloaded', () => {
+        console.log('Updater: update-downloaded');
+        mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send('update_downloaded');
     });
     // IPC for app version
     electron_1.ipcMain.handle('get-app-version', () => {
@@ -250,7 +267,8 @@ function setupIPC() {
                 catch (e) {
                     console.error('Failed to save blocked domains:', e);
                 }
-                setupSession();
+                setupSession(electron_1.session.defaultSession);
+                setupSession(electron_1.session.fromPartition('persist:explore'));
             }
         }
     });
@@ -468,12 +486,14 @@ function createMainWindow() {
     else {
         mainWindow.loadFile(indexPath);
     }
-    // FORCE DevTools in Production for debugging v1.5.8
-    mainWindow.webContents.openDevTools({ mode: 'detach' });
-    // Debug webviews
-    mainWindow.webContents.on('did-attach-webview', (_, webContents) => {
-        webContents.openDevTools({ mode: 'detach' });
-    });
+    // Only open DevTools in Development Mode
+    if (process.env.VITE_DEV_SERVER_URL) {
+        mainWindow.webContents.openDevTools({ mode: 'detach' });
+        // Debug webviews in Development
+        mainWindow.webContents.on('did-attach-webview', (_, webContents) => {
+            webContents.openDevTools({ mode: 'detach' });
+        });
+    }
     // Handle downloads
     mainWindow.webContents.session.on('will-download', (_event, item) => {
         // Ensure we save to the user's Downloads folder by default if no path is set
@@ -539,7 +559,8 @@ function createMainWindow() {
 // Checked later and it's handled by the single userAgent at the top
 electron_1.app.whenReady().then(() => {
     setupIPC();
-    setupSession(); // Initialize session before windows
+    setupSession(electron_1.session.defaultSession); // Initialize session before windows
+    setupSession(electron_1.session.fromPartition('persist:explore'));
     createSplashWindow();
     createMainWindow();
     // Check for deep link on startup (Windows/Linux)
@@ -553,29 +574,6 @@ electron_1.app.whenReady().then(() => {
     }
     // Check for updates
     try {
-        electron_updater_1.autoUpdater.on('update-available', () => {
-            electron_1.dialog.showMessageBox({
-                type: 'info',
-                title: 'Mise à jour disponible',
-                message: 'Une nouvelle version d\'Explore est disponible. Le téléchargement a commencé en arrière-plan...',
-                buttons: ['Ok']
-            });
-        });
-        electron_updater_1.autoUpdater.on('update-downloaded', () => {
-            electron_1.dialog.showMessageBox({
-                type: 'info',
-                title: 'Mise à jour prête',
-                message: 'La mise à jour a été téléchargée avec succès. Voulez-vous redémarrer le navigateur pour l\'installer maintenant ?',
-                buttons: ['Redémarrer', 'Plus tard']
-            }).then((result) => {
-                if (result.response === 0) {
-                    electron_updater_1.autoUpdater.quitAndInstall();
-                }
-            });
-        });
-        electron_updater_1.autoUpdater.on('error', (err) => {
-            console.error('Erreur lors de la mise à jour:', err);
-        });
         electron_updater_1.autoUpdater.checkForUpdatesAndNotify();
     }
     catch (e) {
@@ -634,7 +632,8 @@ electron_1.app.whenReady().then(() => {
         }
     }));
     // Setup Session (Ad Blocker & User Agent)
-    setupSession();
+    setupSession(electron_1.session.defaultSession);
+    setupSession(electron_1.session.fromPartition('persist:explore'));
     // Context Menu & Webview Handling
     electron_1.app.on('web-contents-created', (_e, contents) => {
         if (contents.getType() === 'webview') {

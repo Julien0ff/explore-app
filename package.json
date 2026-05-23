@@ -1,7 +1,7 @@
 {
   "name": "navigateur-explore",
   "private": true,
-  "version": "1.5.8",
+  "version": "1.6.1",
   "description": "Navigateur Explore - Le web réinventé",
   "author": "Explore Team",
   "main": "dist-electron/main.js",

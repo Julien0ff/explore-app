@@ -179,23 +179,46 @@ app.userAgentFallback = userAgent;
 function setupIPC() {
   // Auto Updater Events
   ipcMain.on('restart_app', () => {
+    console.log('Main: quitAndInstall triggered');
     autoUpdater.quitAndInstall();
   });
 
   ipcMain.on('check_for_update', () => {
-    autoUpdater.checkForUpdates();
+    console.log('Main: checkForUpdates triggered manually');
+    autoUpdater.checkForUpdates().catch(err => {
+      console.error('Failed to check for updates manually:', err);
+      mainWindow?.webContents.send('update_error', err?.message || String(err));
+    });
+  });
+
+  autoUpdater.on('checking-for-update', () => {
+    console.log('Updater: checking-for-update');
+    mainWindow?.webContents.send('update_checking');
   });
 
   autoUpdater.on('update-available', () => {
+    console.log('Updater: update-available');
     mainWindow?.webContents.send('update_available');
   });
 
-  autoUpdater.on('update-downloaded', () => {
-    mainWindow?.webContents.send('update_downloaded');
+  autoUpdater.on('update-not-available', () => {
+    console.log('Updater: update-not-available');
+    mainWindow?.webContents.send('update_not_available');
+  });
+
+  autoUpdater.on('error', (err) => {
+    console.error('Updater error:', err);
+    mainWindow?.webContents.send('update_error', err?.message || String(err));
   });
 
   autoUpdater.on('download-progress', (progressObj) => {
+    console.log(`Updater progress: ${progressObj.percent}%`);
     mainWindow?.webContents.send('download_progress', progressObj.percent);
+  });
+
+  autoUpdater.on('update-downloaded', () => {
+    console.log('Updater: update-downloaded');
+    mainWindow?.webContents.send('update_downloaded');
   });
 
   // IPC for app version
@@ -496,13 +519,15 @@ function createMainWindow() {
     mainWindow.loadFile(indexPath);
   }
 
-  // FORCE DevTools in Production for debugging v1.5.8
-  mainWindow.webContents.openDevTools({ mode: 'detach' });
+  // Only open DevTools in Development Mode
+  if (process.env.VITE_DEV_SERVER_URL) {
+    mainWindow.webContents.openDevTools({ mode: 'detach' });
 
-  // Debug webviews
-  mainWindow.webContents.on('did-attach-webview', (_, webContents) => {
-    webContents.openDevTools({ mode: 'detach' });
-  });
+    // Debug webviews in Development
+    mainWindow.webContents.on('did-attach-webview', (_, webContents) => {
+      webContents.openDevTools({ mode: 'detach' });
+    });
+  }
 
   // Handle downloads
   mainWindow.webContents.session.on('will-download', (_event, item) => {
@@ -589,32 +614,6 @@ app.whenReady().then(() => {
 
   // Check for updates
   try {
-    autoUpdater.on('update-available', () => {
-      dialog.showMessageBox({
-        type: 'info',
-        title: 'Mise à jour disponible',
-        message: 'Une nouvelle version d\'Explore est disponible. Le téléchargement a commencé en arrière-plan...',
-        buttons: ['Ok']
-      });
-    });
-
-    autoUpdater.on('update-downloaded', () => {
-      dialog.showMessageBox({
-        type: 'info',
-        title: 'Mise à jour prête',
-        message: 'La mise à jour a été téléchargée avec succès. Voulez-vous redémarrer le navigateur pour l\'installer maintenant ?',
-        buttons: ['Redémarrer', 'Plus tard']
-      }).then((result) => {
-        if (result.response === 0) {
-          autoUpdater.quitAndInstall();
-        }
-      });
-    });
-
-    autoUpdater.on('error', (err) => {
-      console.error('Erreur lors de la mise à jour:', err);
-    });
-
     autoUpdater.checkForUpdatesAndNotify();
   } catch (e) {
     console.error('Failed to check for updates:', e);

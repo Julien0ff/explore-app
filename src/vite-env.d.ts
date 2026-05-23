@@ -63,5 +63,19 @@ interface Window {
     onOAuthCallback: (callback: (url: string) => void) => void;
     offOAuthCallback: () => void;
     getAppVersion: () => Promise<string>;
+    onUpdateChecking: (callback: () => void) => void;
+    onUpdateAvailable: (callback: () => void) => void;
+    onUpdateNotAvailable: (callback: () => void) => void;
+    onUpdateDownloaded: (callback: () => void) => void;
+    onDownloadProgress: (callback: (percent: number) => void) => void;
+    onUpdateError: (callback: (error: string) => void) => void;
+    offUpdateChecking: () => void;
+    offUpdateAvailable: () => void;
+    offUpdateNotAvailable: () => void;
+    offUpdateDownloaded: () => void;
+    offDownloadProgress: () => void;
+    offUpdateError: () => void;
+    checkForUpdate: () => void;
+    restartApp: () => void;
   };
 }

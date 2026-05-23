@@ -72,3 +72,13 @@ body {
     background: rgba(255, 255, 255, 0.2);
   }
 }
+
+/* Hide scrollbar utility class */
+.scrollbar-none::-webkit-scrollbar {
+  display: none !important;
+}
+.scrollbar-none {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
