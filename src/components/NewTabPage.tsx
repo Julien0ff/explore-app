@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Logo } from './Logo';
+import { IncognitoIcon } from './IncognitoIcon';
 import { Search, Plus, X, Shield, Star, Folder, FolderOpen, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
@@ -145,6 +146,7 @@ interface NewTabPageProps {
   blockedAdsCount?: number;
   adBlockEnabled?: boolean;
   bookmarks?: Bookmark[];
+  isPrivate?: boolean;
 }
 
 interface QuickLink {
@@ -153,7 +155,7 @@ interface QuickLink {
   url: string;
 }
 
-export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChange, suggestions = [], blockedAdsCount = 0, adBlockEnabled = false, bookmarks = [] }: NewTabPageProps) {
+export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChange, suggestions = [], blockedAdsCount = 0, adBlockEnabled = false, bookmarks = [], isPrivate = false }: NewTabPageProps) {
   const colors = getAccentColorClass(accentColor, theme === 'dark');
   const [query, setQuery] = useState('');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -458,9 +460,20 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
           className="flex flex-col items-center gap-4"
         >
           <div className="relative">
-            <Logo className="w-16 h-16 relative z-10" />
+            {isPrivate ? (
+              <div className="relative z-10 text-gray-300 drop-shadow-[0_0_16px_rgba(255,255,255,0.1)]">
+                <IncognitoIcon size="lg" animated glow />
+              </div>
+            ) : (
+              <Logo className="w-16 h-16 relative z-10" />
+            )}
           </div>
-            <div className="text-6xl font-extrabold tracking-tighter mb-2 bg-linear-to-r from-blue-400 to-blue-700 bg-clip-text text-transparent pr-3 pb-1">
+            <div className={clsx(
+              "text-6xl font-extrabold tracking-tighter mb-2 bg-clip-text text-transparent pr-3 pb-1",
+              isPrivate 
+                ? "bg-linear-to-r from-gray-300 to-gray-500" 
+                : "bg-linear-to-r from-blue-400 to-blue-700"
+            )}>
               {time}
             </div>
             <motion.h1 

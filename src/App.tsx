@@ -24,6 +24,7 @@ import { twMerge } from 'tailwind-merge';
 import { Reorder, AnimatePresence, motion } from 'framer-motion';
 
 import { Logo } from './components/Logo';
+import { IncognitoIcon } from './components/IncognitoIcon';
 import { SettingsModal } from './components/SettingsModal';
 import { ConfirmModal } from './components/ConfirmModal';
 import { PasswordManager } from './components/PasswordManager';
@@ -54,6 +55,7 @@ interface Tab {
   canGoForward?: boolean;
   themeColor?: string;
   isReaderMode?: boolean;
+  isPrivate?: boolean;
 }
 
 function App() {
@@ -126,7 +128,6 @@ function App() {
   // Language state must be declared before it is used in initial state
   const [language, setLanguage] = useState<'fr' | 'en'>('fr');
   const languageRef = useRef(language);
-  const [isPrivate, setIsPrivate] = useState(false);
   const urlInputRef = useRef<HTMLInputElement>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -138,10 +139,10 @@ function App() {
       closeTab: 'Ctrl+W',
       focusUrl: 'Ctrl+L',
       reloadTab: 'Ctrl+R',
-      togglePrivate: 'Ctrl+Shift+N',
+      togglePrivate: 'Ctrl+Shift+P',
       saveSession: 'Ctrl+Shift+S',
       restoreSession: 'Ctrl+Shift+R',
-      enablePiP: 'Ctrl+Shift+P',
+      enablePiP: 'Ctrl+Shift+E',
       toggleHistory: 'Ctrl+H',
       toggleBookmarks: 'Ctrl+B',
       openSettings: 'Ctrl+,',
@@ -348,13 +349,14 @@ function App() {
     webview.openDevTools();
   };
 
-  function addTab(url = 'explore://newtab', focus = true) {
+  function addTab(url = 'explore://newtab', focus = true, isPrivate = false) {
     const newId = crypto.randomUUID();
     const newTab: Tab = {
       id: newId,
       url,
       title: url === 'explore://newtab' ? (languageRef.current === 'fr' ? 'Nouvel onglet' : 'New Tab') : url,
-      isLoading: false
+      isLoading: false,
+      isPrivate
     };
     setTabs(prev => [...prev, newTab]);
     if (focus) {
@@ -880,9 +882,57 @@ function App() {
   };
 
   const activeTab = tabs.find(t => t.id === activeTabId);
-  const activeThemeColor = activeTab?.url === 'explore://newtab' 
-    ? colors.hex 
-    : activeTab?.themeColor;
+  const isPrivate = activeTab?.isPrivate || false;
+  const activeThemeColor = activeTab?.isPrivate
+    ? '#64748b' // Slate gray for all private pages
+    : activeTab?.url === 'explore://newtab' 
+      ? colors.hex 
+      : activeTab?.themeColor;
+
+  const prevVpnStateRef = useRef<{ connected: boolean; locationId: string } | null>(null);
+
+  useEffect(() => {
+    const activeTab = tabs.find(t => t.id === activeTabId);
+    if (!activeTab) return;
+    const isCurrentTabPrivate = !!activeTab.isPrivate;
+
+    if (isCurrentTabPrivate) {
+      const currentlyConnected = localStorage.getItem('vpn_connected') === 'true';
+      const lastLocationId = localStorage.getItem('vpn_location_id') || 'fr';
+      const lastLocationName = localStorage.getItem('vpn_location') || 'France';
+
+      if (!currentlyConnected) {
+        prevVpnStateRef.current = { connected: false, locationId: lastLocationId };
+
+        localStorage.setItem('vpn_connected', 'true');
+        localStorage.setItem('vpn_location', lastLocationName);
+        localStorage.setItem('vpn_location_id', lastLocationId);
+
+        if (window.electron) {
+          window.electron.setProxy(lastLocationId);
+        }
+        window.dispatchEvent(new Event('vpn-state-change'));
+      }
+    } else {
+      if (prevVpnStateRef.current !== null) {
+        const { connected, locationId } = prevVpnStateRef.current;
+        prevVpnStateRef.current = null;
+
+        localStorage.setItem('vpn_connected', String(connected));
+        
+        if (connected) {
+          if (window.electron) {
+            window.electron.setProxy(locationId);
+          }
+        } else {
+          if (window.electron) {
+            window.electron.disableProxy();
+          }
+        }
+        window.dispatchEvent(new Event('vpn-state-change'));
+      }
+    }
+  }, [activeTabId, tabs]);
 
   useEffect(() => {
     // Check initial adblock state
@@ -951,9 +1001,9 @@ function App() {
     }
   }, [user]);
 
-  const addToHistory = async (url: string, title: string) => {
+  const addToHistory = async (url: string, title: string, isTabPrivate?: boolean) => {
     // Check if url is internal
-    if (url.startsWith('explore://') || isPrivate) return;
+    if (url.startsWith('explore://') || isPrivate || isTabPrivate) return;
     
     const newItem = {
       id: crypto.randomUUID(),
@@ -1070,9 +1120,9 @@ function App() {
       } else if (matches(e, shortcuts.reloadTab)) {
         e.preventDefault();
         webviewRefs.current[activeTabId]?.reload();
-      } else if (matches(e, shortcuts.togglePrivate)) {
+      } else if (matches(e, shortcuts.togglePrivate) || (e.ctrlKey && e.shiftKey && (e.key.toLowerCase() === 'p' || e.key.toLowerCase() === 'n'))) {
         e.preventDefault();
-        setIsPrivate(prev => !prev);
+        addTab('explore://newtab', true, true);
       } else if (matches(e, shortcuts.saveSession)) {
         e.preventDefault();
         localStorage.setItem('explore_sessions', JSON.stringify(tabs));
@@ -1299,7 +1349,11 @@ function App() {
   };
 
   return (
-    <div className={clsx("flex h-screen w-full overflow-hidden transition-colors duration-1000 relative", theme === 'dark' ? "bg-[#14141d] text-white" : "bg-gray-100 text-gray-900")}>
+    <div className={clsx("flex h-screen w-full overflow-hidden transition-colors duration-1000 relative", 
+      activeTab?.isPrivate 
+        ? (theme === 'dark' ? "bg-[#0f1218] text-white" : "bg-slate-100 text-slate-950")
+        : (theme === 'dark' ? "bg-[#14141d] text-white" : "bg-gray-100 text-gray-900")
+    )}>
       
       {ambientMode && activeThemeColor && (
         <>
@@ -1400,9 +1454,11 @@ function App() {
                   )}
                   title={tab.title}
                 >
-                  <div className={clsx("w-5 h-5 rounded-full flex items-center justify-center text-[10px]", activeTabId === tab.id ? clsx(colors.borderSubtle, colors.text) : "bg-white/10 text-gray-400")}>
+                  <div className={clsx("w-5 h-5 rounded-full flex items-center justify-center text-[10px]", activeTabId === tab.id ? clsx(colors.borderSubtle, colors.text) : "bg-white/10 text-gray-400", tab.isPrivate && "border border-slate-500/30 bg-slate-500/10")}>
                     {tab.isLoading ? (
                       <RotateCw className={clsx("w-3.5 h-3.5 animate-spin", activeTabId === tab.id ? colors.text : "text-gray-400")} />
+                    ) : tab.isPrivate ? (
+                      <IncognitoIcon size="sm" animated={false} className="text-slate-400" />
                     ) : tab.url === 'explore://newtab' ? (
                        <Logo className={clsx("w-3.5 h-3.5", activeTabId === tab.id ? colors.text : "text-gray-400")} />
                     ) : (
@@ -1425,6 +1481,19 @@ function App() {
                 )}
               </div>
             ))}
+          </div>
+
+          <div className="flex flex-col items-center gap-2 pb-2">
+            <button 
+              onClick={() => addTab('explore://newtab', true, true)}
+              className={clsx(
+                "p-2 rounded-xl transition-all duration-300 hover:scale-105 active:scale-95 flex items-center justify-center text-gray-400 hover:text-white",
+                theme === 'dark' ? "hover:bg-white/5" : "hover:bg-gray-100"
+              )}
+              title={language === 'fr' ? 'Nouvel onglet privé' : 'New Private Tab'}
+            >
+              <IncognitoIcon size="md" animated className="shrink-0 opacity-75 hover:opacity-100" />
+            </button>
           </div>
 
           <div className={clsx("p-4 border-t flex flex-col items-center gap-2", theme === 'dark' ? "border-white/5" : "border-gray-200")}>
@@ -1502,9 +1571,11 @@ function App() {
                   )}
                   onPointerDown={() => setActiveTabId(tab.id)}
                 >
-                   <div className={clsx("min-w-5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0", activeTabId === tab.id ? clsx(colors.borderSubtle, colors.text) : "bg-white/10 text-gray-400")}>
+                   <div className={clsx("min-w-5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0", activeTabId === tab.id ? clsx(colors.borderSubtle, colors.text) : "bg-white/10 text-gray-400", tab.isPrivate && "border border-purple-500/30 bg-purple-500/10")}>
                     {tab.isLoading ? (
                       <RotateCw className={clsx("w-3 h-3 animate-spin", activeTabId === tab.id ? colors.text : "text-gray-400")} />
+                    ) : tab.isPrivate ? (
+                      <IncognitoIcon size="sm" animated={false} className="text-purple-400" />
                     ) : (
                       <img 
                       src={getFaviconUrl(tab.url)} 
@@ -1604,7 +1675,11 @@ function App() {
           <form onSubmit={handleNavigate} className="w-full max-w-2xl mx-auto no-drag relative z-50 px-4 flex justify-center">
             <div className="relative group w-full">
               <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                <Search className={clsx("w-4 h-4 text-gray-500 transition-colors", `group-focus-within:${colors.text}`)} />
+                {activeTab?.isPrivate ? (
+                  <IncognitoIcon size="sm" animated={false} className="w-4 h-4 text-slate-400 drop-shadow-[0_0_4px_rgba(100,116,139,0.4)]" />
+                ) : (
+                  <Search className={clsx("w-4 h-4 text-gray-500 transition-colors", `group-focus-within:${colors.text}`)} />
+                )}
               </div>
               <input
                 type="text"
@@ -1623,10 +1698,11 @@ function App() {
                 ref={urlInputRef}
                 className={clsx(
                     "w-full border rounded-2xl py-1.5 pl-11 pr-44 text-sm focus:outline-none focus:ring-2 transition-all shadow-sm overflow-hidden text-ellipsis whitespace-nowrap",
-                    colors.ring,
+                    activeTab?.isPrivate ? "focus:ring-slate-500/50" : colors.ring,
                     ambientMode && activeThemeColor
                       ? (theme === 'dark' ? "bg-black/20 border-white/5 text-gray-200 placeholder-gray-600" : "bg-white/40 border-black/5 text-gray-800 placeholder-gray-400")
-                      : (theme === 'dark' ? "bg-[#181825] border-white/5 text-gray-200 placeholder-gray-600 shadow-inner" : "bg-gray-50 border-gray-200 text-gray-800 placeholder-gray-400")
+                      : (theme === 'dark' ? "bg-[#181825] border-white/5 text-gray-200 placeholder-gray-600 shadow-inner" : "bg-gray-50 border-gray-200 text-gray-800 placeholder-gray-400"),
+                    activeTab?.isPrivate && (theme === 'dark' ? "border-slate-500/30 bg-[#0f1218]/60 text-slate-200 placeholder-slate-600" : "border-slate-300 bg-slate-50/50 text-slate-900 placeholder-slate-400")
                   )}
                 placeholder={language === 'fr' ? "Rechercher ou entrer une URL" : "Search or enter URL"}
               />
@@ -1922,11 +1998,13 @@ function App() {
                   )}
                   onPointerDown={() => setActiveTabId(tab.id)}
                 >
-                   <div className={clsx("min-w-5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0", activeTabId === tab.id ? clsx(colors.borderSubtle, colors.text) : "bg-white/10 text-gray-400")}>
+                   <div className={clsx("min-w-5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0", activeTabId === tab.id ? clsx(colors.borderSubtle, colors.text) : "bg-white/10 text-gray-400", tab.isPrivate && "border border-purple-500/30 bg-purple-500/10")}>
                     {tab.isLoading ? (
                       <RotateCw className={clsx("w-3 h-3 animate-spin", activeTabId === tab.id ? colors.text : "text-gray-400")} />
+                    ) : tab.isPrivate ? (
+                      <IncognitoIcon size="sm" animated={false} className="text-purple-400" />
                     ) : tab.url === 'explore://newtab' ? (
-                       <Logo className={clsx("w-3 h-3", activeTabId === tab.id ? colors.text : "text-gray-400")} />
+                       <Logo className={clsx("w-3.5 h-3.5", activeTabId === tab.id ? colors.text : "text-gray-400")} />
                     ) : (
                       <img 
                       src={getFaviconUrl(tab.url)} 
@@ -2095,6 +2173,7 @@ function App() {
                   <NewTabPage 
                     theme={theme} 
                     accentColor={accentColor}
+                    isPrivate={tab.isPrivate}
                     onSearch={(query) => {
                       const url = getSearchUrl(query);
                       updateTab(tab.id, { url, title: url, isLoading: true });
@@ -2415,7 +2494,7 @@ function App() {
                       });
                       el.addEventListener('did-stop-loading', () => {
                         updateTab(tab.id, { isLoading: false, title: el.getTitle() });
-                        addToHistory(el.getURL(), el.getTitle());
+                        addToHistory(el.getURL(), el.getTitle(), tab.isPrivate);
                       });
                       el.addEventListener('did-finish-load', () => {
                         updateTab(tab.id, { isLoading: false, title: el.getTitle(), canGoBack: el.canGoBack(), canGoForward: el.canGoForward() });
@@ -2541,18 +2620,39 @@ function App() {
                             id: newTabId, 
                             url: event.url, 
                             title: languageRef.current === 'fr' ? 'Nouvel onglet' : 'New Tab', 
-                            isLoading: true 
+                            isLoading: true,
+                            isPrivate: tab.isPrivate
                           };
                           setTabs(prev => [...prev, newTab]);
                           setActiveTabId(newTabId);
                         });
-                      el.dataset.listenersAttached = 'true';
+                        el.addEventListener('before-input-event', (e: Event) => {
+                          const event = e as Event & { input: { type: string, key: string, code: string, control: boolean, shift: boolean, alt: boolean, meta: boolean } };
+                          if (event.input.type === 'keyDown') {
+                            const fakeEvent = new KeyboardEvent('keydown', {
+                              key: event.input.key,
+                              code: event.input.code,
+                              ctrlKey: event.input.control,
+                              shiftKey: event.input.shift,
+                              altKey: event.input.alt,
+                              metaKey: event.input.meta,
+                              bubbles: true,
+                              cancelable: true
+                            });
+                            const allowed = window.dispatchEvent(fakeEvent);
+                            if (!allowed) {
+                              event.preventDefault();
+                            }
+                          }
+                        });
+                        
+                        el.dataset.listenersAttached = 'true';
+                      }
                     }
-                  }
-                }}
+                  }}
                 className={clsx("w-full h-full bg-transparent")}
                 allowpopups={true}
-                partition={isPrivate ? "private" : "persist:explore"}
+                partition={tab.isPrivate ? "private" : "persist:explore"}
                 webpreferences="contextIsolation=true, nodeIntegration=false"
               />
             )}

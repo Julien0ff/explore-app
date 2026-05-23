@@ -83,6 +83,14 @@ export function SettingsModal({
   // Active Category for Sidebar layout
   const [activeCategory, setActiveCategory] = React.useState<'general' | 'appearance' | 'shortcuts' | 'privacy' | 'accessibility' | 'about'>('general');
 
+  // Custom Toast state
+  const [toastMessage, setToastMessage] = React.useState<string | null>(null);
+  
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
   React.useEffect(() => {
     if (window.electron?.getAdBlockEnabled) {
       window.electron.getAdBlockEnabled().then(setAdBlockEnabled);
@@ -445,20 +453,36 @@ export function SettingsModal({
                   { label: language === 'fr' ? 'Mode Privé' : 'Private Mode', key: 'togglePrivate', placeholder: 'Ctrl+Shift+P' },
                   { label: language === 'fr' ? 'Sauvegarder Session' : 'Save Session', key: 'saveSession', placeholder: 'Ctrl+S' },
                   { label: language === 'fr' ? 'Restaurer Session' : 'Restore Session', key: 'restoreSession', placeholder: 'Ctrl+Shift+R' },
-                  { label: language === 'fr' ? 'Activer Picture-in-Picture' : 'Enable PiP', key: 'enablePiP', placeholder: 'Ctrl+Shift+P' },
+                  { label: language === 'fr' ? 'Activer Picture-in-Picture' : 'Enable PiP', key: 'enablePiP', placeholder: 'Ctrl+Shift+E' },
                 ].map((s) => (
                   <div key={s.key} className="flex flex-col gap-2">
                     <span className={clsx("text-sm font-bold opacity-80", theme === 'dark' ? "text-white" : "text-gray-900")}>{s.label}</span>
                     <input
                       value={localShortcuts[s.key as keyof typeof localShortcuts]}
-                      onChange={(e) => setLocalShortcuts({ ...localShortcuts, [s.key]: e.target.value })}
+                      readOnly
+                      onKeyDown={(e) => {
+                        e.preventDefault();
+                        if (['Control', 'Shift', 'Alt', 'Meta', 'Tab', 'CapsLock'].includes(e.key)) return;
+                        
+                        const parts = [];
+                        if (e.ctrlKey) parts.push('Ctrl');
+                        if (e.altKey) parts.push('Alt');
+                        if (e.shiftKey) parts.push('Shift');
+                        
+                        let keyName = e.key;
+                        if (keyName === ' ') keyName = 'Space';
+                        if (keyName.length === 1) keyName = keyName.toUpperCase();
+                        
+                        parts.push(keyName);
+                        setLocalShortcuts({ ...localShortcuts, [s.key]: parts.join('+') });
+                      }}
                       className={clsx(
-                        "px-4 py-3 rounded-xl border text-sm font-semibold outline-none transition-all focus:ring-2 focus:ring-opacity-50",
+                        "px-4 py-3 rounded-xl border text-sm font-semibold outline-none transition-all focus:ring-2 focus:ring-opacity-50 cursor-pointer",
                         theme === 'dark' 
                           ? "bg-[#181825] border-white/10 text-white focus:ring-blue-500" 
                           : "bg-white border-gray-200 text-gray-900 focus:ring-blue-500 shadow-sm"
                       )}
-                      placeholder={s.placeholder}
+                      placeholder={language === 'fr' ? 'Appuyez sur une touche...' : 'Press a key combo...'}
                     />
                   </div>
                 ))}
@@ -474,7 +498,7 @@ export function SettingsModal({
                 <button
                   onClick={() => {
                     setShortcuts({ ...shortcuts, ...localShortcuts });
-                    alert(language === 'fr' ? 'Raccourcis enregistrés !' : 'Shortcuts saved!');
+                    showToast(language === 'fr' ? 'Raccourcis enregistrés !' : 'Shortcuts saved!');
                   }}
                   className={clsx("px-5 py-2.5 rounded-xl font-bold text-sm text-white transition-all hover:scale-105 active:scale-95 shadow-md", colors.bgSolid, colors.bgHover)}
                 >
@@ -526,7 +550,7 @@ export function SettingsModal({
                 onClick={() => {
                   if (confirm(language === 'fr' ? 'Voulez-vous vraiment effacer toutes vos données de navigation ?' : 'Are you sure you want to clear all browsing data?')) {
                     onClearData();
-                    alert(language === 'fr' ? 'Données effacées !' : 'Browsing data cleared!');
+                    showToast(language === 'fr' ? 'Données effacées !' : 'Browsing data cleared!');
                   }
                 }}
                 className="px-5 py-3 rounded-2xl bg-red-500/10 text-red-500 hover:bg-red-500/20 font-bold transition-all hover:scale-105 active:scale-95 shadow-sm"
@@ -825,6 +849,24 @@ export function SettingsModal({
             <div className="flex-1 p-8 overflow-y-auto max-h-[70vh]">
               {children}
             </div>
+
+            {/* Internal Toast */}
+            <AnimatePresence>
+              {toastMessage && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                  className={clsx(
+                    "absolute bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 rounded-2xl flex items-center gap-3 shadow-2xl z-50",
+                    theme === 'dark' ? "bg-white text-black" : "bg-black text-white"
+                  )}
+                >
+                  <Check className="w-5 h-5 text-green-500" />
+                  <span className="font-bold text-sm tracking-wide">{toastMessage}</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       );
@@ -864,6 +906,24 @@ export function SettingsModal({
                 </h2>
                 {children}
               </motion.div>
+
+              {/* Internal Toast */}
+              <AnimatePresence>
+                {toastMessage && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                    className={clsx(
+                      "absolute bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 rounded-2xl flex items-center gap-3 shadow-2xl z-50",
+                      theme === 'dark' ? "bg-white text-black" : "bg-black text-white"
+                    )}
+                  >
+                    <Check className="w-5 h-5 text-green-500" />
+                    <span className="font-bold text-sm tracking-wide">{toastMessage}</span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
           </div>
         )}
       </AnimatePresence>
