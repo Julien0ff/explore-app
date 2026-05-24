@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, Layout, RefreshCw, Send, Globe, Palette, Keyboard, Shield, Accessibility, Info, 
-  Check, Sparkles, Sliders, Chrome
+  Check, Sparkles, Sliders, Chrome, Cloud, UploadCloud, DownloadCloud, Star
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -37,6 +37,14 @@ interface SettingsModalProps {
   ambientMode: boolean;
   setAmbientMode: (val: boolean) => void;
   checkForUpdates?: () => void;
+  windowStyle: 'mac' | 'windows';
+  setWindowStyle: (style: 'mac' | 'windows') => void;
+  showBookmarksBar: boolean;
+  setShowBookmarksBar: (show: boolean) => void;
+  onSaveSessionToCloud?: () => void;
+  onRestoreSessionFromCloud?: () => void;
+  isAuthenticated?: boolean;
+  onRequireAuth?: () => void;
 }
 
 export function SettingsModal({
@@ -58,9 +66,17 @@ export function SettingsModal({
   onOpenUrl,
   onImportBookmarks,
   onClearData,
+  windowStyle,
+  setWindowStyle,
+  showBookmarksBar,
+  setShowBookmarksBar,
   ambientMode,
   setAmbientMode,
-  checkForUpdates
+  checkForUpdates,
+  onSaveSessionToCloud,
+  onRestoreSessionFromCloud,
+  isAuthenticated,
+  onRequireAuth
 }: SettingsModalProps) {
   const colors = getAccentColorClass(accentColor, theme === 'dark');
   const [suggestion, setSuggestion] = React.useState('');
@@ -81,7 +97,7 @@ export function SettingsModal({
   });
 
   // Active Category for Sidebar layout
-  const [activeCategory, setActiveCategory] = React.useState<'general' | 'appearance' | 'shortcuts' | 'privacy' | 'accessibility' | 'about'>('general');
+  const [activeCategory, setActiveCategory] = React.useState<'general' | 'appearance' | 'shortcuts' | 'privacy' | 'accessibility' | 'sync' | 'about'>('general');
 
   // Custom Toast state
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
@@ -178,8 +194,9 @@ export function SettingsModal({
     { id: 'general', name: language === 'fr' ? 'Général' : 'General', icon: Globe },
     { id: 'appearance', name: language === 'fr' ? 'Apparence' : 'Appearance', icon: Palette },
     { id: 'shortcuts', name: language === 'fr' ? 'Raccourcis' : 'Shortcuts', icon: Keyboard },
-    { id: 'privacy', name: language === 'fr' ? 'Confidentialité & Sécurité' : 'Privacy & Security', icon: Shield },
+    { id: 'privacy', name: language === 'fr' ? 'Confidentialité et Sécurité' : 'Privacy & Security', icon: Shield },
     { id: 'accessibility', name: language === 'fr' ? 'Accessibilité' : 'Accessibility', icon: Accessibility },
+    { id: 'sync', name: language === 'fr' ? 'Synchronisation Cloud' : 'Cloud Sync', icon: Cloud },
     { id: 'about', name: language === 'fr' ? 'À propos' : 'About', icon: Info },
   ] as const;
 
@@ -371,6 +388,47 @@ export function SettingsModal({
               </div>
             </div>
 
+            {/* Window Style */}
+            <div className={clsx("p-6 rounded-3xl border", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50/50 border-gray-200")}>
+              <h3 className={clsx("text-lg font-bold mb-4", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                {language === 'fr' ? 'Style de fenêtre' : 'Window Style'}
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => setWindowStyle('mac')}
+                  className={clsx(
+                    "p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all hover:scale-[1.02]",
+                    windowStyle === 'mac'
+                      ? clsx(colors.border, colors.bg)
+                      : theme === 'dark' ? "border-white/10 hover:border-white/20" : "border-gray-200 hover:border-gray-300"
+                  )}
+                >
+                  <div className="flex gap-1.5 p-3 rounded-lg border w-full max-w-xs justify-start bg-[#1e1e2e] border-white/10">
+                    <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
+                    <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
+                    <div className="w-3 h-3 rounded-full bg-[#28c840]" />
+                  </div>
+                  <span className={clsx("font-bold text-sm", theme === 'dark' ? "text-white" : "text-gray-900")}>Mac OS</span>
+                </button>
+                <button
+                  onClick={() => setWindowStyle('windows')}
+                  className={clsx(
+                    "p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all hover:scale-[1.02]",
+                    windowStyle === 'windows'
+                      ? clsx(colors.border, colors.bg)
+                      : theme === 'dark' ? "border-white/10 hover:border-white/20" : "border-gray-200 hover:border-gray-300"
+                  )}
+                >
+                  <div className="flex gap-1.5 p-3 rounded-lg border w-full max-w-xs justify-end bg-[#1e1e2e] border-white/10">
+                    <div className="text-gray-400 font-bold px-1 select-none">−</div>
+                    <div className="text-gray-400 font-bold px-1 select-none">□</div>
+                    <div className="text-gray-400 font-bold px-1 select-none">×</div>
+                  </div>
+                  <span className={clsx("font-bold text-sm", theme === 'dark' ? "text-white" : "text-gray-900")}>Windows</span>
+                </button>
+              </div>
+            </div>
+
             {/* Ambient Mode Toggle */}
             <div className={clsx("p-6 rounded-3xl border flex items-center justify-between", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50/50 border-gray-200")}>
               <div className="space-y-1">
@@ -392,6 +450,31 @@ export function SettingsModal({
                 <div className={clsx(
                   "absolute top-1 w-5 h-5 rounded-full bg-white transition-all shadow-md",
                   ambientMode ? "left-8" : "left-1"
+                )} />
+              </button>
+            </div>
+
+            {/* Bookmarks Bar Toggle */}
+            <div className={clsx("p-6 rounded-3xl border flex items-center justify-between", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50/50 border-gray-200")}>
+              <div className="space-y-1">
+                <h4 className={clsx("font-bold text-lg flex items-center gap-2", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                  <Star className="w-5 h-5 text-yellow-400" />
+                  {language === 'fr' ? 'Barre de Favoris' : 'Bookmarks Bar'}
+                </h4>
+                <p className={clsx("text-sm max-w-md", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
+                  {language === 'fr' ? 'Affiche une barre horizontale sous la barre d\'adresse.' : 'Show a horizontal bookmarks bar under the address bar.'}
+                </p>
+              </div>
+              <button 
+                onClick={() => setShowBookmarksBar(!showBookmarksBar)}
+                className={clsx(
+                  "w-14 h-7 rounded-full transition-colors relative shadow-inner shrink-0",
+                  showBookmarksBar ? colors.bgSolid : (theme === 'dark' ? "bg-gray-600" : "bg-gray-300")
+                )}
+              >
+                <div className={clsx(
+                  "absolute top-1 w-5 h-5 rounded-full bg-white transition-all shadow-md",
+                  showBookmarksBar ? "left-8" : "left-1"
                 )} />
               </button>
             </div>
@@ -505,6 +588,63 @@ export function SettingsModal({
                   {language === 'fr' ? 'Enregistrer' : 'Save'}
                 </button>
               </div>
+            </div>
+          </div>
+        );
+      case 'sync':
+        return (
+          <div className="space-y-6 animate-fadeIn">
+            <div className={clsx("p-6 rounded-3xl border flex items-center justify-between", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50/50 border-gray-200")}>
+              <div className="space-y-1">
+                <h4 className={clsx("font-bold text-lg flex items-center gap-2", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                  <UploadCloud className="w-5 h-5 text-blue-500" />
+                  {language === 'fr' ? 'Sauvegarder ma session' : 'Save my session'}
+                </h4>
+                <p className={clsx("text-sm max-w-md", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
+                  {language === 'fr' ? 'Sauvegarde tous vos onglets ouverts dans le cloud pour les retrouver sur n\'importe quel appareil.' : 'Saves all your open tabs to the cloud to retrieve them on any device.'}
+                </p>
+              </div>
+              <button 
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    onRequireAuth?.();
+                    onClose();
+                    return;
+                  }
+                  onSaveSessionToCloud?.();
+                  showToast(language === 'fr' ? 'Session sauvegardée dans le cloud !' : 'Session saved to cloud!');
+                }}
+                className={clsx("px-5 py-2.5 rounded-xl font-bold text-sm text-white transition-all hover:scale-105 active:scale-95 shadow-md", colors.bgSolid, colors.bgHover)}
+              >
+                {language === 'fr' ? 'Sauvegarder' : 'Save'}
+              </button>
+            </div>
+            
+            <div className={clsx("p-6 rounded-3xl border flex items-center justify-between", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50/50 border-gray-200")}>
+              <div className="space-y-1">
+                <h4 className={clsx("font-bold text-lg flex items-center gap-2", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                  <DownloadCloud className="w-5 h-5 text-purple-500" />
+                  {language === 'fr' ? 'Restaurer ma session' : 'Restore my session'}
+                </h4>
+                <p className={clsx("text-sm max-w-md", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
+                  {language === 'fr' ? 'Restaure votre dernière session sauvegardée depuis le cloud.' : 'Restores your last saved session from the cloud.'}
+                </p>
+              </div>
+              <button 
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    onRequireAuth?.();
+                    onClose();
+                    return;
+                  }
+                  onRestoreSessionFromCloud?.();
+                  showToast(language === 'fr' ? 'Session restaurée depuis le cloud !' : 'Session restored from cloud!');
+                  onClose();
+                }}
+                className={clsx("px-5 py-2.5 rounded-xl font-bold text-sm text-white transition-all hover:scale-105 active:scale-95 shadow-md bg-purple-600 hover:bg-purple-700")}
+              >
+                {language === 'fr' ? 'Restaurer' : 'Restore'}
+              </button>
             </div>
           </div>
         );
@@ -807,7 +947,7 @@ export function SettingsModal({
                     key={cat.id}
                     onClick={() => setActiveCategory(cat.id)}
                     className={clsx(
-                      "w-full px-4 py-3 rounded-2xl flex items-center gap-3.5 font-bold text-sm transition-all hover:translate-x-1",
+                      "w-full px-4 py-3 rounded-2xl flex items-center gap-3.5 font-bold text-sm transition-all hover:translate-x-1 text-left",
                       isActive
                         ? clsx(colors.bgSolid, "text-white shadow-md shadow-blue-500/10")
                         : theme === 'dark'
@@ -1000,7 +1140,7 @@ export function SettingsModal({
           {/* Privacy & Shortcuts */}
           <div>
             <h3 className={clsx("text-base font-bold mb-4 uppercase tracking-wider opacity-60 border-b pb-1", theme === 'dark' ? "text-white border-white/10" : "text-gray-900 border-gray-200")}>
-              {language === 'fr' ? 'Confidentialité & Données' : 'Privacy & Data'}
+              {language === 'fr' ? 'Confidentialité et Sécurité' : 'Privacy & Security'}
             </h3>
             <div className="space-y-4">
               <div className={clsx("p-3 rounded-xl border flex items-center justify-between", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200")}>

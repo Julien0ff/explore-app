@@ -28,6 +28,20 @@ export function VPN({ isOpen, onClose, theme, accentColor, language, isFullPage 
   const [stats, setStats] = useState({ up: 0, down: 0 });
 
   useEffect(() => {
+    const handleSync = () => {
+      setIsConnected(localStorage.getItem('vpn_connected') === 'true');
+      setSelectedLocation(localStorage.getItem('vpn_location') || 'France');
+      setSelectedLocationId(localStorage.getItem('vpn_location_id') || 'fr');
+    };
+    window.addEventListener('vpn-state-change', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('vpn-state-change', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem('vpn_connected', String(isConnected));
     localStorage.setItem('vpn_location', selectedLocation);
     localStorage.setItem('vpn_location_id', selectedLocationId);

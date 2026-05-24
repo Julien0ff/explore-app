@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Plus, 
   X, 
+  Minus,
+  Square,
   RotateCw, 
   ArrowLeft, 
   ArrowRight, 
@@ -97,13 +99,22 @@ function App() {
     return () => document.removeEventListener('click', handleGlobalClick);
   }, [bookmarkContextMenu]);
   
-  const [showBookmarksBar] = useState(() => {
+  const [showBookmarksBar, setShowBookmarksBar] = useState(() => {
     return localStorage.getItem('showBookmarksBar') === 'true';
   });
 
   useEffect(() => {
     localStorage.setItem('showBookmarksBar', String(showBookmarksBar));
   }, [showBookmarksBar]);
+
+  const [windowStyle, setWindowStyle] = useState<'mac' | 'windows'>(() => {
+    return (localStorage.getItem('explore_window_style') as 'mac' | 'windows') || 'mac';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('explore_window_style', windowStyle);
+  }, [windowStyle]);
+
   
   // Settings State
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -1106,7 +1117,10 @@ function App() {
       } else if (matches(e, shortcuts.closeTab)) {
         e.preventDefault();
         setTabs(prev => {
-          if (prev.length <= 1) return prev;
+          if (prev.length <= 1) {
+            window.electron?.windowControls?.close?.();
+            return prev;
+          }
           const idx = prev.findIndex(t => t.id === activeTabId);
           const nextTabs = prev.filter(t => t.id !== activeTabId);
           const nextActive = nextTabs[Math.max(0, idx - 1)]?.id || nextTabs[0].id;
@@ -1321,6 +1335,34 @@ function App() {
   };
 
   const renderWindowControls = () => {
+    if (windowStyle === 'windows') {
+      return (
+        <div className="flex items-center gap-1 h-full no-drag text-gray-400 px-2">
+          <button 
+            onClick={() => handleWindowControl('minimize')} 
+            className="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-white/10 hover:text-white transition-colors"
+            title={language === 'fr' ? 'Réduire' : 'Minimize'}
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={() => handleWindowControl('maximize')} 
+            className="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-white/10 hover:text-white transition-colors"
+            title={language === 'fr' ? 'Agrandir' : 'Maximize'}
+          >
+            <Square className="w-3.5 h-3.5" />
+          </button>
+          <button 
+            onClick={() => handleWindowControl('close')} 
+            className="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors"
+            title={language === 'fr' ? 'Fermer' : 'Close'}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="flex items-center gap-2 no-drag px-2 py-1 group">
         <button 
@@ -1556,7 +1598,7 @@ function App() {
               axis="x" 
               values={tabs} 
               onReorder={setTabs} 
-              className="flex-1 flex flex-nowrap overflow-x-auto overflow-y-hidden min-w-0 no-drag gap-2 px-2 scrollbar-none pb-1 pt-1 items-center"
+              className="flex-1 flex flex-nowrap overflow-x-auto overflow-y-hidden min-w-0 drag-region gap-2 px-2 scrollbar-none pb-1 pt-1 items-center"
             >
               {tabs.map(tab => (
                 <Reorder.Item
@@ -1564,7 +1606,7 @@ function App() {
                   value={tab}
                   layout
                   className={twMerge(
-                    "group relative flex items-center gap-2 px-3 py-2 rounded-2xl cursor-pointer transition-all border border-transparent min-w-[140px] max-w-[240px] shrink-0",
+                    "group relative flex items-center gap-2 px-3 py-2 rounded-2xl cursor-pointer transition-all border border-transparent min-w-[30px] max-w-[240px] shrink no-drag",
                     activeTabId === tab.id 
                       ? clsx(colors.bg, colors.text, "shadow-lg relative overflow-hidden after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5", colors.bgSolid.replace("bg-", "after:bg-"), "border-white/5")
                       : clsx("text-gray-400 hover:bg-white/10 dark:hover:bg-white/5", colors.textHover)
@@ -1595,7 +1637,7 @@ function App() {
                 </Reorder.Item>
               ))}
               <div className="flex items-center">
-                <button onClick={() => addTab()} className="p-2 hover:bg-white/10 rounded-lg text-gray-400">
+                <button onClick={() => addTab()} className="p-2 hover:bg-white/10 rounded-lg text-gray-400 no-drag shrink-0">
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
@@ -1639,7 +1681,7 @@ function App() {
         {/* Navigation Bar & Window Controls */}
         <div 
           className={clsx(
-            "h-12 grid grid-cols-3 items-center px-4 border-b drag-region relative z-30 transition-colors duration-1000", 
+            "h-12 grid grid-cols-3 items-center px-4 border-b relative z-30 transition-colors duration-1000 drag-region", 
             tabPosition === 'bottom' && "order-last border-t border-b-0"
           )}
           style={{
@@ -1651,7 +1693,8 @@ function App() {
           }}
         >
           
-          <div className="flex items-center gap-1 no-drag justify-start">
+          <div className="flex items-center justify-start h-full">
+            <div className="flex items-center gap-1 no-drag">
             <button 
               className={clsx("p-1.5 hover:bg-white/10 rounded-lg text-gray-400 transition-colors disabled:opacity-30", colors.textHover)}
               onClick={() => webviewRefs.current[activeTabId]?.goBack()}
@@ -1670,10 +1713,11 @@ function App() {
             >
               <RotateCw className={clsx("w-4 h-4", activeTab?.isLoading && "animate-spin")} />
             </button>
+            </div>
           </div>
 
-          <form onSubmit={handleNavigate} className="w-full max-w-2xl mx-auto no-drag relative z-50 px-4 flex justify-center">
-            <div className="relative group w-full">
+          <form onSubmit={handleNavigate} className="w-full max-w-2xl mx-auto relative z-50 px-4 flex justify-center h-full items-center">
+            <div className="relative group w-full no-drag">
               <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
                 {activeTab?.isPrivate ? (
                   <IncognitoIcon size="sm" animated={false} className="w-4 h-4 text-slate-400 drop-shadow-[0_0_4px_rgba(100,116,139,0.4)]" />
@@ -1864,7 +1908,8 @@ function App() {
             )}
           </form>
 
-          <div className="flex items-center gap-1.5 no-drag justify-end ml-auto">
+          <div className="flex items-center justify-end h-full">
+             <div className="flex items-center gap-1.5 no-drag">
              <button 
               onClick={() => {
                 setIsDownloadsOpen(!isDownloadsOpen);
@@ -1947,6 +1992,7 @@ function App() {
                   {renderWindowControls()}
                </div>
             )}
+            </div>
           </div>
 
         </div>
@@ -1983,7 +2029,7 @@ function App() {
               axis="x" 
               values={tabs} 
               onReorder={setTabs} 
-              className="flex-1 flex flex-nowrap overflow-x-auto overflow-y-hidden min-w-0 no-drag gap-2 px-2 scrollbar-none pb-1 pt-1 items-center"
+              className="flex-1 flex flex-nowrap overflow-x-auto overflow-y-hidden min-w-0 gap-2 px-2 scrollbar-none pb-1 pt-1 items-center"
             >
               {tabs.map(tab => (
                 <Reorder.Item
@@ -1991,7 +2037,7 @@ function App() {
                   value={tab}
                   layout
                   className={twMerge(
-                    "group relative flex items-center gap-2 px-3 py-1.5 rounded-2xl cursor-pointer transition-all border border-transparent min-w-[140px] max-w-[240px] shrink-0",
+                    "group relative flex items-center gap-2 px-3 py-1.5 rounded-2xl cursor-pointer transition-all border border-transparent min-w-[30px] max-w-[240px] shrink no-drag",
                     activeTabId === tab.id 
                       ? clsx(colors.bg, colors.text, "shadow-lg relative overflow-hidden after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5", colors.bgSolid.replace("bg-", "after:bg-"), "border-white/5")
                       : clsx("text-gray-400 hover:bg-white/10 dark:hover:bg-white/5", colors.textHover)
@@ -2017,14 +2063,14 @@ function App() {
                   <span className={clsx("truncate text-sm flex-1 text-center select-none transition-all", tabs.length > 10 && "hidden lg:block")}>{tab.title || (language === 'fr' ? 'Chargement...' : 'Loading...')}</span>
                   <button
                     onClick={(e) => closeTab(e, tab.id)}
-                    className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/20 rounded-full transition-all shrink-0"
+                    className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/20 rounded-full transition-all shrink-0 no-drag"
                   >
                     <X className="w-3 h-3" />
                   </button>
                 </Reorder.Item>
               ))}
               <div className="flex items-center">
-                <button onClick={() => addTab()} className="p-2 hover:bg-white/10 rounded-lg text-gray-400">
+                <button onClick={() => addTab()} className="p-2 hover:bg-white/10 rounded-lg text-gray-400 no-drag shrink-0">
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
@@ -2210,6 +2256,10 @@ function App() {
                         onOpenUrl={(url) => updateTab(activeTabId, { url })}
                         onImportBookmarks={handleImportBookmarks}
                         onClearData={deleteHistory}
+                        windowStyle={windowStyle}
+                        setWindowStyle={setWindowStyle}
+                        showBookmarksBar={showBookmarksBar}
+                        setShowBookmarksBar={setShowBookmarksBar}
                         ambientMode={ambientMode}
                         setAmbientMode={setAmbientMode}
                         checkForUpdates={handleCheckForUpdates}
@@ -2720,6 +2770,26 @@ function App() {
         setLanguage={setLanguage}
         accentColor={accentColor}
         setAccentColor={setAccentColor}
+        onSaveSessionToCloud={async () => {
+          if (!user) return;
+          const { error } = await supabase.from('sessions').upsert({
+            user_id: user.id,
+            tabs: tabs,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id' });
+          if (error) console.error("Error saving session to cloud", error);
+        }}
+        onRestoreSessionFromCloud={async () => {
+          if (!user) return;
+          const { data, error } = await supabase.from('sessions').select('tabs').eq('user_id', user.id).single();
+          if (error) console.error("Error restoring session from cloud", error);
+          else if (data && data.tabs && data.tabs.length > 0) {
+            setTabs(data.tabs);
+            setActiveTabId(data.tabs[0].id);
+          }
+        }}
+        isAuthenticated={!!user}
+        onRequireAuth={() => setIsAuthModalOpen(true)}
         shortcuts={shortcuts}
         setShortcuts={setShortcuts}
         onImportBookmarks={handleImportBookmarks}
@@ -2752,6 +2822,10 @@ function App() {
           setActiveTabId(newId);
           setIsSettingsOpen(false);
         }}
+        windowStyle={windowStyle}
+        setWindowStyle={setWindowStyle}
+        showBookmarksBar={showBookmarksBar}
+        setShowBookmarksBar={setShowBookmarksBar}
         checkForUpdates={handleCheckForUpdates}
       />
 

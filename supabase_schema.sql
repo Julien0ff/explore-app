@@ -2,7 +2,7 @@
 create extension if not exists "uuid-ossp";
 
 -- Create profiles table
-create table public.profiles (
+create table if not exists public.profiles (
   id uuid references auth.users on delete cascade not null primary key,
   username text unique,
   avatar_url text,
@@ -13,44 +13,77 @@ create table public.profiles (
 -- Set up Row Level Security (RLS)
 alter table public.profiles enable row level security;
 
+drop policy if exists "Public profiles are viewable by everyone." on profiles;
 create policy "Public profiles are viewable by everyone."
   on profiles for select
   using ( true );
 
+drop policy if exists "Users can insert their own profile." on profiles;
 create policy "Users can insert their own profile."
   on profiles for insert
   with check ( auth.uid() = id );
 
+drop policy if exists "Users can update own profile." on profiles;
 create policy "Users can update own profile."
   on profiles for update
   using ( auth.uid() = id );
 
+-- Create sessions table for cloud sync
+create table if not exists public.sessions (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references auth.users on delete cascade not null unique,
+  tabs jsonb not null default '[]',
+  updated_at timestamp with time zone default timezone('utc'::text, now())
+);
+
+-- Set up Row Level Security (RLS) for sessions
+alter table public.sessions enable row level security;
+
+drop policy if exists "Users can view their own session." on sessions;
+create policy "Users can view their own session."
+  on sessions for select
+  using ( auth.uid() = user_id );
+
+drop policy if exists "Users can insert their own session." on sessions;
+create policy "Users can insert their own session."
+  on sessions for insert
+  with check ( auth.uid() = user_id );
+
+drop policy if exists "Users can update their own session." on sessions;
+create policy "Users can update their own session."
+  on sessions for update
+  using ( auth.uid() = user_id );
+
 -- Create history table
-create table public.history (
+create table if not exists public.history (
   id uuid default uuid_generate_v4() primary key,
   user_id uuid references auth.users on delete cascade not null,
   url text not null,
   title text,
-  visited_at timestamp with time zone default timezone('utc'::text, now()) not null
+  favicon text,
+  visited_at timestamp with time zone default timezone('utc'::text, now())
 );
 
 -- Set up RLS for history
 alter table public.history enable row level security;
 
+drop policy if exists "Users can view own history." on history;
 create policy "Users can view own history."
   on history for select
   using ( auth.uid() = user_id );
 
+drop policy if exists "Users can insert own history." on history;
 create policy "Users can insert own history."
   on history for insert
   with check ( auth.uid() = user_id );
 
+drop policy if exists "Users can delete own history." on history;
 create policy "Users can delete own history."
   on history for delete
   using ( auth.uid() = user_id );
 
 -- Create bookmarks table
-create table public.bookmarks (
+create table if not exists public.bookmarks (
   id uuid default uuid_generate_v4() primary key,
   user_id uuid references auth.users on delete cascade not null,
   url text not null,
@@ -61,14 +94,17 @@ create table public.bookmarks (
 -- Set up RLS for bookmarks
 alter table public.bookmarks enable row level security;
 
+drop policy if exists "Users can view own bookmarks." on bookmarks;
 create policy "Users can view own bookmarks."
   on bookmarks for select
   using ( auth.uid() = user_id );
 
+drop policy if exists "Users can insert own bookmarks." on bookmarks;
 create policy "Users can insert own bookmarks."
   on bookmarks for insert
   with check ( auth.uid() = user_id );
 
+drop policy if exists "Users can delete own bookmarks." on bookmarks;
 create policy "Users can delete own bookmarks."
   on bookmarks for delete
   using ( auth.uid() = user_id );
@@ -84,6 +120,7 @@ end;
 $$ language plpgsql security definer;
 
 -- Trigger the function every time a user is created
+drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();

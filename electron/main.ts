@@ -4,6 +4,8 @@ import path from 'path';
 import http from 'http';
 import fs from 'fs';
 
+app.setName('Explore Browser');
+
 let mainWindow: BrowserWindow | null = null;
 let splashWindow: BrowserWindow | null = null;
 
@@ -648,9 +650,17 @@ app.whenReady().then(() => {
         globalSessionConfig.proxyRules = 'http://127.0.0.1:8080';
       }
       
-      if (session.defaultSession) {
-        const bypassRules = '<local>;*.google.com;*.gstatic.com;*.duckduckgo.com;flagcdn.com';
-        await session.defaultSession.setProxy({ proxyRules: globalSessionConfig.proxyRules, proxyBypassRules: bypassRules });
+      const bypassRules = '<local>;*.google.com;*.gstatic.com;*.duckduckgo.com;flagcdn.com';
+      const sessions = [
+        session.defaultSession,
+        session.fromPartition('persist:explore'),
+        session.fromPartition('private')
+      ];
+      
+      for (const sess of sessions) {
+        if (sess) {
+          await sess.setProxy({ proxyRules: globalSessionConfig.proxyRules, proxyBypassRules: bypassRules });
+        }
       }
       return true;
     } catch (e) {
@@ -662,8 +672,16 @@ app.whenReady().then(() => {
   ipcMain.handle('disable-proxy', async () => {
     try {
       globalSessionConfig.proxyRules = '';
-      if (session.defaultSession) {
-        await session.defaultSession.setProxy({ proxyRules: 'direct://' });
+      const sessions = [
+        session.defaultSession,
+        session.fromPartition('persist:explore'),
+        session.fromPartition('private')
+      ];
+      
+      for (const sess of sessions) {
+        if (sess) {
+          await sess.setProxy({ proxyRules: 'direct://' });
+        }
       }
       return true;
     } catch (e) {

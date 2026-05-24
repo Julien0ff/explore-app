@@ -17,6 +17,7 @@ const electron_updater_1 = require("electron-updater");
 const path_1 = __importDefault(require("path"));
 const http_1 = __importDefault(require("http"));
 const fs_1 = __importDefault(require("fs"));
+electron_1.app.setName('Explore Browser');
 let mainWindow = null;
 let splashWindow = null;
 // Protocol Handler
@@ -607,9 +608,16 @@ electron_1.app.whenReady().then(() => {
             else {
                 globalSessionConfig.proxyRules = 'http://127.0.0.1:8080';
             }
-            if (electron_1.session.defaultSession) {
-                const bypassRules = '<local>;*.google.com;*.gstatic.com;*.duckduckgo.com;flagcdn.com';
-                yield electron_1.session.defaultSession.setProxy({ proxyRules: globalSessionConfig.proxyRules, proxyBypassRules: bypassRules });
+            const bypassRules = '<local>;*.google.com;*.gstatic.com;*.duckduckgo.com;flagcdn.com';
+            const sessions = [
+                electron_1.session.defaultSession,
+                electron_1.session.fromPartition('persist:explore'),
+                electron_1.session.fromPartition('private')
+            ];
+            for (const sess of sessions) {
+                if (sess) {
+                    yield sess.setProxy({ proxyRules: globalSessionConfig.proxyRules, proxyBypassRules: bypassRules });
+                }
             }
             return true;
         }
@@ -621,8 +629,15 @@ electron_1.app.whenReady().then(() => {
     electron_1.ipcMain.handle('disable-proxy', () => __awaiter(void 0, void 0, void 0, function* () {
         try {
             globalSessionConfig.proxyRules = '';
-            if (electron_1.session.defaultSession) {
-                yield electron_1.session.defaultSession.setProxy({ proxyRules: 'direct://' });
+            const sessions = [
+                electron_1.session.defaultSession,
+                electron_1.session.fromPartition('persist:explore'),
+                electron_1.session.fromPartition('private')
+            ];
+            for (const sess of sessions) {
+                if (sess) {
+                    yield sess.setProxy({ proxyRules: 'direct://' });
+                }
             }
             return true;
         }

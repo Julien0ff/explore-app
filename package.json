@@ -1,13 +1,14 @@
 {
-  "name": "navigateur-explore",
+  "name": "explore-browser",
   "private": true,
-  "version": "1.6.1",
+  "version": "1.6.3",
   "description": "Navigateur Explore - Le web réinventé",
-  "author": "Explore Team",
+  "author": "Foxy",
   "main": "dist-electron/main.js",
   "build": {
     "appId": "com.explore.browser",
     "productName": "Explore Browser",
+    "artifactName": "Explore-Browser-Setup-${version}.${ext}",
     "directories": {
       "output": "dist"
     },

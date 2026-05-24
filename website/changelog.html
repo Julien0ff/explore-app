@@ -44,9 +44,12 @@
     }
 
     @keyframes float {
-      0%, 100% {
+
+      0%,
+      100% {
         transform: translateY(0px);
       }
+
       50% {
         transform: translateY(-10px);
       }
@@ -56,9 +59,11 @@
       0% {
         background-position: 0% 50%;
       }
+
       50% {
         background-position: 100% 50%;
       }
+
       100% {
         background-position: 0% 50%;
       }
@@ -114,7 +119,8 @@
             class="text-gray-400 hover:text-white transition-colors px-3 py-2 text-sm font-medium">Fonctionnalités</a>
           <a href="#"
             class="text-white transition-colors px-3 py-2 text-sm font-medium border-b-2 border-blue-500">Changelogs</a>
-          <a href="https://github.com/Julien0ff/explore-app/releases/download/v1.6.1/Explore-Setup-1.6.1.exe" data-download-link="true"
+          <a href="https://github.com/Julien0ff/explore-app/releases/download/v1.6.1/Explore-Setup-1.6.1.exe"
+            data-download-link="true"
             class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-full text-sm transition-all shadow-lg shadow-blue-500/25">Télécharger</a>
         </div>
       </div>
@@ -122,39 +128,140 @@
   </nav>
 
   <!-- Hero Section -->
-  <div class="relative pt-32 pb-12 sm:pt-40 sm:pb-16 overflow-hidden">
+  <div class="relative pt-32 pb-12 sm:pt-40 sm:pb-16">
     <div class="hero-gradient absolute inset-0 pointer-events-none z-0"></div>
     <div class="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center z-10">
-      <span class="text-xs uppercase font-bold tracking-[0.25em] text-blue-500 block mb-2">Historique de développement</span>
+      <span class="text-xs uppercase font-bold tracking-[0.25em] text-blue-500 block mb-2">Historique de
+        développement</span>
       <h1 class="reveal text-4xl sm:text-6xl font-extrabold tracking-tight mb-4 text-white">
         Journal des <span class="gradient-text font-extrabold">Versions</span>
       </h1>
       <p class="reveal delay-100 text-gray-400 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
-        Suivez l'évolution d'Explore. De la première release aux dernières innovations majeures, découvrez l'historique complet de nos mises à jour.
+        Suivez l'évolution d'Explore. De la première release aux dernières innovations majeures, découvrez l'historique
+        complet de nos mises à jour.
       </p>
     </div>
   </div>
 
   <!-- Timeline Section -->
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-32 relative z-10">
-    <div class="relative border-l border-white/10 pl-6 sm:pl-10 space-y-16">
+    <div id="releases-container" class="relative border-l border-white/10 pl-6 sm:pl-10 space-y-16">
       
-      <!-- Version 1.6.1 -->
+      <!-- Loading state -->
+      <div class="text-center text-gray-500 py-10" id="loading-releases">
+        <svg class="animate-spin h-8 w-8 mx-auto text-blue-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Chargement des mises à jour depuis GitHub...
+      </div>
       <div class="relative reveal">
-        <!-- Dot indicator -->
-        <span class="absolute -left-[31px] sm:-left-[47px] mt-1.5 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.8)]"></span>
-        
+        <span class="absolute -left-[31px] sm:-left-[47px] top-10 -translate-y-1/2 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.8)]"></span>
         <div class="bg-[#14141f]/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 sm:p-8 hover:border-blue-500/20 transition-all duration-300 shadow-xl">
           <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
             <div>
               <span class="px-3 py-1 text-xs font-semibold text-blue-400 bg-blue-500/10 rounded-full border border-blue-500/20 mr-3">Dernière version</span>
+              <h2 class="inline-block text-2xl font-extrabold text-white font-heading">Version 1.6.3</h2>
+            </div>
+            <span class="text-sm text-gray-500 font-medium">24 Mai 2026</span>
+          </div>
+          <p class="text-gray-300 text-sm mb-6 leading-relaxed">
+            La version v1.6.3 introduit une personnalisation poussée de l'interface et corrige des bugs majeurs d'ergonomie.
+          </p>
+          <div class="space-y-6">
+            <div>
+              <h3 class="text-white font-bold text-base mb-3 flex items-center gap-2">
+                <span class="text-blue-500">✨</span> Nouveautés Majeures
+              </h3>
+              <ul class="space-y-3.5 text-sm text-gray-400">
+                <li class="flex items-start gap-3">
+                  <span class="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0 mt-2"></span>
+                  <div>
+                    <strong class="text-white font-semibold">Boutons de fenêtre Mac/Windows :</strong>
+                    Personnalisez l'emplacement des contrôles de fenêtre (gauche ou droite) depuis les paramètres d'apparence.
+                  </div>
+                </li>
+                <li class="flex items-start gap-3">
+                  <span class="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0 mt-2"></span>
+                  <div>
+                    <strong class="text-white font-semibold">Barre de favoris classique :</strong>
+                    Option pour afficher une barre de favoris permanente sous la barre d'adresse pour un accès ultra-rapide.
+                  </div>
+                </li>
+                <li class="flex items-start gap-3">
+                  <span class="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0 mt-2"></span>
+                  <div>
+                    <strong class="text-white font-semibold">Notifications natives :</strong>
+                    Les alertes système disgracieuses sont remplacées par de magnifiques notifications (Toast) intégrées.
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Version 1.6.2 -->
+      <div class="relative reveal">
+        <span class="absolute -left-[31px] sm:-left-[47px] top-10 -translate-y-1/2 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.8)]"></span>
+        <div class="bg-[#14141f]/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 sm:p-8 hover:border-purple-500/20 transition-all duration-300 shadow-xl">
+          <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <div>
+              <h2 class="inline-block text-2xl font-extrabold text-white font-heading">Version 1.6.2</h2>
+            </div>
+            <span class="text-sm text-gray-500 font-medium">24 Mai 2026</span>
+          </div>
+          <p class="text-gray-300 text-sm mb-6 leading-relaxed">
+            Mise à jour majeure introduisant des fonctionnalités de productivité et de sécurité très attendues par la communauté.
+          </p>
+          <div class="space-y-6">
+            <div>
+              <h3 class="text-white font-bold text-base mb-3 flex items-center gap-2">
+                <span class="text-purple-500">✨</span> Nouvelles Fonctionnalités
+              </h3>
+              <ul class="space-y-3.5 text-sm text-gray-400">
+                <li class="flex items-start gap-3">
+                  <span class="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0 mt-2"></span>
+                  <div>
+                    <strong class="text-white font-semibold">Mode Privé (Incognito) :</strong>
+                    Naviguez sans laisser de trace. L'historique et les cookies de session ne sont pas conservés.
+                  </div>
+                </li>
+                <li class="flex items-start gap-3">
+                  <span class="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0 mt-2"></span>
+                  <div>
+                    <strong class="text-white font-semibold">Raccourcis Clavier Personnalisables :</strong>
+                    Un nouveau panneau pour configurer tous vos raccourcis selon vos préférences.
+                  </div>
+                </li>
+                <li class="flex items-start gap-3">
+                  <span class="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0 mt-2"></span>
+                  <div>Amélioration générale de l'interface utilisateur et de l'ergonomie (UI/UX).</div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Version 1.6.1 -->
+      <div class="relative reveal">
+        <!-- Dot indicator -->
+        <span
+          class="absolute -left-[31px] sm:-left-[47px] top-10 -translate-y-1/2 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-gray-600"></span>
+
+        <div
+          class="bg-[#14141f]/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 sm:p-8 hover:border-gray-500/20 transition-all duration-300 shadow-xl">
+          <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <div>
               <h2 class="inline-block text-2xl font-extrabold text-white font-heading">Version 1.6.1</h2>
             </div>
-            <span class="text-sm text-gray-500 font-medium">22 Mai 2026</span>
+            <span class="text-sm text-gray-500 font-medium">23 Mai 2026</span>
           </div>
 
           <p class="text-gray-300 text-sm mb-6 leading-relaxed">
-            La version v1.6.1 apporte des améliorations graphiques et des fonctionnalités révolutionnaires axées sur l'accessibilité, la lisibilité et le confort d'utilisation au quotidien.
+            La version v1.6.1 apporte des améliorations graphiques et des fonctionnalités révolutionnaires axées sur
+            l'accessibilité, la lisibilité et le confort d'utilisation au quotidien.
           </p>
 
           <div class="space-y-6">
@@ -167,28 +274,33 @@
                   <span class="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0 mt-2"></span>
                   <div>
                     <strong class="text-white font-semibold">Système de mise à jour interactif & natif :</strong>
-                    Intégration d'un panneau d'installation ultra-fluide avec effet verre dépoli et barre de progression transparente. Finies les fenêtres bloquantes au démarrage.
+                    Intégration d'un panneau d'installation ultra-fluide avec effet verre dépoli et barre de progression
+                    transparente. Finies les fenêtres bloquantes au démarrage.
                   </div>
                 </li>
                 <li class="flex items-start gap-3">
                   <span class="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0 mt-2"></span>
                   <div>
                     <strong class="text-white font-semibold">Symphonie d'interface & Alignement :</strong>
-                    Recentrage absolu de la barre d'adresse et des icônes sur grand écran grâce à une architecture moderne en trois colonnes symétriques.
+                    Recentrage absolu de la barre d'adresse et des icônes sur grand écran grâce à une architecture
+                    moderne en trois colonnes symétriques.
                   </div>
                 </li>
                 <li class="flex items-start gap-3">
                   <span class="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0 mt-2"></span>
                   <div>
                     <strong class="text-white font-semibold">Tiroir des favoris Discord-style dépoli :</strong>
-                    Nouveau tiroir latéral sur la New Tab avec dossiers imbriqués pliables/dépliables, compteur d'éléments et favicons pour une ergonomie optimale.
+                    Nouveau tiroir latéral sur la New Tab avec dossiers imbriqués pliables/dépliables, compteur
+                    d'éléments et favicons pour une ergonomie optimale.
                   </div>
                 </li>
                 <li class="flex items-start gap-3">
                   <span class="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0 mt-2"></span>
                   <div>
                     <strong class="text-white font-semibold">Paramètres natifs explore://settings :</strong>
-                    Refonte en dashboard à 2 colonnes avec barre latérale à onglets. Nouvelle section <span class="text-white font-medium">Accessibilité</span> (zoom de page et mode lecture par défaut) et cockpit de suggestions direct vers le Discord.
+                    Refonte en dashboard à 2 colonnes avec barre latérale à onglets. Nouvelle section <span
+                      class="text-white font-medium">Accessibilité</span> (zoom de page et mode lecture par défaut) et
+                    cockpit de suggestions direct vers le Discord.
                   </div>
                 </li>
               </ul>
@@ -201,31 +313,41 @@
               <ul class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-gray-400">
                 <li class="bg-white/5 border border-white/5 rounded-2xl p-4">
                   <strong class="text-white block mb-1">Historique (explore://history)</strong>
-                  Recherche textuelle instantanée, groupement automatique par date (Aujourd'hui, Hier, Plus ancien), et suppression unitaire au survol.
+                  Recherche textuelle instantanée, groupement automatique par date (Aujourd'hui, Hier, Plus ancien), et
+                  suppression unitaire au survol.
                 </li>
                 <li class="bg-white/5 border border-white/5 rounded-2xl p-4">
                   <strong class="text-white block mb-1">Favoris (explore://bookmarks)</strong>
-                  Moteur de recherche intégré, effets néons sur les dossiers et menu contextuel au clic droit (ouvrir, ouvrir dans un nouvel onglet, supprimer).
+                  Moteur de recherche intégré, effets néons sur les dossiers et menu contextuel au clic droit (ouvrir,
+                  ouvrir dans un nouvel onglet, supprimer).
                 </li>
                 <li class="bg-white/5 border border-white/5 rounded-2xl p-4">
                   <strong class="text-white block mb-1">Mots de passe (explore://passwords)</strong>
-                  Affichage des identifiants sous forme de tableau épuré avec copie rapide, gestion de la visibilité sécurisée et icônes d'applications.
+                  Affichage des identifiants sous forme de tableau épuré avec copie rapide, gestion de la visibilité
+                  sécurisée et icônes d'applications.
                 </li>
                 <li class="bg-white/5 border border-white/5 rounded-2xl p-4">
                   <strong class="text-white block mb-1">VPN Intégré (explore://vpn)</strong>
-                  Grand interrupteur central à impulsion lumineuse, graphique de bande passante en direct et sélecteur de serveurs mondiaux avec latences.
+                  Grand interrupteur central à impulsion lumineuse, graphique de bande passante en direct et sélecteur
+                  de serveurs mondiaux avec latences.
                 </li>
               </ul>
             </div>
           </div>
 
           <div class="mt-8 pt-6 border-t border-white/5 flex flex-wrap items-center justify-between gap-4">
-            <a href="https://github.com/Julien0ff/explore-app/releases/download/v1.6.1/Explore-Setup-1.6.1.exe" data-download-link="true"
+            <a href="https://github.com/Julien0ff/explore-app/releases/download/v1.6.1/Explore-Setup-1.6.1.exe"
+              data-download-link="true"
               class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-bold text-sm transition-all transform hover:scale-105 shadow-lg shadow-blue-500/20 flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
               Télécharger l'installateur Windows v1.6.1
             </a>
-            <span class="text-xs text-gray-500">Explore-Setup-1.6.1.exe • 76.5 Mo</span>
+            <span class="text-xs text-gray-500">Explore-Setup-1.6.1.exe • 199.44 Mo</span>
           </div>
         </div>
       </div>
@@ -233,9 +355,11 @@
       <!-- Version 1.6.0 -->
       <div class="relative reveal">
         <!-- Dot indicator -->
-        <span class="absolute -left-[31px] sm:-left-[47px] mt-1.5 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-purple-500/60 shadow-[0_0_12px_rgba(168,85,247,0.4)]"></span>
-        
-        <div class="bg-[#14141f]/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 sm:p-8 hover:border-purple-500/20 transition-all duration-300 shadow-xl">
+        <span
+          class="absolute -left-[31px] sm:-left-[47px] mt-1.5 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-purple-500/60 shadow-[0_0_12px_rgba(168,85,247,0.4)]"></span>
+
+        <div
+          class="bg-[#14141f]/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 sm:p-8 hover:border-purple-500/20 transition-all duration-300 shadow-xl">
           <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
             <div>
               <h2 class="inline-block text-2xl font-extrabold text-white font-heading">Version 1.6.0</h2>
@@ -244,7 +368,8 @@
           </div>
 
           <p class="text-gray-300 text-sm mb-6 leading-relaxed">
-            La version v1.6.0 pose les bases de notre écosystème de sécurité interne avec l'introduction des premiers modules cryptés hébergés entièrement en local pour le respect ultime de la vie privée.
+            La version v1.6.0 pose les bases de notre écosystème de sécurité interne avec l'introduction des premiers
+            modules cryptés hébergés entièrement en local pour le respect ultime de la vie privée.
           </p>
 
           <div class="space-y-4">
@@ -256,21 +381,24 @@
                 <span class="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0 mt-2"></span>
                 <div>
                   <strong class="text-white font-semibold">Coffre-fort local de Mots de Passe :</strong>
-                  Premier gestionnaire de mots de passe natif avec cryptage fort. Vos identifiants restent sur votre ordinateur et ne transitent jamais sur le cloud.
+                  Premier gestionnaire de mots de passe natif avec cryptage fort. Vos identifiants restent sur votre
+                  ordinateur et ne transitent jamais sur le cloud.
                 </div>
               </li>
               <li class="flex items-start gap-3">
                 <span class="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0 mt-2"></span>
                 <div>
                   <strong class="text-white font-semibold">VPN Chiffré Intégré :</strong>
-                  Développement d'un service de chiffrement réseau pour anonymiser vos connexions en un clic, directement depuis la barre d'adresse.
+                  Développement d'un service de chiffrement réseau pour anonymiser vos connexions en un clic,
+                  directement depuis la barre d'adresse.
                 </div>
               </li>
               <li class="flex items-start gap-3">
                 <span class="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0 mt-2"></span>
                 <div>
                   <strong class="text-white font-semibold">Bloqueur de Publicité Natif :</strong>
-                  Filtrage réseau intégré bloquant les popups, scripts publicitaires et traceurs invasifs afin d'accélérer le chargement des pages.
+                  Filtrage réseau intégré bloquant les popups, scripts publicitaires et traceurs invasifs afin
+                  d'accélérer le chargement des pages.
                 </div>
               </li>
             </ul>
@@ -281,9 +409,11 @@
       <!-- Version 1.5.0 -->
       <div class="relative reveal">
         <!-- Dot indicator -->
-        <span class="absolute -left-[31px] sm:-left-[47px] mt-1.5 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-purple-500/60 shadow-[0_0_12px_rgba(168,85,247,0.4)]"></span>
-        
-        <div class="bg-[#14141f]/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 sm:p-8 hover:border-purple-500/20 transition-all duration-300 shadow-xl">
+        <span
+          class="absolute -left-[31px] sm:-left-[47px] mt-1.5 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-purple-500/60 shadow-[0_0_12px_rgba(168,85,247,0.4)]"></span>
+
+        <div
+          class="bg-[#14141f]/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 sm:p-8 hover:border-purple-500/20 transition-all duration-300 shadow-xl">
           <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
             <div>
               <h2 class="inline-block text-2xl font-extrabold text-white font-heading">Version 1.5.0</h2>
@@ -292,7 +422,8 @@
           </div>
 
           <p class="text-gray-300 text-sm mb-6 leading-relaxed">
-            Une mise à jour esthétique majeure. La v1.5.0 redessine complètement l'identité visuelle d'Explore à travers un design glassmorphism à haute fidélité.
+            Une mise à jour esthétique majeure. La v1.5.0 redessine complètement l'identité visuelle d'Explore à travers
+            un design glassmorphism à haute fidélité.
           </p>
 
           <div class="space-y-4">
@@ -304,21 +435,24 @@
                 <span class="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0 mt-2"></span>
                 <div>
                   <strong class="text-white font-semibold">Aesthetic Sublimation (Glassmorphism) :</strong>
-                  Intégration d'un design système premium : verres dépolis translucides, contrastes subtils, reflets chromatiques et polices de caractères géométriques raffinées.
+                  Intégration d'un design système premium : verres dépolis translucides, contrastes subtils, reflets
+                  chromatiques et polices de caractères géométriques raffinées.
                 </div>
               </li>
               <li class="flex items-start gap-3">
                 <span class="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0 mt-2"></span>
                 <div>
                   <strong class="text-white font-semibold">Barre latérale d'onglets verticaux :</strong>
-                  Gain d'espace important sur les écrans larges grâce à l'option de disposition des onglets de manière verticale dans une sidebar rétractable.
+                  Gain d'espace important sur les écrans larges grâce à l'option de disposition des onglets de manière
+                  verticale dans une sidebar rétractable.
                 </div>
               </li>
               <li class="flex items-start gap-3">
                 <span class="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0 mt-2"></span>
                 <div>
                   <strong class="text-white font-semibold">Palette de commande intelligente (Ctrl+K) :</strong>
-                  Lanceur centralisé permettant de naviguer instantanément dans l'historique, les paramètres ou les onglets ouverts par saisie clavier.
+                  Lanceur centralisé permettant de naviguer instantanément dans l'historique, les paramètres ou les
+                  onglets ouverts par saisie clavier.
                 </div>
               </li>
             </ul>
@@ -329,9 +463,11 @@
       <!-- Version 1.0.0 -->
       <div class="relative reveal">
         <!-- Dot indicator -->
-        <span class="absolute -left-[31px] sm:-left-[47px] mt-1.5 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-purple-500/60 shadow-[0_0_12px_rgba(168,85,247,0.4)]"></span>
-        
-        <div class="bg-[#14141f]/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 sm:p-8 hover:border-purple-500/20 transition-all duration-300 shadow-xl">
+        <span
+          class="absolute -left-[31px] sm:-left-[47px] mt-1.5 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-purple-500/60 shadow-[0_0_12px_rgba(168,85,247,0.4)]"></span>
+
+        <div
+          class="bg-[#14141f]/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 sm:p-8 hover:border-purple-500/20 transition-all duration-300 shadow-xl">
           <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
             <div>
               <h2 class="inline-block text-2xl font-extrabold text-white font-heading">Version 1.0.0</h2>
@@ -340,7 +476,8 @@
           </div>
 
           <p class="text-gray-300 text-sm mb-6 leading-relaxed">
-            Lancement initial du navigateur Explore. Conçu à partir du noyau open-source Chromium, Explore pose les premières briques d'une alternative rapide, minimaliste et performante.
+            Lancement initial du navigateur Explore. Conçu à partir du noyau open-source Chromium, Explore pose les
+            premières briques d'une alternative rapide, minimaliste et performante.
           </p>
 
           <div class="space-y-4">
@@ -389,10 +526,71 @@
   </footer>
 
   <!-- Website Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    /* GitHub Markdown Styles */
+    .markdown-content h1, .markdown-content h2, .markdown-content h3 { font-weight: bold; color: white; margin-top: 1.5em; margin-bottom: 0.5em; }
+    .markdown-content h3 { font-size: 1.1rem; }
+    .markdown-content ul { list-style-type: disc; margin-left: 1.5em; margin-bottom: 1em; }
+    .markdown-content li { margin-bottom: 0.5em; }
+    .markdown-content strong { color: white; }
+    .markdown-content code { background-color: rgba(255,255,255,0.1); padding: 0.1em 0.3em; border-radius: 3px; font-family: monospace; }
+    .markdown-content a { color: #3b82f6; text-decoration: none; }
+    .markdown-content a:hover { text-decoration: underline; }
+  </style>
   <script>
     // GitHub Release Configuration
     const GITHUB_USERNAME = 'Julien0ff';
     const GITHUB_REPO = 'explore-app';
+
+    async function loadReleases() {
+      try {
+        const response = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/releases`);
+        const releases = await response.json();
+        
+        const container = document.getElementById('releases-container');
+        const loading = document.getElementById('loading-releases');
+        if (!container) return;
+        
+        if (loading) loading.remove();
+
+        // Clear existing hardcoded releases just in case
+        container.innerHTML = '';
+        
+        releases.forEach((release, index) => {
+          const date = new Date(release.published_at).toLocaleDateString('fr-FR', {
+            year: 'numeric', month: 'long', day: 'numeric'
+          });
+          
+          const bodyHtml = marked.parse(release.body || 'Aucune note de mise à jour.');
+          
+          // Alternate colors for the dots based on index
+          const colors = ['blue-500', 'purple-500', 'emerald-500', 'orange-500', 'rose-500'];
+          const colorClass = colors[index % colors.length];
+          
+          const releaseHtml = `
+            <div class="relative reveal active">
+              <span class="absolute -left-[31px] sm:-left-[47px] top-10 -translate-y-1/2 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-${colorClass} shadow-[0_0_12px_rgba(59,130,246,0.8)]"></span>
+              <div class="bg-[#14141f]/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 sm:p-8 hover:border-${colorClass}/20 transition-all duration-300 shadow-xl">
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                  <div>
+                    <h2 class="inline-block text-2xl font-extrabold text-white font-heading">${release.name || release.tag_name}</h2>
+                  </div>
+                  <span class="text-sm text-gray-500 font-medium">${date}</span>
+                </div>
+                <div class="text-gray-300 text-sm mb-6 leading-relaxed markdown-content space-y-2">
+                  ${bodyHtml}
+                </div>
+              </div>
+            </div>
+          `;
+          
+          container.insertAdjacentHTML('beforeend', releaseHtml);
+        });
+      } catch (error) {
+        console.error('Error fetching releases:', error);
+      }
+    }
 
     async function updateDownloadLinks() {
       try {
@@ -404,7 +602,7 @@
 
           if (exeAsset) {
             const downloadUrl = exeAsset.browser_download_url;
-            
+
             document.querySelectorAll('a[data-download-link="true"]').forEach(link => {
               link.href = downloadUrl;
             });
@@ -418,6 +616,7 @@
     // Animation on scroll
     document.addEventListener('DOMContentLoaded', () => {
       updateDownloadLinks();
+      loadReleases();
 
       const observerOptions = {
         threshold: 0.1,

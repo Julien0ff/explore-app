@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Logo } from './Logo';
 import { IncognitoIcon } from './IncognitoIcon';
-import { Search, Plus, X, Shield, Star, Folder, FolderOpen, ChevronRight } from 'lucide-react';
+import { Search, Plus, X, Shield, Star, Folder, FolderOpen, ChevronRight, CloudRain, LayoutDashboard } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 
@@ -161,6 +161,72 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
+  
+  const [enabledWidgets, setEnabledWidgets] = useState<string[]>(() => {
+    const saved = localStorage.getItem('explore_widgets');
+    return saved ? JSON.parse(saved) : ['quicklinks', 'notes', 'adblock', 'weather'];
+  });
+  const [isWidgetMenuOpen, setIsWidgetMenuOpen] = useState(false);
+  const [weather, setWeather] = useState<{temp: number, code: number, city: string} | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem('explore_widgets', JSON.stringify(enabledWidgets));
+    if (enabledWidgets.includes('weather') && !weather) {
+      const loadWeather = (lat: number, lon: number, cityName: string) => {
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
+          .then(r => r.json())
+          .then(wData => setWeather({ 
+             temp: wData.current_weather.temperature, 
+             code: wData.current_weather.weathercode,
+             city: cityName 
+          })).catch(console.error);
+      };
+
+      const fallbackToIP = () => {
+        fetch('https://ipapi.co/json/')
+          .then(r => {
+            if (!r.ok) throw new Error('IP API limit');
+            return r.json();
+          })
+          .then(data => {
+            if (data.latitude && data.longitude) {
+              loadWeather(data.latitude, data.longitude, data.city);
+            } else throw new Error('Invalid IP data');
+          })
+          .catch(() => {
+            // Default to Paris if everything fails
+            loadWeather(48.8566, 2.3522, 'Paris');
+          });
+      };
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            // Reverse geocode to get city name
+            fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${pos.coords.latitude}&longitude=${pos.coords.longitude}&localityLanguage=fr`)
+              .then(r => r.json())
+              .then(data => {
+                loadWeather(pos.coords.latitude, pos.coords.longitude, data.city || data.locality || 'Local');
+              })
+              .catch(() => {
+                loadWeather(pos.coords.latitude, pos.coords.longitude, 'Local');
+              });
+          },
+          (err) => {
+            console.warn('Geolocation denied or failed, falling back to IP:', err);
+            fallbackToIP();
+          },
+          { timeout: 5000 }
+        );
+      } else {
+        fallbackToIP();
+      }
+    }
+  }, [enabledWidgets, weather]);
+
+  const toggleWidget = (id: string) => {
+    setEnabledWidgets(prev => prev.includes(id) ? prev.filter(w => w !== id) : [...prev, id]);
+  };
 
   const toggleFolder = (id: string) => {
     setExpandedFolders(prev => ({
@@ -186,13 +252,15 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
       
       // Set greeting
       if (language === 'fr') {
-        if (hour < 12) setGreeting('Bonjour');
-        else if (hour < 18) setGreeting('Bon après-midi');
-        else setGreeting('Bonsoir');
+        if (hour >= 5 && hour < 12) setGreeting('Bonjour');
+        else if (hour >= 12 && hour < 18) setGreeting('Bon après-midi');
+        else if (hour >= 18 && hour <= 23) setGreeting('Bonsoir');
+        else setGreeting('Bonne nuit');
       } else {
-        if (hour < 12) setGreeting('Good Morning');
-        else if (hour < 18) setGreeting('Good Afternoon');
-        else setGreeting('Good Evening');
+        if (hour >= 5 && hour < 12) setGreeting('Good Morning');
+        else if (hour >= 12 && hour < 18) setGreeting('Good Afternoon');
+        else if (hour >= 18 && hour <= 23) setGreeting('Good Evening');
+        else setGreeting('Good Night');
       }
 
       // Set time
@@ -255,10 +323,20 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
     }
   };
 
+  const searchTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+
   const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setQuery(val);
-    onQueryChange?.(val);
+    
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    searchTimeoutRef.current = setTimeout(() => {
+      onQueryChange?.(val);
+    }, 300);
+
     setShowSuggestions(true);
     setSelectedSuggestionIndex(-1);
   };
@@ -305,6 +383,120 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
       >
         <Star className="w-5 h-5 transition-transform group-hover:rotate-12" />
       </button>
+
+      {/* Floating Weather Widget */}
+      {enabledWidgets.includes('weather') && weather && (
+        <div
+          className={clsx(
+            "absolute top-6 right-20 flex items-center gap-3 px-4 py-2 rounded-2xl border transition-all duration-300 z-40 shadow-lg backdrop-blur-md cursor-default",
+            theme === 'dark' 
+              ? "bg-[#181825]/60 border-white/10 hover:border-white/20 hover:shadow-[0_0_20px_rgba(255,255,255,0.05)]" 
+              : "bg-white/60 border-gray-200 hover:border-gray-300 hover:shadow-xl"
+          )}
+        >
+          <CloudRain className={clsx("w-5 h-5", colors.text)} />
+          <div className="flex flex-col">
+            <span className={clsx("text-sm font-bold leading-none", theme === 'dark' ? "text-white" : "text-gray-900")}>
+              {weather.temp}°C
+            </span>
+            <span className="text-[10px] font-medium text-gray-400 mt-0.5 max-w-[80px] truncate">
+              {weather.city}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Widget Settings Toggle */}
+      <button
+        onClick={() => setIsWidgetMenuOpen(true)}
+        className={clsx(
+          "absolute top-6 right-6 p-3 rounded-2xl border transition-all duration-300 z-40 group hover:scale-110 shadow-lg",
+          theme === 'dark' 
+            ? "bg-[#181825]/60 border-white/10 text-gray-400 hover:text-blue-400 hover:border-blue-400/30 hover:shadow-[0_0_20px_rgba(59,130,246,0.2)]" 
+            : "bg-white/60 border-gray-200 text-gray-500 hover:text-blue-500 hover:border-blue-500/30 hover:shadow-lg hover:shadow-gray-200"
+        )}
+        title={language === 'fr' ? 'Widgets' : 'Widgets'}
+      >
+        <LayoutDashboard className="w-5 h-5 transition-transform group-hover:rotate-12" />
+      </button>
+
+      {/* Widget Settings Drawer */}
+      <AnimatePresence>
+        {isWidgetMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsWidgetMenuOpen(false)}
+              className="absolute inset-0 bg-black/40 backdrop-blur-xs z-40"
+            />
+            <motion.div
+              initial={{ x: '100%', opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: '100%', opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className={clsx(
+                "absolute top-0 right-0 bottom-0 w-80 z-50 h-full flex flex-col border-l shadow-2xl backdrop-blur-2xl text-left",
+                theme === 'dark' 
+                  ? "bg-[#12121e]/85 border-white/10 text-white" 
+                  : "bg-white/85 border-gray-200 text-gray-900"
+              )}
+            >
+              <div className="p-5 border-b border-white/5 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
+                    <LayoutDashboard className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm tracking-tight leading-none">
+                      {language === 'fr' ? 'Personnalisation' : 'Customization'}
+                    </h3>
+                    <p className="text-[10px] opacity-40 mt-1 leading-none">Widgets & Layout</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsWidgetMenuOpen(false)}
+                  className={clsx("p-1.5 rounded-lg transition-colors", theme === 'dark' ? "hover:bg-white/10" : "hover:bg-gray-100")}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="p-4 space-y-2">
+                {[
+                  { id: 'quicklinks', icon: Star, label: language === 'fr' ? 'Liens Rapides' : 'Quick Links' },
+                  { id: 'notes', icon: Folder, label: language === 'fr' ? 'Bloc-Notes' : 'Notepad' },
+                  { id: 'weather', icon: CloudRain, label: language === 'fr' ? 'Météo' : 'Weather' },
+                  { id: 'adblock', icon: Shield, label: 'AdBlock Stats' }
+                ].map(widget => (
+                  <button
+                    key={widget.id}
+                    onClick={() => toggleWidget(widget.id)}
+                    className={clsx(
+                      "w-full flex items-center justify-between p-3 rounded-xl transition-all",
+                      theme === 'dark' ? "hover:bg-white/5" : "hover:bg-gray-100"
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <widget.icon className={clsx("w-4 h-4", enabledWidgets.includes(widget.id) ? "text-blue-500" : "text-gray-400")} />
+                      <span className="text-sm font-medium">{widget.label}</span>
+                    </div>
+                    <div className={clsx(
+                      "w-8 h-5 rounded-full relative transition-colors duration-300",
+                      enabledWidgets.includes(widget.id) ? "bg-blue-500" : (theme === 'dark' ? "bg-gray-700" : "bg-gray-300")
+                    )}>
+                      <div className={clsx(
+                        "absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-transform duration-300",
+                        enabledWidgets.includes(widget.id) && "translate-x-3"
+                      )} />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Favorites Drawer & Backdrop */}
       <AnimatePresence>
@@ -472,7 +664,7 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
               "text-6xl font-extrabold tracking-tighter mb-2 bg-clip-text text-transparent pr-3 pb-1",
               isPrivate 
                 ? "bg-linear-to-r from-gray-300 to-gray-500" 
-                : "bg-linear-to-r from-blue-400 to-blue-700"
+                : clsx("bg-linear-to-r", colors.gradientFrom, colors.gradientTo)
             )}>
               {time}
             </div>
@@ -558,7 +750,7 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
           transition={{ delay: 0.4 }}
           className="flex flex-wrap justify-center gap-4 sm:gap-6 w-full max-w-2xl mx-auto mt-4"
         >
-          {quickLinks.map((link) => (
+          {enabledWidgets.includes('quicklinks') && quickLinks.map((link) => (
             <div
               key={link.id}
               onClick={(e) => {
@@ -608,25 +800,29 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
             </div>
           ))}
           
-          <button
-            onClick={() => setIsAddingLink(true)}
-            className={clsx(
-              "flex flex-col items-center gap-3 p-3 w-24 rounded-2xl transition-all group",
-              theme === 'dark' ? "hover:bg-white/5 text-gray-500 hover:text-white" : "hover:bg-gray-100 text-gray-400 hover:text-gray-900",
-              colors.textHover
-            )}
-          >
-            <div className={clsx(
-              "w-12 h-12 rounded-full flex items-center justify-center border-2 border-dashed transition-colors",
-              theme === 'dark' ? "border-gray-700 group-hover:border-gray-500" : "border-gray-300 group-hover:border-gray-400"
-            )}>
-              <Plus className="w-5 h-5" />
-            </div>
-            <span className="text-sm font-medium">{language === 'fr' ? "Ajouter un raccourci" : "Add Shortcut"}</span>
-          </button>
+          
+          {enabledWidgets.includes('quicklinks') && (
+            <button
+              onClick={() => setIsAddingLink(true)}
+              className={clsx(
+                "flex flex-col items-center gap-3 p-3 w-24 rounded-2xl transition-all group",
+                theme === 'dark' ? "hover:bg-white/5 text-gray-500 hover:text-white" : "hover:bg-gray-100 text-gray-400 hover:text-gray-900",
+                colors.textHover
+              )}
+            >
+              <div className={clsx(
+                "w-12 h-12 rounded-full flex items-center justify-center border-2 border-dashed transition-colors",
+                theme === 'dark' ? "border-gray-700 group-hover:border-gray-500" : "border-gray-300 group-hover:border-gray-400"
+              )}>
+                <Plus className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-medium">{language === 'fr' ? "Ajouter un raccourci" : "Add Shortcut"}</span>
+            </button>
+          )}
         </motion.div>
 
         {/* Notes Widget */}
+        {enabledWidgets.includes('notes') && (
         <motion.div
            initial={{ y: 20, opacity: 0 }}
            animate={{ y: 0, opacity: 1 }}
@@ -655,7 +851,7 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
           </div>
           
           {/* AdBlock Stats Badge */}
-          {adBlockEnabled && blockedAdsCount > 0 && (
+          {enabledWidgets.includes('adblock') && adBlockEnabled && blockedAdsCount > 0 && (
             <motion.div 
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -674,6 +870,7 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
             </motion.div>
           )}
         </motion.div>
+        )}
 
       </div>
 
