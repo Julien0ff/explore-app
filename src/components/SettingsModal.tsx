@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, Layout, RefreshCw, Send, Globe, Palette, Keyboard, Shield, Accessibility, Info, 
-  Check, Sparkles, Sliders, Chrome, Cloud, UploadCloud, DownloadCloud, Star
+  Check, Sparkles, Sliders, Chrome, Cloud, UploadCloud, DownloadCloud, Star, FlaskConical, Bug, Camera
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -33,7 +33,7 @@ interface SettingsModalProps {
   }) => void;
   onOpenUrl: (url: string) => void;
   onImportBookmarks: () => void;
-  onClearData: () => void;
+  onClearData: (onSuccess?: () => void) => void;
   ambientMode: boolean;
   setAmbientMode: (val: boolean) => void;
   checkForUpdates?: () => void;
@@ -41,10 +41,15 @@ interface SettingsModalProps {
   setWindowStyle: (style: 'mac' | 'windows') => void;
   showBookmarksBar: boolean;
   setShowBookmarksBar: (show: boolean) => void;
-  onSaveSessionToCloud?: () => void;
-  onRestoreSessionFromCloud?: () => void;
+  onSaveSessionToCloud?: () => Promise<boolean>;
+  onRestoreSessionFromCloud?: () => Promise<boolean>;
   isAuthenticated?: boolean;
   onRequireAuth?: () => void;
+  autoCloudSync?: boolean;
+  setAutoCloudSync?: (val: boolean) => void;
+  earlyTesting?: { screenshot: boolean, splitView: boolean };
+  setEarlyTesting?: (val: { screenshot: boolean, splitView: boolean }) => void;
+  setConfirmModal?: (val: { isOpen: boolean; title: string; message: string; onConfirm: () => void }) => void;
 }
 
 export function SettingsModal({
@@ -76,7 +81,12 @@ export function SettingsModal({
   onSaveSessionToCloud,
   onRestoreSessionFromCloud,
   isAuthenticated,
-  onRequireAuth
+  onRequireAuth,
+  autoCloudSync,
+  setAutoCloudSync,
+  earlyTesting,
+  setEarlyTesting,
+  setConfirmModal
 }: SettingsModalProps) {
   const colors = getAccentColorClass(accentColor, theme === 'dark');
   const [suggestion, setSuggestion] = React.useState('');
@@ -85,7 +95,7 @@ export function SettingsModal({
   const [isUpdating, setIsUpdating] = React.useState(false);
   const [localShortcuts, setLocalShortcuts] = React.useState(shortcuts);
   const [updateProgress, setUpdateProgress] = React.useState(0);
-  const [appVersion, setAppVersion] = React.useState('1.6.1');
+  const [appVersion, setAppVersion] = React.useState('1.6.3');
   const [adBlockEnabled, setAdBlockEnabled] = React.useState(true);
   
   // Accessibility state
@@ -97,7 +107,7 @@ export function SettingsModal({
   });
 
   // Active Category for Sidebar layout
-  const [activeCategory, setActiveCategory] = React.useState<'general' | 'appearance' | 'shortcuts' | 'privacy' | 'accessibility' | 'sync' | 'about'>('general');
+  const [activeCategory, setActiveCategory] = React.useState<'general' | 'appearance' | 'shortcuts' | 'privacy' | 'accessibility' | 'sync' | 'earlyTesting' | 'about'>('general');
 
   // Custom Toast state
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
@@ -197,6 +207,7 @@ export function SettingsModal({
     { id: 'privacy', name: language === 'fr' ? 'Confidentialité et Sécurité' : 'Privacy & Security', icon: Shield },
     { id: 'accessibility', name: language === 'fr' ? 'Accessibilité' : 'Accessibility', icon: Accessibility },
     { id: 'sync', name: language === 'fr' ? 'Synchronisation Cloud' : 'Cloud Sync', icon: Cloud },
+    { id: 'earlyTesting', name: language === 'fr' ? 'Early Testing' : 'Early Testing', icon: FlaskConical },
     { id: 'about', name: language === 'fr' ? 'À propos' : 'About', icon: Info },
   ] as const;
 
@@ -594,6 +605,38 @@ export function SettingsModal({
       case 'sync':
         return (
           <div className="space-y-6 animate-fadeIn">
+            {/* Automatic Cloud Sync Toggle */}
+            <div className={clsx("p-6 rounded-3xl border flex items-center justify-between", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50/50 border-gray-200")}>
+              <div className="space-y-1">
+                <h4 className={clsx("font-bold text-lg flex items-center gap-2", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                  <RefreshCw className={clsx("w-5 h-5 text-green-500", autoCloudSync && "animate-spin-slow")} />
+                  {language === 'fr' ? 'Sauvegarde automatique cloud' : 'Automatic cloud backup'}
+                </h4>
+                <p className={clsx("text-sm max-w-md", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
+                  {language === 'fr' ? 'Sauvegarde automatiquement vos onglets dans le cloud à chaque changement (navigation, ouverture/fermeture d\'onglet).' : 'Automatically saves your tabs to the cloud on any change (navigation, tab open/close).'}
+                </p>
+              </div>
+              <button 
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    onRequireAuth?.();
+                    onClose();
+                    return;
+                  }
+                  setAutoCloudSync?.(!autoCloudSync);
+                }}
+                className={clsx(
+                  "w-14 h-7 rounded-full transition-colors relative shadow-inner shrink-0",
+                  autoCloudSync ? "bg-green-500" : (theme === 'dark' ? "bg-gray-600" : "bg-gray-300")
+                )}
+              >
+                <div className={clsx(
+                  "absolute top-1 w-5 h-5 rounded-full bg-white transition-all shadow-md",
+                  autoCloudSync ? "left-8" : "left-1"
+                )} />
+              </button>
+            </div>
+
             <div className={clsx("p-6 rounded-3xl border flex items-center justify-between", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50/50 border-gray-200")}>
               <div className="space-y-1">
                 <h4 className={clsx("font-bold text-lg flex items-center gap-2", theme === 'dark' ? "text-white" : "text-gray-900")}>
@@ -605,14 +648,18 @@ export function SettingsModal({
                 </p>
               </div>
               <button 
-                onClick={() => {
+                onClick={async () => {
                   if (!isAuthenticated) {
                     onRequireAuth?.();
                     onClose();
                     return;
                   }
-                  onSaveSessionToCloud?.();
-                  showToast(language === 'fr' ? 'Session sauvegardée dans le cloud !' : 'Session saved to cloud!');
+                  const success = await onSaveSessionToCloud?.();
+                  if (success) {
+                    showToast(language === 'fr' ? 'Session sauvegardée dans le cloud !' : 'Session saved to cloud!');
+                  } else {
+                    showToast(language === 'fr' ? 'Échec de la sauvegarde cloud.' : 'Cloud save failed.');
+                  }
                 }}
                 className={clsx("px-5 py-2.5 rounded-xl font-bold text-sm text-white transition-all hover:scale-105 active:scale-95 shadow-md", colors.bgSolid, colors.bgHover)}
               >
@@ -631,15 +678,19 @@ export function SettingsModal({
                 </p>
               </div>
               <button 
-                onClick={() => {
+                onClick={async () => {
                   if (!isAuthenticated) {
                     onRequireAuth?.();
                     onClose();
                     return;
                   }
-                  onRestoreSessionFromCloud?.();
-                  showToast(language === 'fr' ? 'Session restaurée depuis le cloud !' : 'Session restored from cloud!');
-                  onClose();
+                  const success = await onRestoreSessionFromCloud?.();
+                  if (success) {
+                    showToast(language === 'fr' ? 'Session restaurée depuis le cloud !' : 'Session restored from cloud!');
+                    onClose();
+                  } else {
+                    showToast(language === 'fr' ? 'Aucune session trouvée ou échec.' : 'No session found or request failed.');
+                  }
                 }}
                 className={clsx("px-5 py-2.5 rounded-xl font-bold text-sm text-white transition-all hover:scale-105 active:scale-95 shadow-md bg-purple-600 hover:bg-purple-700")}
               >
@@ -688,10 +739,9 @@ export function SettingsModal({
               </div>
               <button 
                 onClick={() => {
-                  if (confirm(language === 'fr' ? 'Voulez-vous vraiment effacer toutes vos données de navigation ?' : 'Are you sure you want to clear all browsing data?')) {
-                    onClearData();
+                  onClearData(() => {
                     showToast(language === 'fr' ? 'Données effacées !' : 'Browsing data cleared!');
-                  }
+                  });
                 }}
                 className="px-5 py-3 rounded-2xl bg-red-500/10 text-red-500 hover:bg-red-500/20 font-bold transition-all hover:scale-105 active:scale-95 shadow-sm"
               >
@@ -781,6 +831,112 @@ export function SettingsModal({
             </div>
           </div>
         );
+      case 'earlyTesting':
+        return (
+          <div className="space-y-6 animate-fadeIn">
+            <div className={clsx("p-6 rounded-3xl border text-center flex flex-col items-center justify-center relative overflow-hidden", theme === 'dark' ? "bg-amber-500/10 border-amber-500/20" : "bg-amber-50 border-amber-200")}>
+               <div className={clsx("absolute top-0 right-0 p-8 opacity-10 pointer-events-none")}>
+                 <Bug className="w-48 h-48 -rotate-12 text-amber-500" />
+               </div>
+               <div className={clsx("w-16 h-16 rounded-3xl flex items-center justify-center bg-amber-500 mb-4 shadow-xl text-white")}>
+                 <FlaskConical className="w-8 h-8" />
+               </div>
+               <h3 className={clsx("text-xl font-black mb-2", theme === 'dark' ? "text-amber-400" : "text-amber-600")}>
+                 {language === 'fr' ? 'Fonctionnalités Expérimentales' : 'Experimental Features'}
+               </h3>
+               <p className={clsx("text-sm font-bold opacity-80 max-w-md", theme === 'dark' ? "text-amber-200" : "text-amber-800")}>
+                 {language === 'fr' 
+                   ? 'Ces outils sont encore en cours de développement et peuvent contenir des bugs. Aidez-nous à les améliorer en signalant tout dysfonctionnement !' 
+                   : 'These tools are still in development and might contain bugs. Help us improve them by reporting any issues!'}
+               </p>
+            </div>
+
+            {/* Feature Toggles */}
+            <div className="space-y-4">
+              {/* Split View */}
+              <div className={clsx("p-6 rounded-3xl border flex items-center justify-between", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50/50 border-gray-200")}>
+                <div className="space-y-1">
+                  <h4 className={clsx("font-bold text-lg flex items-center gap-2", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                    <Layout className="w-5 h-5 text-blue-400" />
+                    {language === 'fr' ? 'Split View (Écran Scindé)' : 'Split View'}
+                  </h4>
+                  <p className={clsx("text-sm max-w-md", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
+                    {language === 'fr' ? 'Affiche deux onglets simultanément à l\'horizontale ou à la verticale.' : 'Display two tabs simultaneously horizontally or vertically.'}
+                  </p>
+                </div>
+                <button 
+                  onClick={() => {
+                    if (earlyTesting?.splitView) {
+                       setEarlyTesting?.({ ...earlyTesting, splitView: false });
+                    } else if (setConfirmModal) {
+                       setConfirmModal({
+                         isOpen: true,
+                         title: language === 'fr' ? 'Activer Split View (Bêta)' : 'Enable Split View (Beta)',
+                         message: language === 'fr' 
+                            ? 'Cette fonctionnalité est expérimentale et peut présenter des bugs d\'affichage. En l\'activant, vous acceptez ces instabilités. N\'hésitez pas à signaler tout bug dans la boîte à suggestions.' 
+                            : 'This feature is experimental and might have display bugs. By enabling it, you accept these instabilities. Feel free to report any bug in the suggestions box.',
+                         onConfirm: () => {
+                           setEarlyTesting?.({ ...(earlyTesting || { screenshot: false, splitView: false }), splitView: true });
+                           if (setConfirmModal) setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+                         }
+                       });
+                    }
+                  }}
+                  className={clsx(
+                    "w-14 h-7 rounded-full transition-colors relative shadow-inner shrink-0",
+                    earlyTesting?.splitView ? colors.bgSolid : (theme === 'dark' ? "bg-gray-600" : "bg-gray-300")
+                  )}
+                >
+                  <div className={clsx(
+                    "absolute top-1 w-5 h-5 rounded-full bg-white transition-all shadow-md",
+                    earlyTesting?.splitView ? "left-8" : "left-1"
+                  )} />
+                </button>
+              </div>
+
+              {/* Screenshot */}
+              <div className={clsx("p-6 rounded-3xl border flex items-center justify-between", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50/50 border-gray-200")}>
+                <div className="space-y-1">
+                  <h4 className={clsx("font-bold text-lg flex items-center gap-2", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                    <Camera className="w-5 h-5 text-purple-400" />
+                    {language === 'fr' ? 'Outil de Capture d\'Écran' : 'Screenshot Tool'}
+                  </h4>
+                  <p className={clsx("text-sm max-w-md", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
+                    {language === 'fr' ? 'Prend une capture de la page courante et la copie dans le presse-papiers.' : 'Takes a screenshot of the current page and copies it to clipboard.'}
+                  </p>
+                </div>
+                <button 
+                  onClick={() => {
+                    if (earlyTesting?.screenshot) {
+                       setEarlyTesting?.({ ...earlyTesting, screenshot: false });
+                    } else if (setConfirmModal) {
+                       setConfirmModal({
+                         isOpen: true,
+                         title: language === 'fr' ? 'Activer l\'Outil de Capture (Bêta)' : 'Enable Screenshot Tool (Beta)',
+                         message: language === 'fr' 
+                            ? 'L\'outil de capture d\'écran peut parfois manquer certains éléments complexes d\'une page. En l\'activant, vous acceptez de participer au test. Signalez tout bug rencontré !' 
+                            : 'The screenshot tool might sometimes miss complex page elements. By enabling it, you agree to participate in the test. Report any bugs you encounter!',
+                         onConfirm: () => {
+                           setEarlyTesting?.({ ...(earlyTesting || { screenshot: false, splitView: false }), screenshot: true });
+                           if (setConfirmModal) setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+                         }
+                       });
+                    }
+                  }}
+                  className={clsx(
+                    "w-14 h-7 rounded-full transition-colors relative shadow-inner shrink-0",
+                    earlyTesting?.screenshot ? colors.bgSolid : (theme === 'dark' ? "bg-gray-600" : "bg-gray-300")
+                  )}
+                >
+                  <div className={clsx(
+                    "absolute top-1 w-5 h-5 rounded-full bg-white transition-all shadow-md",
+                    earlyTesting?.screenshot ? "left-8" : "left-1"
+                  )} />
+                </button>
+              </div>
+            </div>
+          </div>
+        );
       case 'about':
         return (
           <div className="space-y-8 animate-fadeIn">
@@ -793,7 +949,7 @@ export function SettingsModal({
                 <Logo className="w-12 h-12" />
               </div>
               <h3 className="text-2xl font-black">Explore Browser</h3>
-              <p className="text-sm opacity-60 font-bold mt-1">Version {appVersion} (Stable v1.6.1)</p>
+              <p className="text-sm opacity-60 font-bold mt-1">Version {appVersion} (Stable)</p>
               <div className="mt-4 flex gap-2">
                 <span className={clsx("px-3 py-1 rounded-full text-xs font-bold", theme === 'dark' ? "bg-blue-500/20 text-blue-400" : "bg-blue-100 text-blue-700")}>
                   Stable
@@ -1155,7 +1311,11 @@ export function SettingsModal({
 
               <div className="flex gap-3">
                 <button 
-                  onClick={onClearData}
+                  onClick={() => {
+                    onClearData(() => {
+                      showToast(language === 'fr' ? 'Données effacées !' : 'Browsing data cleared!');
+                    });
+                  }}
                   className="flex-1 py-2 px-3 rounded-xl text-xs font-bold bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all border border-red-500/10"
                 >
                   {language === 'fr' ? 'Effacer historique' : 'Clear History'}

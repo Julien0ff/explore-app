@@ -17,7 +17,7 @@ export function IncognitoIcon({ className, size = 'md', animated = true, glow = 
 
   const sizeClasses = {
     sm: 'w-3.5 h-3.5',
-    md: 'w-5 h-5',
+    md: 'w-7 h-7',
     lg: 'w-16 h-16',
   };
 

@@ -1,7 +1,7 @@
 {
   "name": "explore-browser",
   "private": true,
-  "version": "1.6.3",
+  "version": "1.6.5",
   "description": "Navigateur Explore - Le web réinventé",
   "author": "Foxy",
   "main": "dist-electron/main.js",
@@ -52,10 +52,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@cliqz/adblocker-electron": "^1.26.12",
     "@supabase/supabase-js": "^2.97.0",
     "@tailwindcss/postcss": "^4.2.0",
     "@tailwindcss/vite": "^4.2.0",
     "clsx": "^2.1.1",
+    "cross-fetch": "^4.0.0",
     "electron-updater": "^6.8.3",
     "framer-motion": "^12.34.3",
     "lucide-react": "^0.575.0",

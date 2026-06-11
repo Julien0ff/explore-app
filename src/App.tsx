@@ -19,7 +19,10 @@ import {
   Key,
   Globe,
   FolderPlus,
-  Trash2
+  Trash2,
+  Camera,
+  SplitSquareHorizontal,
+  SplitSquareVertical
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -43,6 +46,7 @@ import { Onboarding } from './components/Onboarding';
 import { NewTabPage } from './components/NewTabPage';
 import { DownloadsPopup } from './components/DownloadsPopup';
 import type { DownloadItem } from './components/DownloadsPopup';
+import { RegionCropper } from './components/RegionCropper';
 import { CommandPalette } from './components/CommandPalette';
 import { ContextMenu } from './components/ContextMenu';
 import { FileDown } from 'lucide-react';
@@ -58,6 +62,10 @@ interface Tab {
   themeColor?: string;
   isReaderMode?: boolean;
   isPrivate?: boolean;
+  isMediaPlaying?: boolean;
+  isAudioPlaying?: boolean;
+  splitTabId?: string | null;
+  splitDirection?: 'horizontal' | 'vertical';
 }
 
 function App() {
@@ -77,6 +85,8 @@ function App() {
   const [showVPN, setShowVPN] = useState(false);
   const [adBlockEnabled, setAdBlockEnabled] = useState(true);
   const [showAdBlockMenu, setShowAdBlockMenu] = useState(false);
+  const [showSplitMenu, setShowSplitMenu] = useState(false);
+  const [showScreenshotMenu, setShowScreenshotMenu] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
   const [historySearchQuery, setHistorySearchQuery] = useState('');
@@ -129,9 +139,24 @@ function App() {
   useEffect(() => {
     localStorage.setItem('ambientMode', ambientMode.toString());
   }, [ambientMode]);
+
+  const [autoCloudSync, setAutoCloudSync] = useState(() => {
+    return localStorage.getItem('explore_auto_cloud_sync') === 'true';
+  });
+  useEffect(() => {
+    localStorage.setItem('explore_auto_cloud_sync', String(autoCloudSync));
+  }, [autoCloudSync]);
   const [searchEngine, setSearchEngine] = useState(() => {
     return localStorage.getItem('searchEngine') || 'google';
   });
+  
+  const [earlyTesting, setEarlyTesting] = useState(() => {
+    const saved = localStorage.getItem('explore_early_testing');
+    return saved ? JSON.parse(saved) : { screenshot: false, splitView: false };
+  });
+  useEffect(() => {
+    localStorage.setItem('explore_early_testing', JSON.stringify(earlyTesting));
+  }, [earlyTesting]);
   
   const [accentColor, setAccentColor] = useState('blue');
   const colors = getAccentColorClass(accentColor, theme === 'dark');
@@ -184,12 +209,12 @@ function App() {
     document.documentElement.style.setProperty('--scrollbar-rgb', hexToRgb(colors.hex));
   }, [theme, colors.hex]);
 
-  // Auto Updater State
   const [updateState, setUpdateState] = useState<{
     status: 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'not-available' | 'error';
     progress?: number;
     error?: string;
     showModal: boolean;
+    version?: string;
   }>({
     status: 'idle',
     showModal: false,
@@ -203,9 +228,9 @@ function App() {
       setUpdateState(prev => ({ ...prev, status: 'checking', showModal: true, error: undefined }));
     };
 
-    const onAvailable = () => {
-      console.log('Renderer: update_available received');
-      setUpdateState(prev => ({ ...prev, status: 'available', showModal: true }));
+    const onAvailable = (version?: string) => {
+      console.log('Renderer: update_available received', version);
+      setUpdateState(prev => ({ ...prev, status: 'available', showModal: true, version }));
     };
 
     const onNotAvailable = () => {
@@ -222,9 +247,9 @@ function App() {
       }, 3000);
     };
 
-    const onDownloaded = () => {
-      console.log('Renderer: update_downloaded received');
-      setUpdateState(prev => ({ ...prev, status: 'downloaded', showModal: true }));
+    const onDownloaded = (version?: string) => {
+      console.log('Renderer: update_downloaded received', version);
+      setUpdateState(prev => ({ ...prev, status: 'downloaded', showModal: true, version }));
     };
 
     const onProgress = (percent: number) => {
@@ -287,6 +312,7 @@ function App() {
   // Downloads State
   const [downloads, setDownloads] = useState<DownloadItem[]>([]);
   const [isDownloadsOpen, setIsDownloadsOpen] = useState(false);
+  const [screenshotToCrop, setScreenshotToCrop] = useState<string | null>(null);
   
   const webviewRefs = useRef<{ [key: string]: Electron.WebviewTag }>({});
 
@@ -356,8 +382,9 @@ function App() {
 
   const openDevTools = () => {
     const webview = webviewRefs.current[activeTabId];
-    if (!webview) return;
-    webview.openDevTools();
+    if (webview) {
+      webview.openDevTools();
+    }
   };
 
   function addTab(url = 'explore://newtab', focus = true, isPrivate = false) {
@@ -850,14 +877,21 @@ function App() {
           const hostname = new URL(url).hostname;
           // Remove www. if present for cleaner blocking
           const domain = hostname.replace(/^www\./, '');
-          if (confirm(language === 'fr' ? `Voulez-vous vraiment bloquer ${domain} ?` : `Are you sure you want to block ${domain}?`)) {
-               window.electron.blockDomain(domain);
-               // Reload to apply blocking
-               webview.reload();
-            }
-          } catch {
-            console.error('Invalid URL for blocking:', url);
-          }
+          setConfirmModal({
+             isOpen: true,
+             title: language === 'fr' ? 'Bloquer le domaine' : 'Block Domain',
+             message: language === 'fr' ? `Voulez-vous vraiment bloquer ${domain} ?` : `Are you sure you want to block ${domain}?`,
+             onConfirm: () => {
+                if (window.electron?.blockDomain) {
+                   window.electron.blockDomain(domain);
+                }
+                // Reload to apply blocking
+                webview.reload();
+             }
+          });
+        } catch {
+          console.error('Invalid URL for blocking:', url);
+        }
         break;
       }
       case 'capture-question':
@@ -1016,6 +1050,7 @@ function App() {
     // Check if url is internal
     if (url.startsWith('explore://') || isPrivate || isTabPrivate) return;
     
+    let shouldAdd = true;
     const newItem = {
       id: crypto.randomUUID(),
       user_id: user?.id || 'guest',
@@ -1024,7 +1059,15 @@ function App() {
       visited_at: new Date().toISOString()
     };
     
-    setHistory(prev => [newItem, ...prev]);
+    setHistory(prev => {
+      if (prev.length > 0 && prev[0].url === url) {
+        shouldAdd = false;
+        return prev;
+      }
+      return [newItem, ...prev];
+    });
+
+    if (!shouldAdd) return;
 
     if (user) {
       await supabase.from('history').insert({
@@ -1261,6 +1304,119 @@ function App() {
     }
   };
 
+  const handleClearData = (onSuccess?: () => void) => {
+    setConfirmModal({
+      isOpen: true,
+      title: language === 'fr' ? 'Effacer les données de navigation' : 'Clear Browsing Data',
+      message: language === 'fr' 
+        ? 'Êtes-vous sûr de vouloir effacer votre historique, vos cookies et votre cache ? Cette action est irréversible.' 
+        : 'Are you sure you want to clear your browsing history, cookies, and cache? This action cannot be undone.',
+      onConfirm: () => {
+        deleteHistory();
+        if (window.electron?.clearData) {
+          window.electron.clearData();
+        }
+        if (onSuccess) {
+          onSuccess();
+        }
+      }
+    });
+  };
+
+  const handleSaveSessionToCloud = async (): Promise<boolean> => {
+    if (!user) return false;
+    try {
+      const { data: existing, error: selectError } = await supabase
+        .from('sessions')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (selectError) {
+        console.error("Error checking existing session:", selectError);
+        return false;
+      }
+
+      const tabsToSave = tabs.map(t => ({
+        id: t.id,
+        url: t.url,
+        title: t.title,
+        isLoading: false,
+        isPrivate: t.isPrivate
+      }));
+
+      if (existing) {
+        const { error: updateError } = await supabase
+          .from('sessions')
+          .update({
+            tabs: tabsToSave,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', user.id);
+
+        if (updateError) {
+          console.error("Error updating session in cloud:", updateError);
+          return false;
+        }
+      } else {
+        const { error: insertError } = await supabase
+          .from('sessions')
+          .insert({
+            user_id: user.id,
+            tabs: tabsToSave,
+            updated_at: new Date().toISOString()
+          });
+
+        if (insertError) {
+          console.error("Error inserting session in cloud:", insertError);
+          return false;
+        }
+      }
+      return true;
+    } catch (e) {
+      console.error("Failed to save session to cloud:", e);
+      return false;
+    }
+  };
+
+  const handleRestoreSessionFromCloud = async (): Promise<boolean> => {
+    if (!user) return false;
+    try {
+      const { data, error } = await supabase
+        .from('sessions')
+        .select('tabs')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error restoring session from cloud:", error);
+        return false;
+      }
+
+      if (data && data.tabs && data.tabs.length > 0) {
+        setTabs(data.tabs);
+        setActiveTabId(data.tabs[0].id);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.error("Failed to restore session from cloud:", e);
+      return false;
+    }
+  };
+
+  // Debounced Auto Cloud Sync when tabs change
+  useEffect(() => {
+    if (!autoCloudSync || !user) return;
+
+    const timer = setTimeout(() => {
+      handleSaveSessionToCloud();
+    }, 2000); // 2 seconds debounce
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabs, autoCloudSync, user]);
+
   const deleteHistoryItem = async (id: string) => {
     setHistory(prev => prev.filter(item => item.id !== id));
     if (user) {
@@ -1326,6 +1482,58 @@ function App() {
     } catch {
       return '';
     }
+  };
+
+  const handleScreenshot = async (type: 'full' | 'visible' | 'region') => {
+    // Note: Implementation of 'region' and 'full' will be done in the electron main process
+    // For now we pass the type to a new IPC if needed or fallback to basic visible capture
+    const webview = webviewRefs.current[activeTabId];
+    if (webview && window.electron?.capturePage) {
+      try {
+        const id = webview.getWebContentsId();
+        const dataUrl = await window.electron.capturePage(id);
+        
+        if (type === 'region' && dataUrl) {
+          setScreenshotToCrop(dataUrl);
+          return;
+        }
+
+        if (dataUrl) {
+          const a = document.createElement('a');
+          a.href = dataUrl;
+          a.download = `screenshot_${type}_${new Date().getTime()}.png`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
+      } catch (e) {
+        console.error("Screenshot failed:", e);
+      }
+    }
+  };
+
+  const handleSplitView = (direction: 'horizontal' | 'vertical') => {
+    setTabs(prev => {
+      const activeIdx = prev.findIndex(t => t.id === activeTabId);
+      if (activeIdx === -1) return prev;
+      
+      const activeTab = prev[activeIdx];
+      if (activeTab.splitTabId) {
+        return prev.map(t => t.id === activeTabId ? { ...t, splitTabId: null, splitDirection: undefined } : t);
+      }
+
+      const otherTab = prev.find(t => t.id !== activeTabId && !t.splitTabId);
+      const newTabs = [...prev];
+      let targetSplitId = otherTab?.id;
+      
+      if (!targetSplitId) {
+        const newTabId = Math.random().toString(36).substr(2, 9);
+        newTabs.push({ id: newTabId, url: 'explore://newtab', title: 'Nouvel onglet', isLoading: false });
+        targetSplitId = newTabId;
+      }
+      
+      return newTabs.map(t => t.id === activeTabId ? { ...t, splitTabId: targetSplitId, splitDirection: direction } : t);
+    });
   };
 
   const handleWindowControl = (action: 'minimize' | 'maximize' | 'close') => {
@@ -1401,29 +1609,29 @@ function App() {
         <>
           {/* Main Ambient Glow */}
           <div 
-            className="absolute inset-0 z-0 pointer-events-none transition-all duration-1000 ease-in-out"
+            className="absolute inset-0 z-0 pointer-events-none transition-all duration-1000 ease-in-out blur-[120px]"
             style={{
               background: activeTab?.url === 'explore://newtab'
-                ? `radial-gradient(circle at 50% 50%, ${activeThemeColor}2b 0%, ${activeThemeColor}0f 45%, ${activeThemeColor}05 75%, transparent 100%)`
-                : `radial-gradient(circle at 50% 0%, ${activeThemeColor} 0%, ${activeThemeColor}15 35%, transparent 75%)`,
+                ? `radial-gradient(circle at 50% 50%, ${activeThemeColor}40 0%, ${activeThemeColor}10 60%, transparent 100%)`
+                : `radial-gradient(ellipse at 50% -20%, ${activeThemeColor}50 0%, ${activeThemeColor}15 50%, transparent 100%)`,
               opacity: activeTab?.url === 'explore://newtab' 
                 ? (theme === 'dark' ? 0.95 : 0.75) 
-                : (theme === 'dark' ? 0.5 : 0.4)
+                : (theme === 'dark' ? 0.6 : 0.4)
             }}
           />
           {/* Subtle Secondary Glow for Depth */}
           <div 
-            className="absolute inset-0 z-0 pointer-events-none transition-all duration-1500 ease-in-out mix-blend-screen"
+            className="absolute inset-0 z-0 pointer-events-none transition-all duration-1500 ease-in-out mix-blend-screen blur-[100px]"
             style={{
-              background: `radial-gradient(circle at 100% 0%, ${activeThemeColor}10 0%, transparent 50%)`,
-              opacity: theme === 'dark' ? 0.3 : 0.15
+              background: `radial-gradient(circle at 100% 0%, ${activeThemeColor}20 0%, transparent 80%)`,
+              opacity: theme === 'dark' ? 0.4 : 0.2
             }}
           />
           {/* Bottom Bloom */}
           <div 
-            className="absolute inset-0 z-0 pointer-events-none transition-all duration-1000 ease-in-out"
+            className="absolute inset-0 z-0 pointer-events-none transition-all duration-1000 ease-in-out blur-[80px]"
             style={{
-              background: `linear-gradient(to top, ${activeThemeColor}05 0%, transparent 20%)`,
+              background: `linear-gradient(to top, ${activeThemeColor}15 0%, transparent 40%)`,
               opacity: activeTab?.url === 'explore://newtab' ? 0 : 1
             }}
           />
@@ -1448,7 +1656,7 @@ function App() {
       {(tabPosition === 'left' || tabPosition === 'right') && (
         <div 
           className={clsx(
-            "w-20 flex flex-col transition-colors duration-1000 relative z-10",
+            "w-16 flex flex-col transition-colors duration-1000 relative z-10",
             tabPosition === 'left' ? "border-r order-first" : "border-l order-last"
           )}
           style={{
@@ -1459,13 +1667,11 @@ function App() {
             borderColor: theme === 'dark' ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"
           }}
         >
-          <div className="p-4 flex flex-col items-center justify-center drag-region">
-            <div className="flex items-center justify-center py-4 border-b border-white/5 w-full">
-              <Logo className="w-8 h-8" />
-            </div>
+          <div className="h-12 w-full flex items-center justify-center drag-region border-b border-white/5 group cursor-default shrink-0">
+            <Logo className="w-8 h-8 group-hover:rotate-180 transition-transform duration-500" />
           </div>
 
-          <div className="px-3 pb-2">
+          <div className="px-3 pb-2 mt-4">
             <button 
               onClick={() => addTab()}
               className={clsx("w-full flex items-center justify-center gap-2 text-white py-2 rounded-xl transition-all shadow-lg font-medium", colors.bgSolid, colors.bgHover, colors.shadow)}
@@ -1477,7 +1683,7 @@ function App() {
 
           <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-none px-3 py-2 space-y-1">
             <div className="w-full flex justify-center mb-1 py-1">
-              <div className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] pl-[0.2em]">
+              <div className="text-[8px] font-bold text-gray-500 uppercase tracking-[0.1em] pl-[0.1em]">
                 {language === 'fr' ? 'Onglets' : 'Tabs'}
               </div>
             </div>
@@ -1496,9 +1702,9 @@ function App() {
                   )}
                   title={tab.title}
                 >
-                  <div className={clsx("w-5 h-5 rounded-full flex items-center justify-center text-[10px]", activeTabId === tab.id ? clsx(colors.borderSubtle, colors.text) : "bg-white/10 text-gray-400", tab.isPrivate && "border border-slate-500/30 bg-slate-500/10")}>
+                  <div className={clsx("w-6 h-6 rounded-full flex items-center justify-center text-[10px]", activeTabId === tab.id ? clsx(colors.borderSubtle, colors.text) : "bg-white/10 text-gray-400", tab.isPrivate && "border border-slate-500/30 bg-slate-500/10")}>
                     {tab.isLoading ? (
-                      <RotateCw className={clsx("w-3.5 h-3.5 animate-spin", activeTabId === tab.id ? colors.text : "text-gray-400")} />
+                      <RotateCw className={clsx("w-4 h-4 animate-spin", activeTabId === tab.id ? colors.text : "text-gray-400")} />
                     ) : tab.isPrivate ? (
                       <IncognitoIcon size="sm" animated={false} className="text-slate-400" />
                     ) : tab.url === 'explore://newtab' ? (
@@ -1506,7 +1712,7 @@ function App() {
                     ) : (
                       <img 
                         src={getFaviconUrl(tab.url)} 
-                        className="w-3.5 h-3.5 rounded-sm"
+                        className="w-4 h-4 rounded-sm"
                         alt=""
                         onError={(e) => { e.currentTarget.style.display = 'none'; }}
                       />
@@ -1559,10 +1765,10 @@ function App() {
             </button>
             <button 
               onClick={() => updateTab(activeTabId, { url: 'explore://settings' })}
-              className={clsx("w-full flex items-center justify-center p-2.5 rounded-xl transition-colors", theme === 'dark' ? "hover:bg-white/5 text-gray-400" : "hover:bg-gray-100 text-gray-600")}
+              className={clsx("p-2 rounded-xl transition-colors flex items-center justify-center", theme === 'dark' ? "hover:bg-white/5 text-gray-400" : "hover:bg-gray-100 text-gray-600")}
               title={language === 'fr' ? 'Paramètres' : 'Settings'}
             >
-              <Settings className="w-6 h-6" />
+              <Settings className="w-7 h-7" />
             </button>
           </div>
         </div>
@@ -1598,7 +1804,7 @@ function App() {
               axis="x" 
               values={tabs} 
               onReorder={setTabs} 
-              className="flex-1 flex flex-nowrap overflow-x-auto overflow-y-hidden min-w-0 drag-region gap-2 px-2 scrollbar-none pb-1 pt-1 items-center"
+              className="flex-1 flex flex-nowrap overflow-hidden min-w-0 drag-region gap-2 px-2 pb-1 pt-1 items-center"
             >
               {tabs.map(tab => (
                 <Reorder.Item
@@ -1606,22 +1812,22 @@ function App() {
                   value={tab}
                   layout
                   className={twMerge(
-                    "group relative flex items-center gap-2 px-3 py-2 rounded-2xl cursor-pointer transition-all border border-transparent min-w-[30px] max-w-[240px] shrink no-drag",
+                    "group relative flex items-center gap-2 px-3 py-2 rounded-2xl cursor-pointer transition-all border border-transparent min-w-[30px] w-48 shrink no-drag",
                     activeTabId === tab.id 
                       ? clsx(colors.bg, colors.text, "shadow-lg relative overflow-hidden after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5", colors.bgSolid.replace("bg-", "after:bg-"), "border-white/5")
                       : clsx("text-gray-400 hover:bg-white/10 dark:hover:bg-white/5", colors.textHover)
                   )}
                   onPointerDown={() => setActiveTabId(tab.id)}
                 >
-                   <div className={clsx("min-w-5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0", activeTabId === tab.id ? clsx(colors.borderSubtle, colors.text) : "bg-white/10 text-gray-400", tab.isPrivate && "border border-purple-500/30 bg-purple-500/10")}>
+                   <div className={clsx("min-w-6 w-6 h-6 rounded-full flex items-center justify-center text-[10px] shrink-0", activeTabId === tab.id ? clsx(colors.borderSubtle, colors.text) : "bg-white/10 text-gray-400", tab.isPrivate && "border border-purple-500/30 bg-purple-500/10")}>
                     {tab.isLoading ? (
-                      <RotateCw className={clsx("w-3 h-3 animate-spin", activeTabId === tab.id ? colors.text : "text-gray-400")} />
+                      <RotateCw className={clsx("w-3.5 h-3.5 animate-spin", activeTabId === tab.id ? colors.text : "text-gray-400")} />
                     ) : tab.isPrivate ? (
                       <IncognitoIcon size="sm" animated={false} className="text-purple-400" />
                     ) : (
                       <img 
                       src={getFaviconUrl(tab.url)} 
-                      className="w-3 h-3 rounded-sm"
+                      className="w-4 h-4 rounded-sm"
                       alt=""
                       onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     />
@@ -1713,6 +1919,75 @@ function App() {
             >
               <RotateCw className={clsx("w-4 h-4", activeTab?.isLoading && "animate-spin")} />
             </button>
+            
+            {earlyTesting.splitView && (
+              <div className="relative flex items-center shrink-0 ml-1">
+                <button 
+                  type="button"
+                  onClick={() => setShowSplitMenu(!showSplitMenu)}
+                  className={clsx("p-1.5 hover:bg-white/10 rounded-lg transition-colors", showSplitMenu || activeTab?.splitDirection ? "text-blue-400 bg-white/10" : "text-gray-400")}
+                  title={language === 'fr' ? 'Écran scindé' : 'Split View'}
+                >
+                  <SplitSquareHorizontal className="w-4 h-4" />
+                </button>
+                <AnimatePresence>
+                  {showSplitMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                      className={clsx(
+                        "absolute top-[calc(100%+8px)] left-0 w-48 rounded-xl shadow-xl border p-2 z-50 overflow-hidden",
+                        theme === 'dark' ? "bg-[#181825] border-white/10 text-white" : "bg-white border-gray-200 text-gray-900"
+                      )}
+                    >
+                      <button onClick={() => { handleSplitView('horizontal'); setShowSplitMenu(false); }} className="w-full text-left px-3 py-2 text-sm hover:bg-white/10 rounded-lg flex items-center gap-2">
+                        <SplitSquareHorizontal className="w-4 h-4" /> {language === 'fr' ? 'Horizontal' : 'Horizontal'}
+                      </button>
+                      <button onClick={() => { handleSplitView('vertical'); setShowSplitMenu(false); }} className="w-full text-left px-3 py-2 text-sm hover:bg-white/10 rounded-lg flex items-center gap-2">
+                        <SplitSquareVertical className="w-4 h-4" /> {language === 'fr' ? 'Vertical' : 'Vertical'}
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+            
+            {earlyTesting.screenshot && (
+              <div className="relative flex items-center shrink-0">
+                <button 
+                  type="button"
+                  onClick={() => setShowScreenshotMenu(!showScreenshotMenu)}
+                  className={clsx("p-1.5 hover:bg-white/10 rounded-lg transition-colors", showScreenshotMenu ? "text-blue-400 bg-white/10" : "text-gray-400")}
+                  title={language === 'fr' ? 'Capture d\'écran' : 'Screenshot'}
+                >
+                  <Camera className="w-4 h-4" />
+                </button>
+                <AnimatePresence>
+                  {showScreenshotMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                      className={clsx(
+                        "absolute top-[calc(100%+8px)] left-0 w-48 rounded-xl shadow-xl border p-2 z-50 overflow-hidden",
+                        theme === 'dark' ? "bg-[#181825] border-white/10 text-white" : "bg-white border-gray-200 text-gray-900"
+                      )}
+                    >
+                      <button onClick={() => { handleScreenshot('full'); setShowScreenshotMenu(false); }} className="w-full text-left px-3 py-2 text-sm hover:bg-white/10 rounded-lg">
+                        {language === 'fr' ? 'Toute la page' : 'Full Page'}
+                      </button>
+                      <button onClick={() => { handleScreenshot('visible'); setShowScreenshotMenu(false); }} className="w-full text-left px-3 py-2 text-sm hover:bg-white/10 rounded-lg">
+                        {language === 'fr' ? 'Partie visible' : 'Visible Part'}
+                      </button>
+                      <button onClick={() => { handleScreenshot('region'); setShowScreenshotMenu(false); }} className="w-full text-left px-3 py-2 text-sm hover:bg-white/10 rounded-lg">
+                        {language === 'fr' ? 'Sélectionner une zone' : 'Select Region'}
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
             </div>
           </div>
 
@@ -1819,7 +2094,7 @@ function App() {
                      )}
                    </AnimatePresence>
                  </div>
-                 {activeTab?.url?.startsWith('http') && (
+                 {activeTab?.url?.startsWith('http') && activeTab.isMediaPlaying && (
                    <button 
                     type="button"
                     onClick={enableZenMode}
@@ -1829,7 +2104,7 @@ function App() {
                      <BookOpen className="w-4 h-4" />
                    </button>
                  )}
-                 {activeTab?.url?.startsWith('http') && (
+                 {activeTab?.url?.startsWith('http') && activeTab.isMediaPlaying && (
                    <button 
                     type="button"
                     onClick={enablePiP}
@@ -1839,7 +2114,7 @@ function App() {
                      <Tv className="w-4 h-4" />
                    </button>
                  )}
-                 {activeTab?.url?.startsWith('http') && (
+                 {activeTab?.url?.startsWith('http') && activeTab.isMediaPlaying && (
                    <button 
                     type="button"
                     onClick={toggleMute}
@@ -1850,14 +2125,16 @@ function App() {
                    </button>
                  )}
                  {activeTab?.url?.startsWith('http') && (
-                   <button 
-                    type="button"
-                    onClick={openDevTools}
-                    className="p-1 hover:bg-white/10 text-gray-400 rounded transition-colors"
-                    title={language === 'fr' ? 'Inspecter la page' : 'Developer Tools'}
-                   >
-                     <Terminal className="w-4 h-4" />
-                   </button>
+                   <>
+                     <button 
+                      type="button"
+                      onClick={openDevTools}
+                      className="p-1 hover:bg-white/10 text-gray-400 rounded transition-colors"
+                      title={language === 'fr' ? 'Inspecter la page' : 'Developer Tools'}
+                     >
+                       <Terminal className="w-4 h-4" />
+                     </button>
+                   </>
                  )}
                  <button 
                   type="button"
@@ -2202,12 +2479,31 @@ function App() {
       <div className={clsx("flex-1 relative transition-colors duration-1000",
         (ambientMode && activeThemeColor) ? "bg-transparent" : "bg-white dark:bg-[#1e1e2e]"
       )}>
-        {tabs.map(tab => (
+        {tabs.map(tab => {
+          const isActive = activeTabId === tab.id;
+          const isSplitTarget = activeTabId && tabs.find(t => t.id === activeTabId)?.splitTabId === tab.id;
+          const activeTabObj = tabs.find(t => t.id === activeTabId);
+          const isVisible = isActive || isSplitTarget;
+          
+          let positionClasses = "inset-0 w-full h-full";
+          
+          if (isActive && activeTabObj?.splitTabId) {
+             positionClasses = activeTabObj.splitDirection === 'horizontal' 
+               ? "top-0 left-0 bottom-0 w-1/2 border-r border-white/20" 
+               : "top-0 left-0 right-0 h-1/2 border-b border-white/20";
+          } else if (isSplitTarget) {
+             positionClasses = activeTabObj?.splitDirection === 'horizontal'
+               ? "top-0 right-0 bottom-0 w-1/2 left-1/2"
+               : "bottom-0 left-0 right-0 h-1/2 top-1/2";
+          }
+
+          return (
           <div
             key={tab.id}
             className={clsx(
-              "absolute inset-0 w-full h-full",
-              activeTabId === tab.id ? "z-10" : "z-0 invisible"
+              "absolute transition-all duration-300",
+              isVisible ? "z-10 visible" : "z-0 invisible",
+              positionClasses
             )}
           >
             {tab.url.startsWith('explore://') ? (
@@ -2255,7 +2551,13 @@ function App() {
                         setShortcuts={setShortcuts}
                         onOpenUrl={(url) => updateTab(activeTabId, { url })}
                         onImportBookmarks={handleImportBookmarks}
-                        onClearData={deleteHistory}
+                        onClearData={handleClearData}
+                        onSaveSessionToCloud={handleSaveSessionToCloud}
+                        onRestoreSessionFromCloud={handleRestoreSessionFromCloud}
+                        isAuthenticated={!!user}
+                        onRequireAuth={() => setIsAuthModalOpen(true)}
+                        autoCloudSync={autoCloudSync}
+                        setAutoCloudSync={setAutoCloudSync}
                         windowStyle={windowStyle}
                         setWindowStyle={setWindowStyle}
                         showBookmarksBar={showBookmarksBar}
@@ -2263,6 +2565,9 @@ function App() {
                         ambientMode={ambientMode}
                         setAmbientMode={setAmbientMode}
                         checkForUpdates={handleCheckForUpdates}
+                        earlyTesting={earlyTesting}
+                        setEarlyTesting={setEarlyTesting}
+                        setConfirmModal={setConfirmModal}
                      />
                   </div>
                 )}
@@ -2291,9 +2596,12 @@ function App() {
                             </div>
                             <button
                                onClick={() => {
-                                  if (confirm(language === 'fr' ? 'Voulez-vous vraiment effacer tout votre historique ?' : 'Are you sure you want to clear all your history?')) {
-                                     deleteHistory();
-                                  }
+                                  setConfirmModal({
+                                     isOpen: true,
+                                     title: language === 'fr' ? 'Effacer l\'historique' : 'Clear history',
+                                     message: language === 'fr' ? 'Voulez-vous vraiment effacer tout votre historique ?' : 'Are you sure you want to clear all your history?',
+                                     onConfirm: deleteHistory
+                                  });
                                }}
                                className="px-4 py-2.5 rounded-2xl bg-red-500/10 text-red-500 hover:bg-red-500/20 font-bold text-sm transition-all hover:scale-105 active:scale-95 shadow-sm"
                             >
@@ -2549,6 +2857,22 @@ function App() {
                       el.addEventListener('did-finish-load', () => {
                         updateTab(tab.id, { isLoading: false, title: el.getTitle(), canGoBack: el.canGoBack(), canGoForward: el.canGoForward() });
                       });
+                      el.addEventListener('did-change-theme-color', (e: Event) => {
+                         const event = e as Event & { themeColor: string };
+                         if (event.themeColor) {
+                           updateTab(tab.id, { themeColor: event.themeColor });
+                         }
+                      });
+                      el.addEventListener('page-favicon-updated', () => {
+                         // const event = e as Event & { favicons: string[] };
+                         // Favicons update available if needed
+                      });
+                      el.addEventListener('media-started-playing', () => {
+                        updateTab(tab.id, { isMediaPlaying: true });
+                      });
+                      el.addEventListener('media-paused', () => {
+                        updateTab(tab.id, { isMediaPlaying: false });
+                      });
                       el.addEventListener('dom-ready', () => {
                         updateTab(tab.id, { title: el.getTitle(), canGoBack: el.canGoBack(), canGoForward: el.canGoForward() });
                         
@@ -2707,9 +3031,26 @@ function App() {
               />
             )}
           </div>
-        ))}
+          );
+        })}
+        {screenshotToCrop && (
+          <RegionCropper
+            imageUrl={screenshotToCrop}
+            language={language}
+            onCancel={() => setScreenshotToCrop(null)}
+            onCrop={(croppedDataUrl) => {
+              const a = document.createElement('a');
+              a.href = croppedDataUrl;
+              a.download = `screenshot_region_${new Date().getTime()}.png`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              setScreenshotToCrop(null);
+            }}
+          />
+        )}
       </div>
-      </div>
+    </div>
 
       <PasswordManager 
         isOpen={showPasswordManager}
@@ -2754,6 +3095,8 @@ function App() {
         )}
       />
 
+
+
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
@@ -2770,46 +3113,21 @@ function App() {
         setLanguage={setLanguage}
         accentColor={accentColor}
         setAccentColor={setAccentColor}
-        onSaveSessionToCloud={async () => {
-          if (!user) return;
-          const { error } = await supabase.from('sessions').upsert({
-            user_id: user.id,
-            tabs: tabs,
-            updated_at: new Date().toISOString()
-          }, { onConflict: 'user_id' });
-          if (error) console.error("Error saving session to cloud", error);
-        }}
-        onRestoreSessionFromCloud={async () => {
-          if (!user) return;
-          const { data, error } = await supabase.from('sessions').select('tabs').eq('user_id', user.id).single();
-          if (error) console.error("Error restoring session from cloud", error);
-          else if (data && data.tabs && data.tabs.length > 0) {
-            setTabs(data.tabs);
-            setActiveTabId(data.tabs[0].id);
-          }
-        }}
+        onSaveSessionToCloud={handleSaveSessionToCloud}
+        onRestoreSessionFromCloud={handleRestoreSessionFromCloud}
         isAuthenticated={!!user}
         onRequireAuth={() => setIsAuthModalOpen(true)}
+        autoCloudSync={autoCloudSync}
+        setAutoCloudSync={setAutoCloudSync}
         shortcuts={shortcuts}
         setShortcuts={setShortcuts}
         onImportBookmarks={handleImportBookmarks}
         ambientMode={ambientMode}
         setAmbientMode={setAmbientMode}
-        onClearData={() => {
-          setConfirmModal({
-            isOpen: true,
-            title: language === 'fr' ? 'Effacer les données de navigation' : 'Clear Browsing Data',
-            message: language === 'fr' 
-              ? 'Êtes-vous sûr de vouloir effacer votre historique, vos cookies et votre cache ? Cette action est irréversible.' 
-              : 'Are you sure you want to clear your browsing history, cookies, and cache? This action cannot be undone.',
-            onConfirm: () => {
-              deleteHistory();
-              if (window.electron?.clearData) {
-                  window.electron.clearData();
-              }
-            }
-          });
-        }}
+        onClearData={handleClearData}
+        earlyTesting={earlyTesting}
+        setEarlyTesting={setEarlyTesting}
+        setConfirmModal={setConfirmModal}
         onOpenUrl={(url) => {
           const newId = crypto.randomUUID();
           const newTab: Tab = {
@@ -2904,9 +3222,9 @@ function App() {
               {/* Subtitle / details */}
               <p className="text-sm text-slate-400 mb-6 px-2">
                 {updateState.status === 'checking' && (language === 'fr' ? 'Nous recherchons si une nouvelle version majeure de Navigateur Explore est disponible.' : 'We are checking if a new major version of Navigateur Explore is available.')}
-                {updateState.status === 'available' && (language === 'fr' ? 'Une version 1.6.1 est disponible avec de superbes fonctionnalités. Le téléchargement va démarrer...' : 'Version 1.6.1 is available with stunning new features. Starting download...')}
+                {updateState.status === 'available' && (language === 'fr' ? `La version ${updateState.version || 'suivante'} est disponible avec de superbes fonctionnalités. Le téléchargement va démarrer...` : `Version ${updateState.version || 'update'} is available with stunning new features. Starting download...`)}
                 {updateState.status === 'downloading' && (language === 'fr' ? 'Récupération des derniers fichiers système. Veuillez ne pas éteindre le navigateur.' : 'Fetching the latest system files. Please do not close the browser.')}
-                {updateState.status === 'downloaded' && (language === 'fr' ? 'La version 1.6.1 a été téléchargée avec succès. Redémarrez maintenant pour en profiter.' : 'Version 1.6.1 has been successfully downloaded. Restart now to apply.')}
+                {updateState.status === 'downloaded' && (language === 'fr' ? `La version ${updateState.version || 'suivante'} a été téléchargée avec succès. Redémarrez maintenant pour en profiter.` : `Version ${updateState.version || 'update'} has been successfully downloaded. Restart now to apply.`)}
                 {updateState.status === 'not-available' && (language === 'fr' ? 'Vous utilisez déjà la toute dernière version stable de Navigateur Explore.' : 'You are already running the latest stable version of Navigateur Explore.')}
                 {updateState.status === 'error' && (updateState.error || (language === 'fr' ? 'Une erreur est survenue lors de la vérification ou du téléchargement.' : 'An error occurred while checking or downloading.'))}
               </p>

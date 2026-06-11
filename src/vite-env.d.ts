@@ -63,6 +63,7 @@ interface Window {
     onOAuthCallback: (callback: (url: string) => void) => void;
     offOAuthCallback: () => void;
     getAppVersion: () => Promise<string>;
+    capturePage: (id: number) => Promise<string | null>;
     onUpdateChecking: (callback: () => void) => void;
     onUpdateAvailable: (callback: () => void) => void;
     onUpdateNotAvailable: (callback: () => void) => void;

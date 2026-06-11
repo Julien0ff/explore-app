@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, nativeTheme, session, shell, dialog, net } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeTheme, session, shell, dialog, net, clipboard, webContents } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import http from 'http';
@@ -120,50 +120,72 @@ function setupSession(sess: Electron.Session = session.defaultSession) {
         sess.setProxy({ proxyRules: 'direct://' });
       }
 
-      // Ad Blocker
-      sess.webRequest.onBeforeRequest(filter, (details, callback) => {
-        if (!adBlockEnabled) {
-          callback({ cancel: false });
-          return;
-        }
+      // Initialize real Ad Blocker if installed
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { ElectronBlocker } = require('@cliqz/adblocker-electron');
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const fetch = require('cross-fetch');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ElectronBlocker.fromPrebuiltAdsAndTracking(fetch).then((b: any) => {
+          if (adBlockEnabled) {
+            b.enableBlockingInSession(sess);
+          }
+          // Provide a way to toggle it globally
+          ipcMain.removeAllListeners('toggle-adblock'); // Prevent duplicate listeners
+          ipcMain.on('toggle-adblock', (_event, enabled: boolean) => {
+            adBlockEnabled = enabled;
+            if (enabled) {
+              b.enableBlockingInSession(sess);
+            } else {
+              b.disableBlockingInSession(sess);
+            }
+          });
+        });
+      } catch {
+        // Fallback to basic custom blocker if module not installed yet
+        sess.webRequest.onBeforeRequest(filter, (details, callback) => {
+          if (!adBlockEnabled) {
+            callback({ cancel: false });
+            return;
+          }
 
-        const url = details.url.toLowerCase();
-        
-        // Whitelist all main Google domain requests (except ad subdomains) to ensure search never breaks
-        const isGoogleMain = (
-          url.startsWith('https://www.google.com') ||
-          url.startsWith('https://www.google.fr') ||
-          url.startsWith('https://google.com') ||
-          url.startsWith('https://google.fr') ||
-          url.startsWith('http://www.google.com') ||
-          url.startsWith('http://www.google.fr')
-        );
-        const isGoogleAdSubdomain = (
-          url.includes('ads.google.com') ||
-          url.includes('adservice.google.com')
-        );
-        if (
-          (isGoogleMain && !isGoogleAdSubdomain) ||
-          url.includes('gstatic.com') ||
-          url.includes('/favicon.ico') ||
-          url.includes('icons.duckduckgo.com') ||
-          url.includes('flagcdn.com')
-        ) {
-          callback({ cancel: false });
-          return;
-        }
+          const url = details.url.toLowerCase();
+          
+          // Whitelist all main Google domain requests
+          const isGoogleMain = (
+            url.startsWith('https://www.google.com') ||
+            url.startsWith('https://www.google.fr') ||
+            url.startsWith('https://google.com') ||
+            url.startsWith('https://google.fr') ||
+            url.startsWith('http://www.google.com') ||
+            url.startsWith('http://www.google.fr')
+          );
+          const isGoogleAdSubdomain = (
+            url.includes('ads.google.com') ||
+            url.includes('adservice.google.com')
+          );
+          if (
+            (isGoogleMain && !isGoogleAdSubdomain) ||
+            url.includes('gstatic.com') ||
+            url.includes('/favicon.ico') ||
+            url.includes('icons.duckduckgo.com') ||
+            url.includes('flagcdn.com')
+          ) {
+            callback({ cancel: false });
+            return;
+          }
 
-        const isAd = getAllBlockedDomains().some(domain => url.includes(domain));
-        
-        if (isAd) {
-          mainWindow?.webContents.send('ad-blocked', url);
-          callback({ cancel: true });
-        } else {
-          callback({ cancel: false });
-        }
-      });
-
-
+          const isAd = getAllBlockedDomains().some(domain => url.includes(domain));
+          
+          if (isAd) {
+            mainWindow?.webContents.send('ad-blocked', url);
+            callback({ cancel: true });
+          } else {
+            callback({ cancel: false });
+          }
+        });
+      }
   } catch (e) {
     console.error('Failed to setup session:', e);
   }
@@ -198,9 +220,9 @@ function setupIPC() {
     mainWindow?.webContents.send('update_checking');
   });
 
-  autoUpdater.on('update-available', () => {
+  autoUpdater.on('update-available', (info) => {
     console.log('Updater: update-available');
-    mainWindow?.webContents.send('update_available');
+    mainWindow?.webContents.send('update_available', info?.version);
   });
 
   autoUpdater.on('update-not-available', () => {
@@ -218,9 +240,9 @@ function setupIPC() {
     mainWindow?.webContents.send('download_progress', progressObj.percent);
   });
 
-  autoUpdater.on('update-downloaded', () => {
+  autoUpdater.on('update-downloaded', (info) => {
     console.log('Updater: update-downloaded');
-    mainWindow?.webContents.send('update_downloaded');
+    mainWindow?.webContents.send('update_downloaded', info?.version);
   });
 
   // IPC for app version
@@ -404,6 +426,20 @@ function setupIPC() {
     }
   });
 
+  // IPC for screenshot capture
+  ipcMain.handle('capture-page', async (_, webContentsId: number) => {
+    try {
+      const wc = webContents.fromId(webContentsId);
+      if (!wc) return null;
+      const image = await wc.capturePage();
+      clipboard.writeImage(image);
+      return image.toDataURL();
+    } catch (e) {
+      console.error('Failed to capture page:', e);
+      return null;
+    }
+  });
+
   // Prepare local OAuth redirect server
   let oauthServer: http.Server | null = null;
   ipcMain.handle('prepare-oauth', async () => {
@@ -521,14 +557,9 @@ function createMainWindow() {
     mainWindow.loadFile(indexPath);
   }
 
-  // Only open DevTools in Development Mode
+  // Only open DevTools in Development Mode for main window
   if (process.env.VITE_DEV_SERVER_URL) {
-    mainWindow.webContents.openDevTools({ mode: 'detach' });
-
-    // Debug webviews in Development
-    mainWindow.webContents.on('did-attach-webview', (_, webContents) => {
-      webContents.openDevTools({ mode: 'detach' });
-    });
+    // mainWindow.webContents.openDevTools({ mode: 'detach' });
   }
 
   // Handle downloads

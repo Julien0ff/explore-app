@@ -7,6 +7,7 @@ import { clsx } from 'clsx';
 
 import { getAccentColorClass } from '../lib/theme';
 import type { Bookmark } from '../types';
+import beeImg from '../assets/Minecraft-Bee-PNG-Image.png';
 
 interface BookmarkTreeItemProps {
   item: Bookmark;
@@ -161,6 +162,34 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
+  
+  const [showBee, setShowBee] = useState(false);
+  const [beeDirection, setBeeDirection] = useState<'left-to-right' | 'right-to-left'>('left-to-right');
+  const [beeVerticalOffset, setBeeVerticalOffset] = useState(0);
+
+  useEffect(() => {
+    const triggerBee = () => {
+      setBeeDirection(Math.random() > 0.5 ? 'left-to-right' : 'right-to-left');
+      setBeeVerticalOffset(Math.random() * 60 - 30);
+      setShowBee(true);
+      setTimeout(() => setShowBee(false), 15000);
+    };
+
+    let interval: NodeJS.Timeout;
+    const triggerNextBee = () => {
+      triggerBee();
+      const nextDelay = Math.floor(Math.random() * 20000) + 15000; // 15 to 35 seconds
+      interval = setTimeout(triggerNextBee, nextDelay);
+    };
+
+    const initialDelay = Math.floor(Math.random() * 10000) + 5000; // 5 to 15 seconds
+    const timeout = setTimeout(triggerNextBee, initialDelay);
+
+    return () => {
+      clearTimeout(timeout);
+      if (interval) clearTimeout(interval);
+    };
+  }, []);
   
   const [enabledWidgets, setEnabledWidgets] = useState<string[]>(() => {
     const saved = localStorage.getItem('explore_widgets');
@@ -366,7 +395,7 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className={clsx(
-        "flex flex-col items-center h-full w-full overflow-y-auto custom-scrollbar relative",
+        "flex flex-col items-center h-full w-full overflow-y-auto overflow-x-hidden custom-scrollbar relative",
         theme === 'dark' ? "bg-transparent text-white" : "bg-transparent text-gray-900"
       )}
     >
@@ -958,6 +987,44 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
           </div>
         )}
       </AnimatePresence>
+
+      {showBee && (
+        <motion.div
+          initial={{
+            x: beeDirection === 'left-to-right' ? '-20vw' : '120vw',
+            y: `calc(50vh + ${beeVerticalOffset}vh)`,
+            scaleX: beeDirection === 'left-to-right' ? -1 : 1,
+            opacity: 0
+          }}
+          animate={{
+            x: beeDirection === 'left-to-right' ? '120vw' : '-20vw',
+            y: [
+              `calc(50vh + ${beeVerticalOffset}vh)`,
+              `calc(40vh + ${beeVerticalOffset}vh)`,
+              `calc(60vh + ${beeVerticalOffset}vh)`,
+              `calc(45vh + ${beeVerticalOffset}vh)`,
+              `calc(55vh + ${beeVerticalOffset}vh)`,
+              `calc(50vh + ${beeVerticalOffset}vh)`
+            ],
+            opacity: [0, 1, 1, 0]
+          }}
+          transition={{
+            x: { duration: 15, ease: "linear" },
+            y: { duration: 15, ease: "easeInOut", times: [0, 0.2, 0.4, 0.6, 0.8, 1] },
+            opacity: { duration: 15, times: [0, 0.1, 0.9, 1] }
+          }}
+          className="absolute pointer-events-none"
+          style={{ zIndex: 999 }}
+        >
+          <motion.img 
+            src={beeImg} 
+            alt="bee" 
+            className="w-16 h-auto drop-shadow-xl"
+            animate={{ y: [-5, 5, -5], rotate: beeDirection === 'left-to-right' ? [-5, 5, -5] : [5, -5, 5] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </motion.div>
+      )}
     </motion.div>
   );
 }

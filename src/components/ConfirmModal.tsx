@@ -103,7 +103,7 @@ export function ConfirmModal({
                 {defaultCancelText}
               </button>
               <button
-                onClick={onConfirm}
+                onClick={() => { onConfirm(); onClose(); }}
                 className={clsx("px-4 py-2 rounded-xl font-medium transition-colors", isDark ? `bg-${accentColor}-500 hover:bg-${accentColor}-600 text-white` : `bg-${accentColor}-500 hover:bg-${accentColor}-600 text-white`)}
               >
                 {defaultConfirmText}

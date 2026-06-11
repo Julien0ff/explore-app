@@ -123,39 +123,65 @@ function setupSession(sess = electron_1.session.defaultSession) {
         else {
             sess.setProxy({ proxyRules: 'direct://' });
         }
-        // Ad Blocker
-        sess.webRequest.onBeforeRequest(filter, (details, callback) => {
-            if (!adBlockEnabled) {
-                callback({ cancel: false });
-                return;
-            }
-            const url = details.url.toLowerCase();
-            // Whitelist all main Google domain requests (except ad subdomains) to ensure search never breaks
-            const isGoogleMain = (url.startsWith('https://www.google.com') ||
-                url.startsWith('https://www.google.fr') ||
-                url.startsWith('https://google.com') ||
-                url.startsWith('https://google.fr') ||
-                url.startsWith('http://www.google.com') ||
-                url.startsWith('http://www.google.fr'));
-            const isGoogleAdSubdomain = (url.includes('ads.google.com') ||
-                url.includes('adservice.google.com'));
-            if ((isGoogleMain && !isGoogleAdSubdomain) ||
-                url.includes('gstatic.com') ||
-                url.includes('/favicon.ico') ||
-                url.includes('icons.duckduckgo.com') ||
-                url.includes('flagcdn.com')) {
-                callback({ cancel: false });
-                return;
-            }
-            const isAd = getAllBlockedDomains().some(domain => url.includes(domain));
-            if (isAd) {
-                mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send('ad-blocked', url);
-                callback({ cancel: true });
-            }
-            else {
-                callback({ cancel: false });
-            }
-        });
+        // Initialize real Ad Blocker if installed
+        try {
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            const { ElectronBlocker } = require('@cliqz/adblocker-electron');
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            const fetch = require('cross-fetch');
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ElectronBlocker.fromPrebuiltAdsAndTracking(fetch).then((b) => {
+                if (adBlockEnabled) {
+                    b.enableBlockingInSession(sess);
+                }
+                // Provide a way to toggle it globally
+                electron_1.ipcMain.removeAllListeners('toggle-adblock'); // Prevent duplicate listeners
+                electron_1.ipcMain.on('toggle-adblock', (_event, enabled) => {
+                    adBlockEnabled = enabled;
+                    if (enabled) {
+                        b.enableBlockingInSession(sess);
+                    }
+                    else {
+                        b.disableBlockingInSession(sess);
+                    }
+                });
+            });
+        }
+        catch (_a) {
+            // Fallback to basic custom blocker if module not installed yet
+            sess.webRequest.onBeforeRequest(filter, (details, callback) => {
+                if (!adBlockEnabled) {
+                    callback({ cancel: false });
+                    return;
+                }
+                const url = details.url.toLowerCase();
+                // Whitelist all main Google domain requests
+                const isGoogleMain = (url.startsWith('https://www.google.com') ||
+                    url.startsWith('https://www.google.fr') ||
+                    url.startsWith('https://google.com') ||
+                    url.startsWith('https://google.fr') ||
+                    url.startsWith('http://www.google.com') ||
+                    url.startsWith('http://www.google.fr'));
+                const isGoogleAdSubdomain = (url.includes('ads.google.com') ||
+                    url.includes('adservice.google.com'));
+                if ((isGoogleMain && !isGoogleAdSubdomain) ||
+                    url.includes('gstatic.com') ||
+                    url.includes('/favicon.ico') ||
+                    url.includes('icons.duckduckgo.com') ||
+                    url.includes('flagcdn.com')) {
+                    callback({ cancel: false });
+                    return;
+                }
+                const isAd = getAllBlockedDomains().some(domain => url.includes(domain));
+                if (isAd) {
+                    mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send('ad-blocked', url);
+                    callback({ cancel: true });
+                }
+                else {
+                    callback({ cancel: false });
+                }
+            });
+        }
     }
     catch (e) {
         console.error('Failed to setup session:', e);
@@ -185,9 +211,9 @@ function setupIPC() {
         console.log('Updater: checking-for-update');
         mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send('update_checking');
     });
-    electron_updater_1.autoUpdater.on('update-available', () => {
+    electron_updater_1.autoUpdater.on('update-available', (info) => {
         console.log('Updater: update-available');
-        mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send('update_available');
+        mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send('update_available', info === null || info === void 0 ? void 0 : info.version);
     });
     electron_updater_1.autoUpdater.on('update-not-available', () => {
         console.log('Updater: update-not-available');
@@ -201,9 +227,9 @@ function setupIPC() {
         console.log(`Updater progress: ${progressObj.percent}%`);
         mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send('download_progress', progressObj.percent);
     });
-    electron_updater_1.autoUpdater.on('update-downloaded', () => {
+    electron_updater_1.autoUpdater.on('update-downloaded', (info) => {
         console.log('Updater: update-downloaded');
-        mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send('update_downloaded');
+        mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send('update_downloaded', info === null || info === void 0 ? void 0 : info.version);
     });
     // IPC for app version
     electron_1.ipcMain.handle('get-app-version', () => {
@@ -376,6 +402,21 @@ function setupIPC() {
             return [];
         }
     }));
+    // IPC for screenshot capture
+    electron_1.ipcMain.handle('capture-page', (_, webContentsId) => __awaiter(this, void 0, void 0, function* () {
+        try {
+            const wc = electron_1.webContents.fromId(webContentsId);
+            if (!wc)
+                return null;
+            const image = yield wc.capturePage();
+            electron_1.clipboard.writeImage(image);
+            return image.toDataURL();
+        }
+        catch (e) {
+            console.error('Failed to capture page:', e);
+            return null;
+        }
+    }));
     // Prepare local OAuth redirect server
     let oauthServer = null;
     electron_1.ipcMain.handle('prepare-oauth', () => __awaiter(this, void 0, void 0, function* () {
@@ -487,13 +528,9 @@ function createMainWindow() {
     else {
         mainWindow.loadFile(indexPath);
     }
-    // Only open DevTools in Development Mode
+    // Only open DevTools in Development Mode for main window
     if (process.env.VITE_DEV_SERVER_URL) {
-        mainWindow.webContents.openDevTools({ mode: 'detach' });
-        // Debug webviews in Development
-        mainWindow.webContents.on('did-attach-webview', (_, webContents) => {
-            webContents.openDevTools({ mode: 'detach' });
-        });
+        // mainWindow.webContents.openDevTools({ mode: 'detach' });
     }
     // Handle downloads
     mainWindow.webContents.session.on('will-download', (_event, item) => {
