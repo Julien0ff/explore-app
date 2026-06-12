@@ -1,7 +1,15 @@
 @import "tailwindcss";
 
+@theme {
+  --color-theme-accent: var(--theme-accent);
+  --color-theme-accent-hover: var(--theme-accent-hover);
+  --color-theme-input-bg: var(--theme-input-bg);
+  --color-theme-border-subtle: var(--theme-border-subtle);
+  --color-theme-text: var(--theme-text-primary);
+}
+
 :root {
-  font-family: 'Outfit', 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Geist', system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.6;
   font-weight: 400;
 
@@ -95,3 +103,30 @@ body {
   animation: spin-slow 12s linear infinite;
 }
 
+/* Theme Variable Overrides */
+[data-explore-theme] {
+  color: var(--theme-text-primary) !important;
+  background-color: var(--theme-bg-primary) !important;
+}
+
+[data-explore-theme] .theme-bg {
+  background-color: var(--theme-bg-primary) !important;
+}
+
+[data-explore-theme] .theme-surface {
+  background-color: var(--theme-sidebar-bg) !important;
+}
+
+[data-explore-theme] .theme-border {
+  border-color: var(--theme-border-color) !important;
+}
+
+/* Fade-in animation for internal pages */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}

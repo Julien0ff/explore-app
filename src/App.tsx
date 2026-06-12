@@ -22,7 +22,8 @@ import {
   Trash2,
   Camera,
   SplitSquareHorizontal,
-  SplitSquareVertical
+  SplitSquareVertical,
+  Puzzle
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -49,8 +50,12 @@ import type { DownloadItem } from './components/DownloadsPopup';
 import { RegionCropper } from './components/RegionCropper';
 import { CommandPalette } from './components/CommandPalette';
 import { ContextMenu } from './components/ContextMenu';
+import { ExtensionsPage } from './components/ExtensionsPage';
+import { ThemesPage } from './components/ThemesPage';
+import { SearchPage } from './components/SearchPage';
 import { FileDown } from 'lucide-react';
 import { getAccentColorClass } from './lib/theme';
+import { getActiveTheme, applyTheme } from './lib/themes';
 
 interface Tab {
   id: string;
@@ -159,7 +164,8 @@ function App() {
   }, [earlyTesting]);
   
   const [accentColor, setAccentColor] = useState('blue');
-  const colors = getAccentColorClass(accentColor, theme === 'dark');
+  const [activeExploreTheme, setActiveExploreTheme] = useState<string | null>(() => getActiveTheme() ? getActiveTheme()!.id : null);
+  const colors = getAccentColorClass(activeExploreTheme ? 'theme' : accentColor, theme === 'dark');
 
   // Language state must be declared before it is used in initial state
   const [language, setLanguage] = useState<'fr' | 'en'>('fr');
@@ -208,6 +214,22 @@ function App() {
     
     document.documentElement.style.setProperty('--scrollbar-rgb', hexToRgb(colors.hex));
   }, [theme, colors.hex]);
+
+  // Apply saved explore theme on startup
+  useEffect(() => {
+    const savedTheme = getActiveTheme();
+    if (savedTheme) {
+      applyTheme(savedTheme);
+    }
+
+    const handleThemeChange = (e: Event) => {
+      const customEvent = e as CustomEvent<string | null>;
+      setActiveExploreTheme(customEvent.detail);
+    };
+
+    window.addEventListener('explore-theme-changed', handleThemeChange);
+    return () => window.removeEventListener('explore-theme-changed', handleThemeChange);
+  }, []);
 
   const [updateState, setUpdateState] = useState<{
     status: 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'not-available' | 'error';
@@ -459,6 +481,7 @@ function App() {
     
     const engines: { [key: string]: string } = {
       google: 'https://www.google.com/search?q=',
+      explore: 'explore://search?q=',
       bing: 'https://www.bing.com/search?q=',
       duckduckgo: 'https://duckduckgo.com/?q=',
       ecosia: 'https://www.ecosia.org/search?q=',
@@ -1519,7 +1542,11 @@ function App() {
       
       const activeTab = prev[activeIdx];
       if (activeTab.splitTabId) {
-        return prev.map(t => t.id === activeTabId ? { ...t, splitTabId: null, splitDirection: undefined } : t);
+        if (activeTab.splitDirection === direction) {
+          return prev.map(t => t.id === activeTabId ? { ...t, splitTabId: null, splitDirection: undefined } : t);
+        } else {
+          return prev.map(t => t.id === activeTabId ? { ...t, splitDirection: direction } : t);
+        }
       }
 
       const otherTab = prev.find(t => t.id !== activeTabId && !t.splitTabId);
@@ -1599,7 +1626,7 @@ function App() {
   };
 
   return (
-    <div className={clsx("flex h-screen w-full overflow-hidden transition-colors duration-1000 relative", 
+    <div className={clsx("flex h-screen w-full overflow-hidden transition-colors duration-1000 relative theme-bg", 
       activeTab?.isPrivate 
         ? (theme === 'dark' ? "bg-[#0f1218] text-white" : "bg-slate-100 text-slate-950")
         : (theme === 'dark' ? "bg-[#14141d] text-white" : "bg-gray-100 text-gray-900")
@@ -1656,7 +1683,7 @@ function App() {
       {(tabPosition === 'left' || tabPosition === 'right') && (
         <div 
           className={clsx(
-            "w-16 flex flex-col transition-colors duration-1000 relative z-10",
+            "w-16 flex flex-col transition-colors duration-1000 relative z-10 theme-surface",
             tabPosition === 'left' ? "border-r order-first" : "border-l order-last"
           )}
           style={{
@@ -1683,11 +1710,18 @@ function App() {
 
           <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-none px-3 py-2 space-y-1">
             <div className="w-full flex justify-center mb-1 py-1">
-              <div className="text-[8px] font-bold text-gray-500 uppercase tracking-[0.1em] pl-[0.1em]">
+              <div className="text-[8px] font-bold text-gray-500 uppercase tracking-widest pl-[0.1em]">
                 {language === 'fr' ? 'Onglets' : 'Tabs'}
               </div>
             </div>
-            {tabs.map(tab => (
+            {tabs.map(tab => {
+              const isSplitChild = tabs.some(t => t.splitTabId === tab.id);
+              if (isSplitChild) return null;
+              
+              const splitChild = tab.splitTabId ? tabs.find(t => t.id === tab.splitTabId) : null;
+              const isActive = activeTabId === tab.id || activeTabId === splitChild?.id;
+
+              return (
               <div
                 key={tab.id}
                 className="relative group w-full"
@@ -1696,39 +1730,46 @@ function App() {
                   onClick={() => setActiveTabId(tab.id)}
                   className={twMerge(
                     "flex items-center justify-center w-full h-10 rounded-xl cursor-pointer transition-all border border-transparent mb-1",
-                    activeTabId === tab.id 
+                    isActive 
                       ? clsx(colors.bg, colors.text, colors.borderSubtle, "shadow-lg")
                       : clsx("text-gray-400 hover:bg-white/5", colors.textHover)
                   )}
                   title={tab.title}
                 >
-                  <div className={clsx("w-6 h-6 rounded-full flex items-center justify-center text-[10px]", activeTabId === tab.id ? clsx(colors.borderSubtle, colors.text) : "bg-white/10 text-gray-400", tab.isPrivate && "border border-slate-500/30 bg-slate-500/10")}>
+                  <div className={clsx("w-6 h-6 rounded-full flex items-center justify-center text-[10px]", isActive ? clsx(colors.borderSubtle, colors.text) : "bg-white/10 text-gray-400", tab.isPrivate && "border border-slate-500/30 bg-slate-500/10")}>
                     {tab.isLoading ? (
-                      <RotateCw className={clsx("w-4 h-4 animate-spin", activeTabId === tab.id ? colors.text : "text-gray-400")} />
+                      <RotateCw className={clsx("w-4 h-4 animate-spin", isActive ? colors.text : "text-gray-400")} />
                     ) : tab.isPrivate ? (
                       <IncognitoIcon size="sm" animated={false} className="text-slate-400" />
                     ) : tab.url === 'explore://newtab' ? (
-                       <Logo className={clsx("w-3.5 h-3.5", activeTabId === tab.id ? colors.text : "text-gray-400")} />
+                       <Logo className={clsx("w-3.5 h-3.5", isActive ? colors.text : "text-gray-400")} />
                     ) : (
-                      <img 
-                        src={getFaviconUrl(tab.url)} 
-                        className="w-4 h-4 rounded-sm"
-                        alt=""
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      />
+                      splitChild ? (
+                         <div className="flex gap-0.5">
+                           <img src={getFaviconUrl(tab.url)} className="w-3 h-3 rounded-sm object-cover" alt="" />
+                           <img src={getFaviconUrl(splitChild.url)} className="w-3 h-3 rounded-sm object-cover" alt="" />
+                         </div>
+                      ) : (
+                        <img 
+                          src={getFaviconUrl(tab.url)} 
+                          className="w-4 h-4 rounded-sm object-cover"
+                          alt=""
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      )
                     )}
                   </div>
                 </div>
                 {tabs.length > 1 && (
                   <button
-                    onClick={(e) => { e.stopPropagation(); closeTab(e, tab.id); }}
+                    onClick={(e) => { e.stopPropagation(); closeTab(e, tab.id); if (splitChild) closeTab(e, splitChild.id); }}
                     className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20 shadow-sm"
                   >
                     <X className="w-2.5 h-2.5" />
                   </button>
                 )}
               </div>
-            ))}
+            )})}
           </div>
 
           <div className="flex flex-col items-center gap-2 pb-2">
@@ -1747,13 +1788,13 @@ function App() {
           <div className={clsx("p-4 border-t flex flex-col items-center gap-2", theme === 'dark' ? "border-white/5" : "border-gray-200")}>
             <button 
               onClick={() => setIsAuthModalOpen(true)}
-              className="p-2 hover:bg-white/10 rounded-xl transition-colors flex items-center justify-center text-gray-400 hover:text-white"
+              className="p-2 hover:bg-white/10 rounded-xl transition-colors flex items-center justify-center text-gray-400 hover:text-white shrink-0"
               title={user ? user.name : (language === 'fr' ? 'Connexion' : 'Sign In')}
             >
               {user ? (
                 <img 
                   src={user.avatar} 
-                  className="w-6 h-6 rounded-full bg-white/10" 
+                  className="w-6 h-6 rounded-full bg-white/10 object-cover shrink-0" 
                   alt="" 
                   onError={(e) => {
                     e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`;
@@ -1775,7 +1816,7 @@ function App() {
       )}
 
       {/* Main Content Area */}
-      <div className={clsx("flex-1 flex flex-col relative transition-colors duration-1000", 
+      <div className={clsx("flex-1 flex flex-col relative transition-colors duration-1000 theme-bg", 
           (ambientMode && activeThemeColor) ? "bg-transparent" : (theme === 'dark' ? "bg-[#1e1e2e]" : "bg-white")
       )}>
         
@@ -1804,7 +1845,7 @@ function App() {
               axis="x" 
               values={tabs} 
               onReorder={setTabs} 
-              className="flex-1 flex flex-nowrap overflow-hidden min-w-0 drag-region gap-2 px-2 pb-1 pt-1 items-center"
+              className="flex-1 flex flex-nowrap overflow-x-auto scrollbar-none min-w-0 drag-region gap-2 px-2 pb-1 pt-1 items-center"
             >
               {tabs.map(tab => (
                 <Reorder.Item
@@ -2136,6 +2177,14 @@ function App() {
                      </button>
                    </>
                  )}
+                 <button 
+                  type="button"
+                  onClick={() => updateTab(activeTabId, { url: 'explore://extensions' })}
+                  className="p-1 hover:bg-white/10 text-gray-400 rounded transition-colors"
+                  title={language === 'fr' ? 'Extensions' : 'Extensions'}
+                 >
+                   <Puzzle className="w-4 h-4" />
+                 </button>
                  <button 
                   type="button"
                   className={clsx("p-1 hover:bg-white/10 rounded transition-colors", bookmarks.some(b => b.url === activeTab?.url) ? "text-yellow-400" : "text-gray-400")}
@@ -2835,6 +2884,38 @@ function App() {
                       language={language}
                     />
                   </div>
+                )}
+                {tab.url.startsWith('explore://search') && (
+                  <SearchPage
+                    query={new URLSearchParams(tab.url.split('?')[1]).get('q') || ''}
+                    onSearch={(q) => updateTab(tab.id, { url: `explore://search?q=${encodeURIComponent(q)}` })}
+                    onOpenUrl={(url) => updateTab(tab.id, { url })}
+                    onNewTab={(url) => {
+                      const newTabId = Date.now().toString();
+                      setTabs(prev => [...prev, { id: newTabId, url, title: language === 'fr' ? 'Nouvel onglet' : 'New Tab', isLoading: true, isPrivate: tab.isPrivate }]);
+                      setActiveTabId(newTabId);
+                    }}
+                    theme={theme as 'dark' | 'light'}
+                    colors={colors}
+                    language={language}
+                  />
+                )}
+                {tab.url === 'explore://extensions' && (
+                  <ExtensionsPage
+                    theme={theme as 'dark' | 'light'}
+                    accentColor={accentColor}
+                    language={language}
+                    colors={colors}
+                  />
+                )}
+                {tab.url === 'explore://themes' && (
+                  <ThemesPage
+                    theme={theme as 'dark' | 'light'}
+                    setTheme={setTheme}
+                    accentColor={accentColor}
+                    language={language}
+                    colors={colors}
+                  />
                 )}
                 </div>
               ) : null

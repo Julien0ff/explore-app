@@ -250,6 +250,25 @@ function setupIPC() {
     return app.getVersion();
   });
 
+  // IPC for Explore Search (DuckDuckGo HTML Proxy)
+  ipcMain.handle('search-web', async (_, query: string) => {
+    try {
+      const response = await fetch('https://html.duckduckgo.com/html/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        },
+        body: `q=${encodeURIComponent(query)}`
+      });
+      if (!response.ok) throw new Error('Network response was not ok');
+      return await response.text();
+    } catch (error) {
+      console.error('Search failed:', error);
+      return null;
+    }
+  });
+
   // IPC for window controls
   ipcMain.on('window-minimize', () => mainWindow?.minimize());
   ipcMain.on('window-maximize', () => {
@@ -501,6 +520,148 @@ function setupIPC() {
     });
     return result.canceled ? null : result.filePaths;
   });
+
+  // ─── Extensions Management ───────────────────────────────────────────
+  const extensionsDir = path.join(app.getPath('userData'), 'extensions');
+  if (!fs.existsSync(extensionsDir)) {
+    fs.mkdirSync(extensionsDir, { recursive: true });
+  }
+
+  // Load all saved extensions on startup
+  ipcMain.handle('extensions-load-all', async () => {
+    const loaded: { id: string; name: string; version: string; description: string; icon?: string; enabled: boolean; path: string }[] = [];
+    try {
+      const dirs = fs.readdirSync(extensionsDir, { withFileTypes: true }).filter(d => d.isDirectory());
+      for (const dir of dirs) {
+        const extPath = path.join(extensionsDir, dir.name);
+        const manifestPath = path.join(extPath, 'manifest.json');
+        if (fs.existsSync(manifestPath)) {
+          try {
+            const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+            const ext = await session.defaultSession.loadExtension(extPath, { allowFileAccess: true });
+            // Resolve icon path
+            let iconDataUrl: string | undefined;
+            const iconKeys = manifest.icons ? Object.keys(manifest.icons).sort((a: string, b: string) => Number(b) - Number(a)) : [];
+            if (iconKeys.length > 0) {
+              const iconRelPath = manifest.icons[iconKeys[0]];
+              const iconAbsPath = path.join(extPath, iconRelPath);
+              if (fs.existsSync(iconAbsPath)) {
+                const iconBuf = fs.readFileSync(iconAbsPath);
+                const ext2 = path.extname(iconAbsPath).toLowerCase();
+                const mime = ext2 === '.svg' ? 'image/svg+xml' : ext2 === '.png' ? 'image/png' : 'image/jpeg';
+                iconDataUrl = `data:${mime};base64,${iconBuf.toString('base64')}`;
+              }
+            }
+            loaded.push({
+              id: ext.id,
+              name: manifest.name || dir.name,
+              version: manifest.version || '1.0',
+              description: manifest.description || '',
+              icon: iconDataUrl,
+              enabled: true,
+              path: extPath
+            });
+          } catch (e) {
+            console.error(`Failed to load extension ${dir.name}:`, e);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Failed to scan extensions directory:', e);
+    }
+    return loaded;
+  });
+
+  // Install a new extension from a folder path
+  ipcMain.handle('extensions-install', async (_, extSourcePath: string) => {
+    try {
+      const manifestPath = path.join(extSourcePath, 'manifest.json');
+      if (!fs.existsSync(manifestPath)) {
+        return { success: false, error: 'No manifest.json found in folder' };
+      }
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+      const folderName = (manifest.name || path.basename(extSourcePath)).replace(/[^a-zA-Z0-9_-]/g, '_');
+      const destPath = path.join(extensionsDir, folderName);
+      
+      // Copy the extension folder
+      if (fs.existsSync(destPath)) {
+        fs.rmSync(destPath, { recursive: true, force: true });
+      }
+      copyDirSync(extSourcePath, destPath);
+      
+      // Load the extension
+      const ext = await session.defaultSession.loadExtension(destPath, { allowFileAccess: true });
+      
+      // Resolve icon
+      let iconDataUrl: string | undefined;
+      const iconKeys = manifest.icons ? Object.keys(manifest.icons).sort((a: string, b: string) => Number(b) - Number(a)) : [];
+      if (iconKeys.length > 0) {
+        const iconRelPath = manifest.icons[iconKeys[0]];
+        const iconAbsPath = path.join(destPath, iconRelPath);
+        if (fs.existsSync(iconAbsPath)) {
+          const iconBuf = fs.readFileSync(iconAbsPath);
+          const ext2 = path.extname(iconAbsPath).toLowerCase();
+          const mime = ext2 === '.svg' ? 'image/svg+xml' : ext2 === '.png' ? 'image/png' : 'image/jpeg';
+          iconDataUrl = `data:${mime};base64,${iconBuf.toString('base64')}`;
+        }
+      }
+      
+      return {
+        success: true,
+        extension: {
+          id: ext.id,
+          name: manifest.name || folderName,
+          version: manifest.version || '1.0',
+          description: manifest.description || '',
+          icon: iconDataUrl,
+          enabled: true,
+          path: destPath
+        }
+      };
+    } catch (e: unknown) {
+      console.error('Failed to install extension:', e);
+      return { success: false, error: String(e) };
+    }
+  });
+
+  // Remove an extension
+  ipcMain.handle('extensions-remove', async (_, extId: string, extPath: string) => {
+    try {
+      await session.defaultSession.removeExtension(extId);
+      if (extPath && fs.existsSync(extPath)) {
+        fs.rmSync(extPath, { recursive: true, force: true });
+      }
+      return { success: true };
+    } catch (e: unknown) {
+      console.error('Failed to remove extension:', e);
+      return { success: false, error: String(e) };
+    }
+  });
+
+  // Open a file dialog to pick an extension folder
+  ipcMain.handle('extensions-pick-folder', async () => {
+    if (!mainWindow) return null;
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+      title: 'Select Extension Folder',
+      properties: ['openDirectory'],
+      buttonLabel: 'Load Extension'
+    });
+    return canceled || filePaths.length === 0 ? null : filePaths[0];
+  });
+}
+
+// Utility: recursively copy a directory
+function copyDirSync(src: string, dest: string) {
+  fs.mkdirSync(dest, { recursive: true });
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+    if (entry.isDirectory()) {
+      copyDirSync(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
 }
 
 function createSplashWindow() {

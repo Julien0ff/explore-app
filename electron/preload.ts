@@ -40,6 +40,7 @@ contextBridge.exposeInMainWorld('electron', {
   clearData: () => ipcRenderer.invoke('clear-data'),
   getSearchSuggestions: (query: string) => ipcRenderer.invoke('get-search-suggestions', query),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  searchWeb: (query: string) => ipcRenderer.invoke('search-web', query),
   capturePage: (id: number) => ipcRenderer.invoke('capture-page', id),
   prepareOAuthRedirect: () => ipcRenderer.invoke('prepare-oauth'),
   onContextMenuRequest: (callback: (data: { params: Electron.ContextMenuParams, x: number, y: number }) => void) => 
@@ -65,4 +66,9 @@ contextBridge.exposeInMainWorld('electron', {
   offUpdateError: () => ipcRenderer.removeAllListeners('update_error'),
   checkForUpdate: () => ipcRenderer.send('check_for_update'),
   restartApp: () => ipcRenderer.send('restart_app'),
+  // Extensions
+  extensionsLoadAll: () => ipcRenderer.invoke('extensions-load-all'),
+  extensionsInstall: (folderPath: string) => ipcRenderer.invoke('extensions-install', folderPath),
+  extensionsRemove: (id: string, extPath: string) => ipcRenderer.invoke('extensions-remove', id, extPath),
+  extensionsPickFolder: () => ipcRenderer.invoke('extensions-pick-folder'),
 });

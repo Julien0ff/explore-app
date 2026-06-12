@@ -41,6 +41,7 @@ electron_1.contextBridge.exposeInMainWorld('electron', {
     clearData: () => electron_1.ipcRenderer.invoke('clear-data'),
     getSearchSuggestions: (query) => electron_1.ipcRenderer.invoke('get-search-suggestions', query),
     getAppVersion: () => electron_1.ipcRenderer.invoke('get-app-version'),
+    searchWeb: (query) => electron_1.ipcRenderer.invoke('search-web', query),
     capturePage: (id) => electron_1.ipcRenderer.invoke('capture-page', id),
     prepareOAuthRedirect: () => electron_1.ipcRenderer.invoke('prepare-oauth'),
     onContextMenuRequest: (callback) => electron_1.ipcRenderer.on('context-menu-request', (_, data) => callback(data)),
@@ -65,4 +66,9 @@ electron_1.contextBridge.exposeInMainWorld('electron', {
     offUpdateError: () => electron_1.ipcRenderer.removeAllListeners('update_error'),
     checkForUpdate: () => electron_1.ipcRenderer.send('check_for_update'),
     restartApp: () => electron_1.ipcRenderer.send('restart_app'),
+    // Extensions
+    extensionsLoadAll: () => electron_1.ipcRenderer.invoke('extensions-load-all'),
+    extensionsInstall: (folderPath) => electron_1.ipcRenderer.invoke('extensions-install', folderPath),
+    extensionsRemove: (id, extPath) => electron_1.ipcRenderer.invoke('extensions-remove', id, extPath),
+    extensionsPickFolder: () => electron_1.ipcRenderer.invoke('extensions-pick-folder'),
 });

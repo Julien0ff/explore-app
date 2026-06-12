@@ -98,6 +98,22 @@ export const getAccentColorClass = (color: string, isDark: boolean): ThemeColors
       textHover: isDark ? 'hover:text-pink-400' : 'hover:text-pink-600',
       hex: '#ec4899',
     },
+    theme: {
+      text: 'text-theme-accent',
+      bg: 'bg-theme-input-bg',
+      border: 'border-theme-accent',
+      ring: 'focus:ring-theme-accent',
+      bgSolid: 'bg-theme-accent',
+      bgHover: 'hover:bg-theme-accent-hover',
+      gradientFrom: 'from-theme-accent',
+      gradientTo: 'to-theme-accent-hover',
+      focusBorder: 'focus:border-theme-accent',
+      focusShadow: 'focus:shadow-none',
+      shadow: 'shadow-md',
+      borderSubtle: 'border-theme-border-subtle',
+      textHover: 'hover:text-theme-accent-hover',
+      hex: '#8b5cf6', // Fallback hex for scrollbar
+    },
     red: {
       text: isDark ? 'text-red-400' : 'text-red-600',
       bg: isDark ? 'bg-red-500/10' : 'bg-red-50',

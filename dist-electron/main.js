@@ -235,6 +235,26 @@ function setupIPC() {
     electron_1.ipcMain.handle('get-app-version', () => {
         return electron_1.app.getVersion();
     });
+    // IPC for Explore Search (DuckDuckGo HTML Proxy)
+    electron_1.ipcMain.handle('search-web', (_, query) => __awaiter(this, void 0, void 0, function* () {
+        try {
+            const response = yield fetch('https://html.duckduckgo.com/html/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                },
+                body: `q=${encodeURIComponent(query)}`
+            });
+            if (!response.ok)
+                throw new Error('Network response was not ok');
+            return yield response.text();
+        }
+        catch (error) {
+            console.error('Search failed:', error);
+            return null;
+        }
+    }));
     // IPC for window controls
     electron_1.ipcMain.on('window-minimize', () => mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.minimize());
     electron_1.ipcMain.on('window-maximize', () => {
@@ -479,6 +499,144 @@ function setupIPC() {
         });
         return result.canceled ? null : result.filePaths;
     }));
+    // ─── Extensions Management ───────────────────────────────────────────
+    const extensionsDir = path_1.default.join(electron_1.app.getPath('userData'), 'extensions');
+    if (!fs_1.default.existsSync(extensionsDir)) {
+        fs_1.default.mkdirSync(extensionsDir, { recursive: true });
+    }
+    // Load all saved extensions on startup
+    electron_1.ipcMain.handle('extensions-load-all', () => __awaiter(this, void 0, void 0, function* () {
+        const loaded = [];
+        try {
+            const dirs = fs_1.default.readdirSync(extensionsDir, { withFileTypes: true }).filter(d => d.isDirectory());
+            for (const dir of dirs) {
+                const extPath = path_1.default.join(extensionsDir, dir.name);
+                const manifestPath = path_1.default.join(extPath, 'manifest.json');
+                if (fs_1.default.existsSync(manifestPath)) {
+                    try {
+                        const manifest = JSON.parse(fs_1.default.readFileSync(manifestPath, 'utf-8'));
+                        const ext = yield electron_1.session.defaultSession.loadExtension(extPath, { allowFileAccess: true });
+                        // Resolve icon path
+                        let iconDataUrl;
+                        const iconKeys = manifest.icons ? Object.keys(manifest.icons).sort((a, b) => Number(b) - Number(a)) : [];
+                        if (iconKeys.length > 0) {
+                            const iconRelPath = manifest.icons[iconKeys[0]];
+                            const iconAbsPath = path_1.default.join(extPath, iconRelPath);
+                            if (fs_1.default.existsSync(iconAbsPath)) {
+                                const iconBuf = fs_1.default.readFileSync(iconAbsPath);
+                                const ext2 = path_1.default.extname(iconAbsPath).toLowerCase();
+                                const mime = ext2 === '.svg' ? 'image/svg+xml' : ext2 === '.png' ? 'image/png' : 'image/jpeg';
+                                iconDataUrl = `data:${mime};base64,${iconBuf.toString('base64')}`;
+                            }
+                        }
+                        loaded.push({
+                            id: ext.id,
+                            name: manifest.name || dir.name,
+                            version: manifest.version || '1.0',
+                            description: manifest.description || '',
+                            icon: iconDataUrl,
+                            enabled: true,
+                            path: extPath
+                        });
+                    }
+                    catch (e) {
+                        console.error(`Failed to load extension ${dir.name}:`, e);
+                    }
+                }
+            }
+        }
+        catch (e) {
+            console.error('Failed to scan extensions directory:', e);
+        }
+        return loaded;
+    }));
+    // Install a new extension from a folder path
+    electron_1.ipcMain.handle('extensions-install', (_, extSourcePath) => __awaiter(this, void 0, void 0, function* () {
+        try {
+            const manifestPath = path_1.default.join(extSourcePath, 'manifest.json');
+            if (!fs_1.default.existsSync(manifestPath)) {
+                return { success: false, error: 'No manifest.json found in folder' };
+            }
+            const manifest = JSON.parse(fs_1.default.readFileSync(manifestPath, 'utf-8'));
+            const folderName = (manifest.name || path_1.default.basename(extSourcePath)).replace(/[^a-zA-Z0-9_-]/g, '_');
+            const destPath = path_1.default.join(extensionsDir, folderName);
+            // Copy the extension folder
+            if (fs_1.default.existsSync(destPath)) {
+                fs_1.default.rmSync(destPath, { recursive: true, force: true });
+            }
+            copyDirSync(extSourcePath, destPath);
+            // Load the extension
+            const ext = yield electron_1.session.defaultSession.loadExtension(destPath, { allowFileAccess: true });
+            // Resolve icon
+            let iconDataUrl;
+            const iconKeys = manifest.icons ? Object.keys(manifest.icons).sort((a, b) => Number(b) - Number(a)) : [];
+            if (iconKeys.length > 0) {
+                const iconRelPath = manifest.icons[iconKeys[0]];
+                const iconAbsPath = path_1.default.join(destPath, iconRelPath);
+                if (fs_1.default.existsSync(iconAbsPath)) {
+                    const iconBuf = fs_1.default.readFileSync(iconAbsPath);
+                    const ext2 = path_1.default.extname(iconAbsPath).toLowerCase();
+                    const mime = ext2 === '.svg' ? 'image/svg+xml' : ext2 === '.png' ? 'image/png' : 'image/jpeg';
+                    iconDataUrl = `data:${mime};base64,${iconBuf.toString('base64')}`;
+                }
+            }
+            return {
+                success: true,
+                extension: {
+                    id: ext.id,
+                    name: manifest.name || folderName,
+                    version: manifest.version || '1.0',
+                    description: manifest.description || '',
+                    icon: iconDataUrl,
+                    enabled: true,
+                    path: destPath
+                }
+            };
+        }
+        catch (e) {
+            console.error('Failed to install extension:', e);
+            return { success: false, error: String(e) };
+        }
+    }));
+    // Remove an extension
+    electron_1.ipcMain.handle('extensions-remove', (_, extId, extPath) => __awaiter(this, void 0, void 0, function* () {
+        try {
+            yield electron_1.session.defaultSession.removeExtension(extId);
+            if (extPath && fs_1.default.existsSync(extPath)) {
+                fs_1.default.rmSync(extPath, { recursive: true, force: true });
+            }
+            return { success: true };
+        }
+        catch (e) {
+            console.error('Failed to remove extension:', e);
+            return { success: false, error: String(e) };
+        }
+    }));
+    // Open a file dialog to pick an extension folder
+    electron_1.ipcMain.handle('extensions-pick-folder', () => __awaiter(this, void 0, void 0, function* () {
+        if (!mainWindow)
+            return null;
+        const { canceled, filePaths } = yield electron_1.dialog.showOpenDialog(mainWindow, {
+            title: 'Select Extension Folder',
+            properties: ['openDirectory'],
+            buttonLabel: 'Load Extension'
+        });
+        return canceled || filePaths.length === 0 ? null : filePaths[0];
+    }));
+}
+// Utility: recursively copy a directory
+function copyDirSync(src, dest) {
+    fs_1.default.mkdirSync(dest, { recursive: true });
+    for (const entry of fs_1.default.readdirSync(src, { withFileTypes: true })) {
+        const srcPath = path_1.default.join(src, entry.name);
+        const destPath = path_1.default.join(dest, entry.name);
+        if (entry.isDirectory()) {
+            copyDirSync(srcPath, destPath);
+        }
+        else {
+            fs_1.default.copyFileSync(srcPath, destPath);
+        }
+    }
 }
 function createSplashWindow() {
     splashWindow = new electron_1.BrowserWindow({

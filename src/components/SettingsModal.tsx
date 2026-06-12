@@ -8,6 +8,8 @@ import { clsx } from 'clsx';
 
 import { getAccentColorClass } from '../lib/theme';
 import { Logo } from './Logo';
+import { ExtensionsPage } from './ExtensionsPage';
+import { ThemesPage } from './ThemesPage';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -107,7 +109,7 @@ export function SettingsModal({
   });
 
   // Active Category for Sidebar layout
-  const [activeCategory, setActiveCategory] = React.useState<'general' | 'appearance' | 'shortcuts' | 'privacy' | 'accessibility' | 'sync' | 'earlyTesting' | 'about'>('general');
+  const [activeCategory, setActiveCategory] = React.useState<'general' | 'appearance' | 'extensions' | 'shortcuts' | 'privacy' | 'accessibility' | 'sync' | 'earlyTesting' | 'about'>('general');
 
   // Custom Toast state
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
@@ -202,7 +204,8 @@ export function SettingsModal({
 
   const categories = [
     { id: 'general', name: language === 'fr' ? 'Général' : 'General', icon: Globe },
-    { id: 'appearance', name: language === 'fr' ? 'Apparence' : 'Appearance', icon: Palette },
+    { id: 'appearance', name: language === 'fr' ? 'Apparence & Thèmes' : 'Appearance & Themes', icon: Palette },
+    { id: 'extensions', name: language === 'fr' ? 'Extensions' : 'Extensions', icon: Chrome },
     { id: 'shortcuts', name: language === 'fr' ? 'Raccourcis' : 'Shortcuts', icon: Keyboard },
     { id: 'privacy', name: language === 'fr' ? 'Confidentialité et Sécurité' : 'Privacy & Security', icon: Shield },
     { id: 'accessibility', name: language === 'fr' ? 'Accessibilité' : 'Accessibility', icon: Accessibility },
@@ -210,6 +213,7 @@ export function SettingsModal({
     { id: 'earlyTesting', name: language === 'fr' ? 'Early Testing' : 'Early Testing', icon: FlaskConical },
     { id: 'about', name: language === 'fr' ? 'À propos' : 'About', icon: Info },
   ] as const;
+
 
   // Render specific content panel
   const renderCategoryContent = (catId: typeof activeCategory) => {
@@ -268,6 +272,7 @@ export function SettingsModal({
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {[
+                  { id: 'explore', name: 'Explore', isLogo: true },
                   { id: 'google', name: 'Google', url: 'https://www.google.com/s2/favicons?domain=google.com&sz=64' },
                   { id: 'bing', name: 'Bing', url: 'https://www.google.com/s2/favicons?domain=bing.com&sz=64' },
                   { id: 'duckduckgo', name: 'DuckDuckGo', url: 'https://www.google.com/s2/favicons?domain=duckduckgo.com&sz=64' },
@@ -286,19 +291,23 @@ export function SettingsModal({
                     )}
                   >
                     <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center p-2 shadow-sm shrink-0">
-                      <img 
-                        src={engine.url} 
-                        alt={engine.name} 
-                        className="w-8 h-8 object-contain rounded-md" 
-                        onError={(e) => {
-                          const target = e.currentTarget;
-                          if (target.src.includes('google.com')) {
-                            target.src = `https://icons.duckduckgo.com/ip3/${engine.id === 'google' ? 'google.com' : engine.id === 'bing' ? 'bing.com' : engine.id === 'duckduckgo' ? 'duckduckgo.com' : 'ecosia.org'}.ico`;
-                          } else {
-                            target.style.display = 'none';
-                          }
-                        }}
-                      />
+                      {engine.isLogo ? (
+                        <Logo className="w-8 h-8 text-black" />
+                      ) : (
+                        <img 
+                          src={engine.url} 
+                          alt={engine.name} 
+                          className="w-8 h-8 object-contain rounded-md" 
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            if (target.src.includes('google.com')) {
+                              target.src = `https://icons.duckduckgo.com/ip3/${engine.id === 'google' ? 'google.com' : engine.id === 'bing' ? 'bing.com' : engine.id === 'duckduckgo' ? 'duckduckgo.com' : 'ecosia.org'}.ico`;
+                            } else {
+                              target.style.display = 'none';
+                            }
+                          }}
+                        />
+                      )}
                     </div>
                     <span className={clsx("font-bold text-sm", theme === 'dark' ? "text-white" : "text-gray-900")}>{engine.name}</span>
                   </button>
@@ -338,25 +347,18 @@ export function SettingsModal({
                 </button>
               </div>
             </div>
-
-            {/* Extensions */}
-            <div className={clsx("p-6 rounded-3xl border flex items-center justify-between", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50/50 border-gray-200")}>
-              <div className="space-y-1">
-                <h4 className={clsx("font-bold text-lg flex items-center gap-2", theme === 'dark' ? "text-white" : "text-gray-900")}>
-                  <Chrome className="w-5 h-5 text-blue-400" />
-                  Chrome Web Store
-                </h4>
-                <p className={clsx("text-sm max-w-md", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
-                  {language === 'fr' ? 'Accédez à des milliers d\'extensions pour personnaliser votre expérience.' : 'Access thousands of extensions to customize your experience.'}
-                </p>
-              </div>
-              <button 
-                onClick={() => onOpenUrl('https://chrome.google.com/webstore')}
-                className={clsx("px-5 py-3 rounded-2xl font-bold transition-all text-white hover:scale-105 active:scale-95 shadow-md", colors.bgSolid, colors.bgHover)}
-              >
-                {language === 'fr' ? 'Ouvrir le Store' : 'Open Store'}
-              </button>
-            </div>
+          </div>
+        );
+      case 'extensions':
+        return (
+          <div className="animate-fadeIn">
+            <ExtensionsPage
+              theme={theme === 'system' ? 'dark' : theme}
+              accentColor={accentColor}
+              language={language}
+              colors={colors}
+              isEmbedded={true}
+            />
           </div>
         );
       case 'appearance':
@@ -526,6 +528,17 @@ export function SettingsModal({
                   );
                 })}
               </div>
+            </div>
+            {/* Themes Engine integration */}
+            <div className={clsx("mt-12 pt-8 border-t", theme === 'dark' ? "border-white/10" : "border-gray-200")}>
+              <ThemesPage
+                theme={theme === 'system' ? 'dark' : theme}
+                setTheme={setTheme}
+                language={language}
+                accentColor={accentColor}
+                colors={colors}
+                isEmbedded={true}
+              />
             </div>
           </div>
         );
@@ -1101,7 +1114,9 @@ export function SettingsModal({
                 return (
                   <button
                     key={cat.id}
-                    onClick={() => setActiveCategory(cat.id)}
+                    onClick={() => {
+                      setActiveCategory(cat.id as typeof activeCategory);
+                    }}
                     className={clsx(
                       "w-full px-4 py-3 rounded-2xl flex items-center gap-3.5 font-bold text-sm transition-all hover:translate-x-1 text-left",
                       isActive
