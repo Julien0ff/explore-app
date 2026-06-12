@@ -72,4 +72,4 @@ Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou un
 
 ## 📄 Licence
 
-Ce projet est sous licence MIT.
+Ce projet est sous licence GNU GPL v3.
