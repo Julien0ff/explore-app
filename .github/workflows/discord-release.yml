@@ -12,5 +12,6 @@ jobs:
         uses: sillyangel/releases-to-discord@v1
         with:
           webhook_url: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          username: "Update Manager"
+          username: "Explore Update"
+          avatar: "https://github.com/Julien0ff/explore-app/blob/main/website/icon.png"
           color: "3447003" # Couleur de la barre latérale en décimal (Bleu)

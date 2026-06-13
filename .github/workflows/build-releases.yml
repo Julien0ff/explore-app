@@ -12,6 +12,7 @@ jobs:
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         # We build on Windows, Linux, and macOS servers
         os: [windows-latest, ubuntu-latest, macos-latest]
@@ -31,6 +32,7 @@ jobs:
       - name: Build and Publish Release Assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
         # The `--publish always` flag tells electron-builder to upload the output
         # to the GitHub release that triggered this workflow.
         run: npm run build -- --publish always
