@@ -107,6 +107,13 @@ function App() {
     }
   });
 
+  const [openedPopups, setOpenedPopups] = useState<string[]>([]);
+  useEffect(() => {
+    if (activeExtensionPopup && !openedPopups.includes(activeExtensionPopup)) {
+      setOpenedPopups(prev => [...prev, activeExtensionPopup]);
+    }
+  }, [activeExtensionPopup, openedPopups]);
+
   useEffect(() => {
     localStorage.setItem('explore-pinned-extensions', JSON.stringify(pinnedExtensions));
   }, [pinnedExtensions]);
@@ -2377,31 +2384,34 @@ function App() {
                    </AnimatePresence>
 
                    {/* Global active popup renderer */}
-                   <AnimatePresence>
-                     {activeExtensionPopup && (
+                   <div className="absolute top-full mt-4 right-0 z-9999 w-0 h-0">
+                     {installedExtensions.filter(e => e.popup && openedPopups.includes(e.id)).map(ext => (
                        <motion.div
+                         key={ext.id}
                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                         animate={{ 
+                           opacity: activeExtensionPopup === ext.id ? 1 : 0, 
+                           y: activeExtensionPopup === ext.id ? 0 : 10, 
+                           scale: activeExtensionPopup === ext.id ? 1 : 0.95 
+                         }}
                          className={clsx(
-                           "absolute top-full mt-4 right-0 rounded-xl shadow-2xl overflow-hidden z-9999 border",
+                           "absolute top-full mt-4 right-0 rounded-xl shadow-2xl overflow-hidden border",
                            theme === 'dark' ? "bg-[#1e1e2e] border-white/10" : "bg-white border-gray-100"
                          )}
                          style={{ 
-                           width: installedExtensions.find(e => e.id === activeExtensionPopup)?.popupWidth || 320, 
-                           height: installedExtensions.find(e => e.id === activeExtensionPopup)?.popupHeight || 380 
+                           width: ext.popupWidth || 320, 
+                           height: ext.popupHeight || 380,
+                           pointerEvents: activeExtensionPopup === ext.id ? 'auto' : 'none'
                          }}
                        >
-                         {installedExtensions.filter(e => e.id === activeExtensionPopup && e.popup).map(ext => (
-                           <webview
-                             key={ext.id}
-                             src={`chrome-extension://${ext.id}/${ext.popup}`}
-                             className="w-full h-full bg-transparent"
-                           />
-                         ))}
+                         <webview
+                           src={`chrome-extension://${ext.id}/${ext.popup}`}
+                           className="w-full h-full bg-transparent"
+                         />
                        </motion.div>
-                     )}
-                   </AnimatePresence>
+                     ))}
+                   </div>
+
                  </div>
                  <button 
                   type="button"
