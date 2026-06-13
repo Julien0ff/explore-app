@@ -1,0 +1,16 @@
+name: Annonce Release Discord
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  discord-notification:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Envoyer la notification sur Discord
+        uses: sillyangel/releases-to-discord@v1
+        with:
+          webhook_url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          username: "Update Manager"
+          color: "3447003" # Couleur de la barre latérale en décimal (Bleu)
