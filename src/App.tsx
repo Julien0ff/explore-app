@@ -128,6 +128,51 @@ function App() {
     return () => window.removeEventListener('extensions-changed', handleExtensionsChanged);
   }, []);
 
+  const hasCheckedExtensionUpdates = useRef(false);
+  
+  useEffect(() => {
+    if (hasCheckedExtensionUpdates.current) return;
+    if (installedExtensions.length === 0) return;
+    
+    const checkForUpdates = async () => {
+      try {
+        const response = await fetch('https://api.github.com/search/repositories?q=topic:explore-extension');
+        if (!response.ok) return;
+        const data = await response.json();
+        const officialExts = data.items || [];
+
+        for (const installed of installedExtensions) {
+          const official = officialExts.find((ext: { name: string }) => ext.name === installed.name || ext.name === installed.id);
+          if (!official) continue;
+
+          const releaseRes = await fetch(`https://api.github.com/repos/${official.owner.login}/${official.name}/releases/latest`);
+          if (!releaseRes.ok) continue;
+          
+          const release = await releaseRes.json();
+          const latestVersion = release.tag_name.replace('v', '');
+          const currentVersion = installed.version.replace('v', '');
+
+          if (latestVersion !== currentVersion && latestVersion > currentVersion) {
+            console.log(`Updating extension ${installed.name} from ${currentVersion} to ${latestVersion}`);
+            
+            const zipAsset = release.assets?.find((a: { name: string; browser_download_url: string }) => a.name.endsWith('.zip'));
+            if (zipAsset && window.electron?.extensionsInstallFromUrl) {
+              const result = await window.electron.extensionsInstallFromUrl(zipAsset.browser_download_url);
+              if (result.success) {
+                window.dispatchEvent(new Event('extensions-changed'));
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to check for extension updates:', err);
+      }
+    };
+
+    hasCheckedExtensionUpdates.current = true;
+    setTimeout(checkForUpdates, 5000);
+  }, [installedExtensions]);
+
   const [historySearchQuery, setHistorySearchQuery] = useState('');
   const [bookmarkSearchQuery, setBookmarkSearchQuery] = useState('');
   const [bookmarkContextMenu, setBookmarkContextMenu] = useState<{
@@ -2262,7 +2307,7 @@ function App() {
                          animate={{ opacity: 1, y: 0, scale: 1 }}
                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
                          className={clsx(
-                           "absolute top-full mt-4 right-0 rounded-xl shadow-2xl overflow-hidden z-[9999] border w-72 flex flex-col",
+                           "absolute top-full mt-4 right-0 rounded-xl shadow-2xl overflow-hidden z-9999 border w-72 flex flex-col",
                            theme === 'dark' ? "bg-[#1e1e2e] border-white/10 text-white" : "bg-white border-gray-100 text-gray-900"
                          )}
                        >
@@ -2339,10 +2384,13 @@ function App() {
                          animate={{ opacity: 1, y: 0, scale: 1 }}
                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
                          className={clsx(
-                           "absolute top-full mt-4 right-0 rounded-xl shadow-2xl overflow-hidden z-[9999] border",
+                           "absolute top-full mt-4 right-0 rounded-xl shadow-2xl overflow-hidden z-9999 border",
                            theme === 'dark' ? "bg-[#1e1e2e] border-white/10" : "bg-white border-gray-100"
                          )}
-                         style={{ width: '320px', height: '380px' }}
+                         style={{ 
+                           width: installedExtensions.find(e => e.id === activeExtensionPopup)?.popupWidth || 320, 
+                           height: installedExtensions.find(e => e.id === activeExtensionPopup)?.popupHeight || 380 
+                         }}
                        >
                          {installedExtensions.filter(e => e.id === activeExtensionPopup && e.popup).map(ext => (
                            <webview

@@ -94,6 +94,8 @@ interface ElectronExtensionInfo {
   description: string;
   icon?: string;
   popup?: string;
+  popupWidth?: number;
+  popupHeight?: number;
   enabled: boolean;
   path: string;
 }
