@@ -29,6 +29,10 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
+      - name: Fix Mac Icon Size
+        if: runner.os == 'macOS'
+        run: sips -z 512 512 public/icon.png
+
       - name: Build and Publish Release Assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

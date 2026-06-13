@@ -48,7 +48,8 @@
       {
         "provider": "github",
         "owner": "Julien0ff",
-        "repo": "explore-app"
+        "repo": "explore-app",
+        "releaseType": "release"
       }
     ]
   },
