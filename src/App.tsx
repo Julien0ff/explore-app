@@ -23,7 +23,8 @@ import {
   Camera,
   SplitSquareHorizontal,
   SplitSquareVertical,
-  Puzzle
+  Puzzle,
+  Pin
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -97,6 +98,18 @@ function App() {
   
   const [installedExtensions, setInstalledExtensions] = useState<ElectronExtensionInfo[]>([]);
   const [activeExtensionPopup, setActiveExtensionPopup] = useState<string | null>(null);
+  const [showExtensionsMenu, setShowExtensionsMenu] = useState(false);
+  const [pinnedExtensions, setPinnedExtensions] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('explore-pinned-extensions') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('explore-pinned-extensions', JSON.stringify(pinnedExtensions));
+  }, [pinnedExtensions]);
 
   useEffect(() => {
     const loadExtensions = async () => {
@@ -2199,15 +2212,14 @@ function App() {
                      </button>
                    </>
                  )}
-                 {installedExtensions.filter(e => e.enabled).map(ext => (
+                 {installedExtensions.filter(e => e.enabled && pinnedExtensions.includes(e.id)).map(ext => (
                    <div key={ext.id} className="relative">
                      <button
                        type="button"
                        onClick={() => {
                          if (ext.popup) {
                            setActiveExtensionPopup(activeExtensionPopup === ext.id ? null : ext.id);
-                         } else {
-                           // Flash or visual feedback if no popup
+                           setShowExtensionsMenu(false);
                          }
                        }}
                        className={clsx(
@@ -2224,35 +2236,125 @@ function App() {
                          </div>
                        )}
                      </button>
-                     <AnimatePresence>
-                       {activeExtensionPopup === ext.id && ext.popup && (
-                         <motion.div
-                           initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                           animate={{ opacity: 1, y: 0, scale: 1 }}
-                           exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                           className={clsx(
-                             "absolute top-full mt-4 right-0 rounded-xl shadow-2xl overflow-hidden z-[9999] border",
-                             theme === 'dark' ? "bg-[#1e1e2e] border-white/10" : "bg-white border-gray-100"
+                   </div>
+                 ))}
+                 
+                 <div className="relative">
+                   <button 
+                    type="button"
+                    onClick={() => {
+                      setShowExtensionsMenu(!showExtensionsMenu);
+                      setActiveExtensionPopup(null);
+                    }}
+                    className={clsx(
+                      "p-1 rounded transition-colors flex items-center justify-center",
+                      showExtensionsMenu ? "bg-white/20 text-white" : "hover:bg-white/10 text-gray-400"
+                    )}
+                    title={language === 'fr' ? 'Extensions' : 'Extensions'}
+                   >
+                     <Puzzle className="w-4 h-4" />
+                   </button>
+                   
+                   <AnimatePresence>
+                     {showExtensionsMenu && (
+                       <motion.div
+                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                         animate={{ opacity: 1, y: 0, scale: 1 }}
+                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                         className={clsx(
+                           "absolute top-full mt-4 right-0 rounded-xl shadow-2xl overflow-hidden z-[9999] border w-72 flex flex-col",
+                           theme === 'dark' ? "bg-[#1e1e2e] border-white/10 text-white" : "bg-white border-gray-100 text-gray-900"
+                         )}
+                       >
+                         <div className="px-4 py-3 border-b border-white/10 flex justify-between items-center bg-white/5">
+                           <h3 className="font-semibold text-sm">Extensions</h3>
+                         </div>
+                         <div className="max-h-80 overflow-y-auto">
+                           {installedExtensions.filter(e => e.enabled).length === 0 ? (
+                             <div className="p-4 text-center text-sm text-gray-500">
+                               Aucune extension installée
+                             </div>
+                           ) : (
+                             installedExtensions.filter(e => e.enabled).map(ext => (
+                               <div key={ext.id} className="flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors">
+                                 <button
+                                   onClick={() => {
+                                     setShowExtensionsMenu(false);
+                                     if (ext.popup) {
+                                       setActiveExtensionPopup(ext.id);
+                                     }
+                                   }}
+                                   className="flex items-center gap-3 flex-1 text-left"
+                                 >
+                                   {ext.icon ? (
+                                     <img src={ext.icon} alt={ext.name} className="w-6 h-6 rounded-sm object-cover shadow-sm" />
+                                   ) : (
+                                     <div className="w-6 h-6 bg-blue-500 rounded-sm flex items-center justify-center text-[10px] font-bold text-white shadow-sm">
+                                       {ext.name.charAt(0).toUpperCase()}
+                                     </div>
+                                   )}
+                                   <span className="text-sm font-medium truncate max-w-[150px]">{ext.name}</span>
+                                 </button>
+                                 <button
+                                   onClick={() => {
+                                     setPinnedExtensions(prev => 
+                                       prev.includes(ext.id) 
+                                         ? prev.filter(id => id !== ext.id)
+                                         : [...prev, ext.id]
+                                     );
+                                   }}
+                                   className={clsx(
+                                     "p-1.5 rounded-md transition-colors",
+                                     pinnedExtensions.includes(ext.id) ? "text-blue-400 bg-blue-500/10 hover:bg-blue-500/20" : "text-gray-400 hover:text-white hover:bg-white/10"
+                                   )}
+                                   title="Épingler"
+                                 >
+                                   <Pin className={clsx("w-3.5 h-3.5", pinnedExtensions.includes(ext.id) && "fill-current")} />
+                                 </button>
+                               </div>
+                             ))
                            )}
-                           style={{ width: '320px', height: '380px' }}
-                         >
+                         </div>
+                         <div className="p-2 border-t border-white/10 bg-white/5">
+                           <button
+                             onClick={() => {
+                               setShowExtensionsMenu(false);
+                               updateTab(activeTabId, { url: 'explore://extensions' });
+                             }}
+                             className="w-full py-2 text-sm text-center font-medium hover:bg-white/5 rounded-lg transition-colors flex items-center justify-center gap-2"
+                           >
+                             <Settings className="w-4 h-4" />
+                             Gérer les extensions
+                           </button>
+                         </div>
+                       </motion.div>
+                     )}
+                   </AnimatePresence>
+
+                   {/* Global active popup renderer */}
+                   <AnimatePresence>
+                     {activeExtensionPopup && (
+                       <motion.div
+                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                         animate={{ opacity: 1, y: 0, scale: 1 }}
+                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                         className={clsx(
+                           "absolute top-full mt-4 right-0 rounded-xl shadow-2xl overflow-hidden z-[9999] border",
+                           theme === 'dark' ? "bg-[#1e1e2e] border-white/10" : "bg-white border-gray-100"
+                         )}
+                         style={{ width: '320px', height: '380px' }}
+                       >
+                         {installedExtensions.filter(e => e.id === activeExtensionPopup && e.popup).map(ext => (
                            <webview
+                             key={ext.id}
                              src={`chrome-extension://${ext.id}/${ext.popup}`}
                              className="w-full h-full bg-transparent"
                            />
-                         </motion.div>
-                       )}
-                     </AnimatePresence>
-                   </div>
-                 ))}
-                 <button 
-                  type="button"
-                  onClick={() => updateTab(activeTabId, { url: 'explore://extensions' })}
-                  className="p-1 hover:bg-white/10 text-gray-400 rounded transition-colors"
-                  title={language === 'fr' ? 'Extensions' : 'Extensions'}
-                 >
-                   <Puzzle className="w-4 h-4" />
-                 </button>
+                         ))}
+                       </motion.div>
+                     )}
+                   </AnimatePresence>
+                 </div>
                  <button 
                   type="button"
                   className={clsx("p-1 hover:bg-white/10 rounded transition-colors", bookmarks.some(b => b.url === activeTab?.url) ? "text-yellow-400" : "text-gray-400")}
