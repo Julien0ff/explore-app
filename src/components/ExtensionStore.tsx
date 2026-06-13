@@ -53,6 +53,7 @@ export default function ExtensionStore({ theme, language = 'fr', colors }: Exten
       const result = await window.electron.extensionsInstallFromUrl(zipAsset.browser_download_url);
       if (result.success) {
         setInstalled(prev => ({ ...prev, [ext.id]: true }));
+        window.dispatchEvent(new Event('extensions-changed'));
       } else {
         throw new Error(result.error);
       }

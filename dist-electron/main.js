@@ -508,6 +508,7 @@ function setupIPC() {
     }
     // Load all saved extensions on startup
     electron_1.ipcMain.handle('extensions-load-all', () => __awaiter(this, void 0, void 0, function* () {
+        var _a, _b;
         const loaded = [];
         try {
             const dirs = fs_1.default.readdirSync(extensionsDir, { withFileTypes: true }).filter(d => d.isDirectory());
@@ -537,6 +538,7 @@ function setupIPC() {
                             version: manifest.version || '1.0',
                             description: manifest.description || '',
                             icon: iconDataUrl,
+                            popup: ((_a = manifest.action) === null || _a === void 0 ? void 0 : _a.default_popup) || ((_b = manifest.browser_action) === null || _b === void 0 ? void 0 : _b.default_popup) || undefined,
                             enabled: true,
                             path: extPath
                         });
@@ -554,6 +556,7 @@ function setupIPC() {
     }));
     // Install a new extension from a folder path
     electron_1.ipcMain.handle('extensions-install', (_, extSourcePath) => __awaiter(this, void 0, void 0, function* () {
+        var _a, _b;
         try {
             const manifestPath = path_1.default.join(extSourcePath, 'manifest.json');
             if (!fs_1.default.existsSync(manifestPath)) {
@@ -590,6 +593,7 @@ function setupIPC() {
                     version: manifest.version || '1.0',
                     description: manifest.description || '',
                     icon: iconDataUrl,
+                    popup: ((_a = manifest.action) === null || _a === void 0 ? void 0 : _a.default_popup) || ((_b = manifest.browser_action) === null || _b === void 0 ? void 0 : _b.default_popup) || undefined,
                     enabled: true,
                     path: destPath
                 }
@@ -602,6 +606,7 @@ function setupIPC() {
     }));
     // Install a new extension from a direct zip URL
     electron_1.ipcMain.handle('extensions-install-from-url', (_, zipUrl) => __awaiter(this, void 0, void 0, function* () {
+        var _a, _b;
         try {
             const tmpDir = os_1.default.tmpdir();
             const zipPath = path_1.default.join(tmpDir, `ext-${Date.now()}.zip`);
@@ -668,6 +673,7 @@ function setupIPC() {
                     version: manifest.version || '1.0',
                     description: manifest.description || '',
                     icon: iconDataUrl,
+                    popup: ((_a = manifest.action) === null || _a === void 0 ? void 0 : _a.default_popup) || ((_b = manifest.browser_action) === null || _b === void 0 ? void 0 : _b.default_popup) || undefined,
                     enabled: true,
                     path: destPath
                 }

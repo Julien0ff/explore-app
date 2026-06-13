@@ -10,6 +10,7 @@ interface ExtensionInfo {
   version: string;
   description: string;
   icon?: string;
+  popup?: string;
   enabled: boolean;
   path: string;
 }
@@ -69,6 +70,7 @@ export function ExtensionsPage({ theme, language, colors, isEmbedded, onOpenStor
       const result = await electron.extensionsInstall(folderPath);
       if (result.success && result.extension) {
         setExtensions(prev => [...prev, result.extension]);
+        window.dispatchEvent(new Event('extensions-changed'));
       } else {
         setError(result.error || (language === 'fr' ? 'Échec de l\'installation' : 'Installation failed'));
       }
@@ -88,6 +90,7 @@ export function ExtensionsPage({ theme, language, colors, isEmbedded, onOpenStor
       const result = await electron.extensionsRemove(ext.id, ext.path);
       if (result.success) {
         setExtensions(prev => prev.filter(e => e.id !== ext.id));
+        window.dispatchEvent(new Event('extensions-changed'));
       } else {
         setError(result.error || (language === 'fr' ? 'Échec de la suppression' : 'Removal failed'));
       }

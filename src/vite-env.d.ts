@@ -93,6 +93,7 @@ interface ElectronExtensionInfo {
   version: string;
   description: string;
   icon?: string;
+  popup?: string;
   enabled: boolean;
   path: string;
 }

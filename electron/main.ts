@@ -531,7 +531,7 @@ function setupIPC() {
 
   // Load all saved extensions on startup
   ipcMain.handle('extensions-load-all', async () => {
-    const loaded: { id: string; name: string; version: string; description: string; icon?: string; enabled: boolean; path: string }[] = [];
+    const loaded: { id: string; name: string; version: string; description: string; icon?: string; popup?: string; enabled: boolean; path: string }[] = [];
     try {
       const dirs = fs.readdirSync(extensionsDir, { withFileTypes: true }).filter(d => d.isDirectory());
       for (const dir of dirs) {
@@ -560,6 +560,7 @@ function setupIPC() {
               version: manifest.version || '1.0',
               description: manifest.description || '',
               icon: iconDataUrl,
+              popup: manifest.action?.default_popup || manifest.browser_action?.default_popup || undefined,
               enabled: true,
               path: extPath
             });
@@ -616,6 +617,7 @@ function setupIPC() {
           version: manifest.version || '1.0',
           description: manifest.description || '',
           icon: iconDataUrl,
+          popup: manifest.action?.default_popup || manifest.browser_action?.default_popup || undefined,
           enabled: true,
           path: destPath
         }
@@ -702,6 +704,7 @@ function setupIPC() {
           version: manifest.version || '1.0',
           description: manifest.description || '',
           icon: iconDataUrl,
+          popup: manifest.action?.default_popup || manifest.browser_action?.default_popup || undefined,
           enabled: true,
           path: destPath
         }

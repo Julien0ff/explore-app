@@ -94,6 +94,26 @@ function App() {
   const [showSplitMenu, setShowSplitMenu] = useState(false);
   const [showScreenshotMenu, setShowScreenshotMenu] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  
+  const [installedExtensions, setInstalledExtensions] = useState<ElectronExtensionInfo[]>([]);
+  const [activeExtensionPopup, setActiveExtensionPopup] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadExtensions = async () => {
+      if (window.electron?.extensionsLoadAll) {
+        const loaded = await window.electron.extensionsLoadAll();
+        setInstalledExtensions(loaded);
+      }
+    };
+    loadExtensions();
+
+    const handleExtensionsChanged = () => {
+      loadExtensions();
+    };
+
+    window.addEventListener('extensions-changed', handleExtensionsChanged);
+    return () => window.removeEventListener('extensions-changed', handleExtensionsChanged);
+  }, []);
 
   const [historySearchQuery, setHistorySearchQuery] = useState('');
   const [bookmarkSearchQuery, setBookmarkSearchQuery] = useState('');
@@ -2179,6 +2199,52 @@ function App() {
                      </button>
                    </>
                  )}
+                 {installedExtensions.filter(e => e.enabled).map(ext => (
+                   <div key={ext.id} className="relative">
+                     <button
+                       type="button"
+                       onClick={() => {
+                         if (ext.popup) {
+                           setActiveExtensionPopup(activeExtensionPopup === ext.id ? null : ext.id);
+                         } else {
+                           // Flash or visual feedback if no popup
+                         }
+                       }}
+                       className={clsx(
+                         "p-1 rounded transition-colors flex items-center justify-center",
+                         activeExtensionPopup === ext.id ? "bg-white/20" : "hover:bg-white/10"
+                       )}
+                       title={ext.name}
+                     >
+                       {ext.icon ? (
+                         <img src={ext.icon} alt={ext.name} className="w-4 h-4 rounded-sm object-cover" />
+                       ) : (
+                         <div className="w-4 h-4 bg-blue-500 rounded-sm flex items-center justify-center text-[10px] font-bold text-white">
+                           {ext.name.charAt(0).toUpperCase()}
+                         </div>
+                       )}
+                     </button>
+                     <AnimatePresence>
+                       {activeExtensionPopup === ext.id && ext.popup && (
+                         <motion.div
+                           initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                           animate={{ opacity: 1, y: 0, scale: 1 }}
+                           exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                           className={clsx(
+                             "absolute top-full mt-4 right-0 rounded-xl shadow-2xl overflow-hidden z-[9999] border",
+                             theme === 'dark' ? "bg-[#1e1e2e] border-white/10" : "bg-white border-gray-100"
+                           )}
+                           style={{ width: '380px', height: '550px' }}
+                         >
+                           <webview
+                             src={`chrome-extension://${ext.id}/${ext.popup}`}
+                             className="w-full h-full bg-transparent"
+                           />
+                         </motion.div>
+                       )}
+                     </AnimatePresence>
+                   </div>
+                 ))}
                  <button 
                   type="button"
                   onClick={() => updateTab(activeTabId, { url: 'explore://extensions' })}
