@@ -28,6 +28,41 @@ export default function ExtensionStore({ theme, language = 'fr', colors }: Exten
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState('');
+  const [installing, setInstalling] = useState<Record<number, boolean>>({});
+  const [installed, setInstalled] = useState<Record<number, boolean>>({});
+
+  const handleInstall = async (ext: GithubRepo) => {
+    if (!window.electron?.extensionsInstallFromUrl) {
+      window.electron?.openExternal(`${ext.html_url}/releases/latest`);
+      return;
+    }
+
+    try {
+      setInstalling(prev => ({ ...prev, [ext.id]: true }));
+      const response = await fetch(`https://api.github.com/repos/${ext.owner.login}/${ext.name}/releases/latest`);
+      if (!response.ok) throw new Error('No release found');
+      const release = await response.json();
+      
+      const zipAsset = release.assets?.find((a: { name: string; browser_download_url: string }) => a.name.endsWith('.zip'));
+      if (!zipAsset) {
+        window.electron?.openExternal(`${ext.html_url}/releases/latest`);
+        setInstalling(prev => ({ ...prev, [ext.id]: false }));
+        return;
+      }
+      
+      const result = await window.electron.extensionsInstallFromUrl(zipAsset.browser_download_url);
+      if (result.success) {
+        setInstalled(prev => ({ ...prev, [ext.id]: true }));
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (e) {
+      console.error('Failed to install extension:', e);
+      window.electron?.openExternal(`${ext.html_url}/releases/latest`);
+    } finally {
+      setInstalling(prev => ({ ...prev, [ext.id]: false }));
+    }
+  };
 
   useEffect(() => {
     const fetchExtensions = async () => {
@@ -141,9 +176,16 @@ export default function ExtensionStore({ theme, language = 'fr', colors }: Exten
                       alt={ext.owner.login} 
                       className="w-14 h-14 rounded-2xl border bg-white/10 shadow-sm object-cover shrink-0" 
                     />
-                    <div className="min-w-0">
-                      <h3 className="font-black text-lg truncate group-hover:text-blue-500 transition-colors">{ext.name.replace('explore-extension-', '')}</h3>
-                      <p className="text-xs font-bold opacity-50 truncate flex items-center gap-1.5 mt-0.5">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-col items-start gap-1">
+                        <h3 className="font-black text-lg truncate group-hover:text-blue-500 transition-colors w-full">{ext.name.replace('explore-extension-', '')}</h3>
+                        {ext.owner.login.toLowerCase() === 'julien0ff' && (
+                          <span className={clsx("text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider", theme === 'dark' ? "bg-blue-500/20 text-blue-400 border border-blue-500/20" : "bg-blue-50 text-blue-600 border border-blue-200")}>
+                            {language === 'fr' ? 'Extension Officielle' : 'Official Extension'}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs font-bold opacity-50 truncate flex items-center gap-1.5 mt-1">
                         <span className="w-4 h-4 rounded-full bg-current opacity-20 inline-block overflow-hidden relative">
                           <img src={ext.owner.avatar_url} className="absolute inset-0 w-full h-full" />
                         </span>
@@ -173,14 +215,29 @@ export default function ExtensionStore({ theme, language = 'fr', colors }: Exten
                         <ExternalLink className="w-4 h-4" />
                       </button>
                       <button 
-                        onClick={() => window.electron?.openExternal(`${ext.html_url}/releases/latest`)}
+                        onClick={() => handleInstall(ext)}
+                        disabled={installing[ext.id] || installed[ext.id]}
                         className={clsx(
-                          "px-4 py-2 rounded-xl text-xs font-bold text-white transition-all hover:scale-105 active:scale-95 shadow-md flex items-center gap-2",
-                          colors.bgSolid, colors.bgHover
+                          "px-4 py-2 rounded-xl text-xs font-bold text-white transition-all shadow-md flex items-center gap-2",
+                          installing[ext.id] || installed[ext.id] ? "opacity-75 cursor-not-allowed bg-gray-500" : clsx("hover:scale-105 active:scale-95", colors.bgSolid, colors.bgHover)
                         )}
                       >
-                        <Download className="w-3.5 h-3.5" />
-                        {language === 'fr' ? 'Télécharger' : 'Download'}
+                        {installing[ext.id] ? (
+                          <>
+                            <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            {language === 'fr' ? 'Téléchargement...' : 'Downloading...'}
+                          </>
+                        ) : installed[ext.id] ? (
+                          <>
+                            <Star className="w-3.5 h-3.5" />
+                            {language === 'fr' ? 'Installé' : 'Installed'}
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-3.5 h-3.5" />
+                            {language === 'fr' ? 'Télécharger' : 'Download'}
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>

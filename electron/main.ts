@@ -3,6 +3,8 @@ import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import http from 'http';
 import fs from 'fs';
+import os from 'os';
+import AdmZip from 'adm-zip';
 
 app.setName('Explore Browser');
 
@@ -620,6 +622,92 @@ function setupIPC() {
       };
     } catch (e: unknown) {
       console.error('Failed to install extension:', e);
+      return { success: false, error: String(e) };
+    }
+  });
+
+  // Install a new extension from a direct zip URL
+  ipcMain.handle('extensions-install-from-url', async (_, zipUrl: string) => {
+    try {
+      const tmpDir = os.tmpdir();
+      const zipPath = path.join(tmpDir, `ext-${Date.now()}.zip`);
+      const extractPath = path.join(tmpDir, `ext-extract-${Date.now()}`);
+      
+      // Download the zip using Electron's net module
+      const response = await net.fetch(zipUrl);
+      if (!response.ok) {
+        return { success: false, error: `Failed to download: ${response.statusText}` };
+      }
+      
+      const arrayBuffer = await response.arrayBuffer();
+      fs.writeFileSync(zipPath, Buffer.from(arrayBuffer));
+      
+      // Extract the zip
+      const zip = new AdmZip(zipPath);
+      zip.extractAllTo(extractPath, true);
+      
+      // Find where the manifest.json is
+      let extSourcePath = extractPath;
+      if (!fs.existsSync(path.join(extSourcePath, 'manifest.json'))) {
+        // sometimes zips have a root folder inside
+        const dirs = fs.readdirSync(extractPath, { withFileTypes: true }).filter(d => d.isDirectory());
+        if (dirs.length > 0 && fs.existsSync(path.join(extractPath, dirs[0].name, 'manifest.json'))) {
+          extSourcePath = path.join(extractPath, dirs[0].name);
+        } else {
+          return { success: false, error: 'No manifest.json found in downloaded zip' };
+        }
+      }
+      
+      const manifestPath = path.join(extSourcePath, 'manifest.json');
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+      const folderName = (manifest.name || path.basename(extSourcePath)).replace(/[^a-zA-Z0-9_-]/g, '_');
+      const destPath = path.join(extensionsDir, folderName);
+      
+      // Copy the extension folder
+      if (fs.existsSync(destPath)) {
+        fs.rmSync(destPath, { recursive: true, force: true });
+      }
+      copyDirSync(extSourcePath, destPath);
+      
+      // Cleanup temp
+      try {
+        fs.rmSync(zipPath, { force: true });
+        fs.rmSync(extractPath, { recursive: true, force: true });
+      } catch (e) {
+        console.error('Failed to cleanup temp extraction:', e);
+      }
+      
+      // Load the extension
+      const ext = await session.defaultSession.loadExtension(destPath, { allowFileAccess: true });
+      
+      // Resolve icon
+      let iconDataUrl: string | undefined;
+      const iconKeys = manifest.icons ? Object.keys(manifest.icons).sort((a: string, b: string) => Number(b) - Number(a)) : [];
+      if (iconKeys.length > 0) {
+        const iconRelPath = manifest.icons[iconKeys[0]];
+        const iconAbsPath = path.join(destPath, iconRelPath);
+        if (fs.existsSync(iconAbsPath)) {
+          const iconBuf = fs.readFileSync(iconAbsPath);
+          const ext2 = path.extname(iconAbsPath).toLowerCase();
+          const mime = ext2 === '.svg' ? 'image/svg+xml' : ext2 === '.png' ? 'image/png' : 'image/jpeg';
+          iconDataUrl = `data:${mime};base64,${iconBuf.toString('base64')}`;
+        }
+      }
+      
+      return {
+        success: true,
+        extension: {
+          id: ext.id,
+          name: manifest.name || folderName,
+          version: manifest.version || '1.0',
+          description: manifest.description || '',
+          icon: iconDataUrl,
+          enabled: true,
+          path: destPath
+        }
+      };
+    } catch (e: unknown) {
+      console.error('Failed to install extension from url:', e);
       return { success: false, error: String(e) };
     }
   });

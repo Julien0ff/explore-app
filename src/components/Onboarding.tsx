@@ -171,7 +171,7 @@ export function Onboarding({ onComplete, setTheme, setSearchEngine, setLanguage,
                       className={clsx(
                         "p-6 rounded-2xl border-2 flex flex-col items-center gap-3 transition-all hover:scale-[1.03]",
                         isDark
-                          ? "border-white/10 bg-white/[0.03] hover:bg-white/[0.07] hover:border-white/20"
+                          ? "border-white/10 bg-white/3 hover:bg-white/[0.07] hover:border-white/20"
                           : "border-gray-200 bg-gray-50/50 hover:bg-gray-100 hover:border-gray-300"
                       )}
                     >
@@ -186,7 +186,7 @@ export function Onboarding({ onComplete, setTheme, setSearchEngine, setLanguage,
                       className={clsx(
                         "p-6 rounded-2xl border-2 flex flex-col items-center gap-3 transition-all hover:scale-[1.03]",
                         isDark
-                          ? "border-white/10 bg-white/[0.03] hover:bg-white/[0.07] hover:border-white/20"
+                          ? "border-white/10 bg-white/3 hover:bg-white/[0.07] hover:border-white/20"
                           : "border-gray-200 bg-gray-50/50 hover:bg-gray-100 hover:border-gray-300"
                       )}
                     >
@@ -212,7 +212,7 @@ export function Onboarding({ onComplete, setTheme, setSearchEngine, setLanguage,
                   <div className="w-full flex flex-col gap-4 text-left">
                     <div className={clsx(
                       "p-5 rounded-2xl border text-sm space-y-4 max-h-60 overflow-y-auto custom-scrollbar w-full",
-                      isDark ? "bg-white/[0.03] border-white/10" : "bg-gray-50/80 border-gray-200/80"
+                      isDark ? "bg-white/3 border-white/10" : "bg-gray-50/80 border-gray-200/80"
                     )}>
                       {[
                         { emoji: '🔒', titleFr: 'Confidentialité absolue', titleEn: 'Absolute Privacy', descFr: 'Zéro traçage, zéro télémétrie. Votre navigation reste totalement privée.', descEn: 'Zero tracking, zero telemetry. Your browsing remains completely private.' },
@@ -274,7 +274,7 @@ export function Onboarding({ onComplete, setTheme, setSearchEngine, setLanguage,
                           currentTheme === t.id
                             ? "border-blue-500 bg-blue-500/10 text-blue-500 shadow-lg shadow-blue-500/10"
                             : isDark 
-                              ? "border-white/10 bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/20" 
+                              ? "border-white/10 bg-white/3 hover:bg-white/6 hover:border-white/20" 
                               : "border-gray-200 bg-gray-50/50 hover:bg-gray-100 hover:border-gray-300"
                         )}
                       >
@@ -354,7 +354,7 @@ export function Onboarding({ onComplete, setTheme, setSearchEngine, setLanguage,
                         className={clsx(
                           "p-4 rounded-2xl flex items-center gap-3 transition-all group text-left border",
                           isDark
-                            ? "bg-white/[0.03] border-white/10 hover:bg-white/[0.07] hover:border-white/20"
+                            ? "bg-white/3 border-white/10 hover:bg-white/[0.07] hover:border-white/20"
                             : "bg-gray-50/50 border-gray-200 hover:bg-gray-100 hover:border-gray-300"
                         )}
                       >

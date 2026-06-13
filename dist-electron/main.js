@@ -17,6 +17,8 @@ const electron_updater_1 = require("electron-updater");
 const path_1 = __importDefault(require("path"));
 const http_1 = __importDefault(require("http"));
 const fs_1 = __importDefault(require("fs"));
+const os_1 = __importDefault(require("os"));
+const adm_zip_1 = __importDefault(require("adm-zip"));
 electron_1.app.setName('Explore Browser');
 let mainWindow = null;
 let splashWindow = null;
@@ -595,6 +597,84 @@ function setupIPC() {
         }
         catch (e) {
             console.error('Failed to install extension:', e);
+            return { success: false, error: String(e) };
+        }
+    }));
+    // Install a new extension from a direct zip URL
+    electron_1.ipcMain.handle('extensions-install-from-url', (_, zipUrl) => __awaiter(this, void 0, void 0, function* () {
+        try {
+            const tmpDir = os_1.default.tmpdir();
+            const zipPath = path_1.default.join(tmpDir, `ext-${Date.now()}.zip`);
+            const extractPath = path_1.default.join(tmpDir, `ext-extract-${Date.now()}`);
+            // Download the zip using Electron's net module
+            const response = yield electron_1.net.fetch(zipUrl);
+            if (!response.ok) {
+                return { success: false, error: `Failed to download: ${response.statusText}` };
+            }
+            const arrayBuffer = yield response.arrayBuffer();
+            fs_1.default.writeFileSync(zipPath, Buffer.from(arrayBuffer));
+            // Extract the zip
+            const zip = new adm_zip_1.default(zipPath);
+            zip.extractAllTo(extractPath, true);
+            // Find where the manifest.json is
+            let extSourcePath = extractPath;
+            if (!fs_1.default.existsSync(path_1.default.join(extSourcePath, 'manifest.json'))) {
+                // sometimes zips have a root folder inside
+                const dirs = fs_1.default.readdirSync(extractPath, { withFileTypes: true }).filter(d => d.isDirectory());
+                if (dirs.length > 0 && fs_1.default.existsSync(path_1.default.join(extractPath, dirs[0].name, 'manifest.json'))) {
+                    extSourcePath = path_1.default.join(extractPath, dirs[0].name);
+                }
+                else {
+                    return { success: false, error: 'No manifest.json found in downloaded zip' };
+                }
+            }
+            const manifestPath = path_1.default.join(extSourcePath, 'manifest.json');
+            const manifest = JSON.parse(fs_1.default.readFileSync(manifestPath, 'utf-8'));
+            const folderName = (manifest.name || path_1.default.basename(extSourcePath)).replace(/[^a-zA-Z0-9_-]/g, '_');
+            const destPath = path_1.default.join(extensionsDir, folderName);
+            // Copy the extension folder
+            if (fs_1.default.existsSync(destPath)) {
+                fs_1.default.rmSync(destPath, { recursive: true, force: true });
+            }
+            copyDirSync(extSourcePath, destPath);
+            // Cleanup temp
+            try {
+                fs_1.default.rmSync(zipPath, { force: true });
+                fs_1.default.rmSync(extractPath, { recursive: true, force: true });
+            }
+            catch (e) {
+                console.error('Failed to cleanup temp extraction:', e);
+            }
+            // Load the extension
+            const ext = yield electron_1.session.defaultSession.loadExtension(destPath, { allowFileAccess: true });
+            // Resolve icon
+            let iconDataUrl;
+            const iconKeys = manifest.icons ? Object.keys(manifest.icons).sort((a, b) => Number(b) - Number(a)) : [];
+            if (iconKeys.length > 0) {
+                const iconRelPath = manifest.icons[iconKeys[0]];
+                const iconAbsPath = path_1.default.join(destPath, iconRelPath);
+                if (fs_1.default.existsSync(iconAbsPath)) {
+                    const iconBuf = fs_1.default.readFileSync(iconAbsPath);
+                    const ext2 = path_1.default.extname(iconAbsPath).toLowerCase();
+                    const mime = ext2 === '.svg' ? 'image/svg+xml' : ext2 === '.png' ? 'image/png' : 'image/jpeg';
+                    iconDataUrl = `data:${mime};base64,${iconBuf.toString('base64')}`;
+                }
+            }
+            return {
+                success: true,
+                extension: {
+                    id: ext.id,
+                    name: manifest.name || folderName,
+                    version: manifest.version || '1.0',
+                    description: manifest.description || '',
+                    icon: iconDataUrl,
+                    enabled: true,
+                    path: destPath
+                }
+            };
+        }
+        catch (e) {
+            console.error('Failed to install extension from url:', e);
             return { success: false, error: String(e) };
         }
     }));

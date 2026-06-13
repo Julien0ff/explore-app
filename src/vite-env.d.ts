@@ -78,5 +78,21 @@ interface Window {
     offUpdateError: () => void;
     checkForUpdate: () => void;
     restartApp: () => void;
+    // Extensions
+    extensionsLoadAll: () => Promise<ElectronExtensionInfo[]>;
+    extensionsInstall: (folderPath: string) => Promise<{ success: boolean; error?: string; extension?: ElectronExtensionInfo }>;
+    extensionsInstallFromUrl: (url: string) => Promise<{ success: boolean; error?: string; extension?: ElectronExtensionInfo }>;
+    extensionsRemove: (id: string, extPath: string) => Promise<{ success: boolean; error?: string }>;
+    extensionsPickFolder: () => Promise<string | null>;
   };
+}
+
+interface ElectronExtensionInfo {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  icon?: string;
+  enabled: boolean;
+  path: string;
 }

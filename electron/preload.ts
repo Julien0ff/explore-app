@@ -69,6 +69,7 @@ contextBridge.exposeInMainWorld('electron', {
   // Extensions
   extensionsLoadAll: () => ipcRenderer.invoke('extensions-load-all'),
   extensionsInstall: (folderPath: string) => ipcRenderer.invoke('extensions-install', folderPath),
+  extensionsInstallFromUrl: (url: string) => ipcRenderer.invoke('extensions-install-from-url', url),
   extensionsRemove: (id: string, extPath: string) => ipcRenderer.invoke('extensions-remove', id, extPath),
   extensionsPickFolder: () => ipcRenderer.invoke('extensions-pick-folder'),
 });
