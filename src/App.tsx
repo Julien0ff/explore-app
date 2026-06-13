@@ -51,6 +51,7 @@ import { RegionCropper } from './components/RegionCropper';
 import { CommandPalette } from './components/CommandPalette';
 import { ContextMenu } from './components/ContextMenu';
 import { ExtensionsPage } from './components/ExtensionsPage';
+import ExtensionStore from './components/ExtensionStore';
 import { ThemesPage } from './components/ThemesPage';
 import { SearchPage } from './components/SearchPage';
 import { FileDown } from 'lucide-react';
@@ -157,7 +158,7 @@ function App() {
   
   const [earlyTesting, setEarlyTesting] = useState(() => {
     const saved = localStorage.getItem('explore_early_testing');
-    return saved ? JSON.parse(saved) : { screenshot: false, splitView: false };
+    return saved ? JSON.parse(saved) : { screenshot: false, splitView: false, exploreSearch: false };
   });
   useEffect(() => {
     localStorage.setItem('explore_early_testing', JSON.stringify(earlyTesting));
@@ -1674,6 +1675,7 @@ function App() {
           }}
           setTheme={setTheme}
           setSearchEngine={setSearchEngine}
+          setLanguage={setLanguage}
           currentTheme={theme}
           language={language}
         />
@@ -2904,6 +2906,14 @@ function App() {
                   <ExtensionsPage
                     theme={theme as 'dark' | 'light'}
                     accentColor={accentColor}
+                    language={language}
+                    colors={colors}
+                    onOpenStore={() => updateTab(activeTabId, { url: 'explore://store' })}
+                  />
+                )}
+                {tab.url === 'explore://store' && (
+                  <ExtensionStore
+                    theme={theme as 'dark' | 'light'}
                     language={language}
                     colors={colors}
                   />

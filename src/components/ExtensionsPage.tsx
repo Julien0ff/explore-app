@@ -20,9 +20,10 @@ interface ExtensionsPageProps {
   language: 'fr' | 'en';
   colors: ThemeColors;
   isEmbedded?: boolean;
+  onOpenStore?: () => void;
 }
 
-export function ExtensionsPage({ theme, language, colors, isEmbedded }: ExtensionsPageProps) {
+export function ExtensionsPage({ theme, language, colors, isEmbedded, onOpenStore }: ExtensionsPageProps) {
   const [extensions, setExtensions] = useState<ExtensionInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -121,6 +122,25 @@ export function ExtensionsPage({ theme, language, colors, isEmbedded }: Extensio
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                if (onOpenStore) {
+                  onOpenStore();
+                } else {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const electron = (window as any).electron;
+                  if (electron?.openExternal) electron.openExternal('https://chromewebstore.google.com/');
+                  else window.open('https://chromewebstore.google.com/', '_blank');
+                }
+              }}
+              className={clsx(
+                "flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold transition-all shadow-sm hover:shadow-md active:scale-95",
+                isDark ? "bg-white/10 hover:bg-white/20 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-900"
+              )}
+            >
+              <Package className="w-4 h-4" />
+              {language === 'fr' ? 'Ouvrir le Store' : 'Open Store'}
+            </button>
             <button
               onClick={loadExtensions}
               className={clsx(

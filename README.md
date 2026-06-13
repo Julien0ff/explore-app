@@ -20,7 +20,6 @@
   - Intégration Discord (Suggestions & Feedback)
   - Gestionnaire de téléchargements
   - Historique et Favoris (avec synchronisation Supabase optionnelle)
-  - Mode Lecteur
 
 ## 🚀 Installation & Développement
 

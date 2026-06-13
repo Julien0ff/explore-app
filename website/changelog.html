@@ -20,14 +20,14 @@
     }
 
     body {
-      font-family: 'Inter', sans-serif;
+      font-family: 'Geist', sans-serif;
     }
 
     h1,
     h2,
     h3,
     .font-heading {
-      font-family: 'Outfit', sans-serif;
+      font-family: 'Geist', sans-serif;
     }
 
     .gradient-text {
@@ -129,7 +129,9 @@
 
   <!-- Hero Section -->
   <div class="relative pt-32 pb-12 sm:pt-40 sm:pb-16">
-    <div class="hero-gradient absolute top-0 left-0 right-0 h-[600px] pointer-events-none z-0" style="mask-image: linear-gradient(to bottom, black 50%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);"></div>
+    <div class="hero-gradient absolute top-0 left-0 right-0 h-[600px] pointer-events-none z-0"
+      style="mask-image: linear-gradient(to bottom, black 50%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);">
+    </div>
     <div class="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center z-10">
       <span class="text-xs uppercase font-bold tracking-[0.25em] text-blue-500 block mb-2">Historique de
         développement</span>
@@ -146,27 +148,35 @@
   <!-- Timeline Section -->
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-32 relative z-10">
     <div id="releases-container" class="relative border-l border-white/10 pl-6 sm:pl-10 space-y-16">
-      
+
       <!-- Loading state -->
       <div class="text-center text-gray-500 py-10" id="loading-releases">
-        <svg class="animate-spin h-8 w-8 mx-auto text-blue-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <svg class="animate-spin h-8 w-8 mx-auto text-blue-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none"
+          viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          <path class="opacity-75" fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+          </path>
         </svg>
         Chargement des mises à jour depuis GitHub...
       </div>
       <div class="relative reveal">
-        <span class="absolute -left-[31px] sm:-left-[47px] top-10 -translate-y-1/2 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.8)]"></span>
-        <div class="bg-[#14141f]/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 sm:p-8 hover:border-blue-500/20 transition-all duration-300 shadow-xl">
+        <span
+          class="absolute -left-[32.5px] sm:-left-[48.5px] top-10 -translate-y-1/2 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.8)]"></span>
+        <div
+          class="bg-[#14141f]/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 sm:p-8 hover:border-blue-500/20 transition-all duration-300 shadow-xl">
           <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
             <div>
-              <span class="px-3 py-1 text-xs font-semibold text-blue-400 bg-blue-500/10 rounded-full border border-blue-500/20 mr-3">Dernière version</span>
+              <span
+                class="px-3 py-1 text-xs font-semibold text-blue-400 bg-blue-500/10 rounded-full border border-blue-500/20 mr-3">Dernière
+                version</span>
               <h2 class="inline-block text-2xl font-extrabold text-white font-heading">Version 1.6.3</h2>
             </div>
             <span class="text-sm text-gray-500 font-medium">24 Mai 2026</span>
           </div>
           <p class="text-gray-300 text-sm mb-6 leading-relaxed">
-            La version v1.6.3 introduit une personnalisation poussée de l'interface et corrige des bugs majeurs d'ergonomie.
+            La version v1.6.3 introduit une personnalisation poussée de l'interface et corrige des bugs majeurs
+            d'ergonomie.
           </p>
           <div class="space-y-6">
             <div>
@@ -178,21 +188,24 @@
                   <span class="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0 mt-2"></span>
                   <div>
                     <strong class="text-white font-semibold">Boutons de fenêtre Mac/Windows :</strong>
-                    Personnalisez l'emplacement des contrôles de fenêtre (gauche ou droite) depuis les paramètres d'apparence.
+                    Personnalisez l'emplacement des contrôles de fenêtre (gauche ou droite) depuis les paramètres
+                    d'apparence.
                   </div>
                 </li>
                 <li class="flex items-start gap-3">
                   <span class="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0 mt-2"></span>
                   <div>
                     <strong class="text-white font-semibold">Barre de favoris classique :</strong>
-                    Option pour afficher une barre de favoris permanente sous la barre d'adresse pour un accès ultra-rapide.
+                    Option pour afficher une barre de favoris permanente sous la barre d'adresse pour un accès
+                    ultra-rapide.
                   </div>
                 </li>
                 <li class="flex items-start gap-3">
                   <span class="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0 mt-2"></span>
                   <div>
                     <strong class="text-white font-semibold">Notifications natives :</strong>
-                    Les alertes système disgracieuses sont remplacées par de magnifiques notifications (Toast) intégrées.
+                    Les alertes système disgracieuses sont remplacées par de magnifiques notifications (Toast)
+                    intégrées.
                   </div>
                 </li>
               </ul>
@@ -203,8 +216,10 @@
 
       <!-- Version 1.6.2 -->
       <div class="relative reveal">
-        <span class="absolute -left-[31px] sm:-left-[47px] top-10 -translate-y-1/2 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.8)]"></span>
-        <div class="bg-[#14141f]/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 sm:p-8 hover:border-purple-500/20 transition-all duration-300 shadow-xl">
+        <span
+          class="absolute -left-[32.5px] sm:-left-[48.5px] top-10 -translate-y-1/2 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.8)]"></span>
+        <div
+          class="bg-[#14141f]/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 sm:p-8 hover:border-purple-500/20 transition-all duration-300 shadow-xl">
           <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
             <div>
               <h2 class="inline-block text-2xl font-extrabold text-white font-heading">Version 1.6.2</h2>
@@ -212,7 +227,8 @@
             <span class="text-sm text-gray-500 font-medium">24 Mai 2026</span>
           </div>
           <p class="text-gray-300 text-sm mb-6 leading-relaxed">
-            Mise à jour majeure introduisant des fonctionnalités de productivité et de sécurité très attendues par la communauté.
+            Mise à jour majeure introduisant des fonctionnalités de productivité et de sécurité très attendues par la
+            communauté.
           </p>
           <div class="space-y-6">
             <div>
@@ -248,7 +264,7 @@
       <div class="relative reveal">
         <!-- Dot indicator -->
         <span
-          class="absolute -left-[31px] sm:-left-[47px] top-10 -translate-y-1/2 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-gray-600"></span>
+          class="absolute -left-[32.5px] sm:-left-[48.5px] top-10 -translate-y-1/2 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-gray-600"></span>
 
         <div
           class="bg-[#14141f]/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 sm:p-8 hover:border-gray-500/20 transition-all duration-300 shadow-xl">
@@ -356,7 +372,7 @@
       <div class="relative reveal">
         <!-- Dot indicator -->
         <span
-          class="absolute -left-[31px] sm:-left-[47px] mt-1.5 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-purple-500/60 shadow-[0_0_12px_rgba(168,85,247,0.4)]"></span>
+          class="absolute -left-[32.5px] sm:-left-[48.5px] mt-1.5 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-purple-500/60 shadow-[0_0_12px_rgba(168,85,247,0.4)]"></span>
 
         <div
           class="bg-[#14141f]/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 sm:p-8 hover:border-purple-500/20 transition-all duration-300 shadow-xl">
@@ -410,7 +426,7 @@
       <div class="relative reveal">
         <!-- Dot indicator -->
         <span
-          class="absolute -left-[31px] sm:-left-[47px] mt-1.5 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-purple-500/60 shadow-[0_0_12px_rgba(168,85,247,0.4)]"></span>
+          class="absolute -left-[32.5px] sm:-left-[48.5px] mt-1.5 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-purple-500/60 shadow-[0_0_12px_rgba(168,85,247,0.4)]"></span>
 
         <div
           class="bg-[#14141f]/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 sm:p-8 hover:border-purple-500/20 transition-all duration-300 shadow-xl">
@@ -464,7 +480,7 @@
       <div class="relative reveal">
         <!-- Dot indicator -->
         <span
-          class="absolute -left-[31px] sm:-left-[47px] mt-1.5 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-purple-500/60 shadow-[0_0_12px_rgba(168,85,247,0.4)]"></span>
+          class="absolute -left-[32.5px] sm:-left-[48.5px] mt-1.5 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-purple-500/60 shadow-[0_0_12px_rgba(168,85,247,0.4)]"></span>
 
         <div
           class="bg-[#14141f]/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 sm:p-8 hover:border-purple-500/20 transition-all duration-300 shadow-xl">
@@ -529,14 +545,48 @@
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     /* GitHub Markdown Styles */
-    .markdown-content h1, .markdown-content h2, .markdown-content h3 { font-weight: bold; color: white; margin-top: 1.5em; margin-bottom: 0.5em; }
-    .markdown-content h3 { font-size: 1.1rem; }
-    .markdown-content ul { list-style-type: disc; margin-left: 1.5em; margin-bottom: 1em; }
-    .markdown-content li { margin-bottom: 0.5em; }
-    .markdown-content strong { color: white; }
-    .markdown-content code { background-color: rgba(255,255,255,0.1); padding: 0.1em 0.3em; border-radius: 3px; font-family: monospace; }
-    .markdown-content a { color: #3b82f6; text-decoration: none; }
-    .markdown-content a:hover { text-decoration: underline; }
+    .markdown-content h1,
+    .markdown-content h2,
+    .markdown-content h3 {
+      font-weight: bold;
+      color: white;
+      margin-top: 1.5em;
+      margin-bottom: 0.5em;
+    }
+
+    .markdown-content h3 {
+      font-size: 1.1rem;
+    }
+
+    .markdown-content ul {
+      list-style-type: disc;
+      margin-left: 1.5em;
+      margin-bottom: 1em;
+    }
+
+    .markdown-content li {
+      margin-bottom: 0.5em;
+    }
+
+    .markdown-content strong {
+      color: white;
+    }
+
+    .markdown-content code {
+      background-color: rgba(255, 255, 255, 0.1);
+      padding: 0.1em 0.3em;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+
+    .markdown-content a {
+      color: #3b82f6;
+      text-decoration: none;
+    }
+
+    .markdown-content a:hover {
+      text-decoration: underline;
+    }
   </style>
   <script>
     // GitHub Release Configuration
@@ -547,30 +597,30 @@
       try {
         const response = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/releases`);
         const releases = await response.json();
-        
+
         const container = document.getElementById('releases-container');
         const loading = document.getElementById('loading-releases');
         if (!container) return;
-        
+
         if (loading) loading.remove();
 
         // Clear existing hardcoded releases just in case
         container.innerHTML = '';
-        
+
         releases.forEach((release, index) => {
           const date = new Date(release.published_at).toLocaleDateString('fr-FR', {
             year: 'numeric', month: 'long', day: 'numeric'
           });
-          
+
           const bodyHtml = marked.parse(release.body || 'Aucune note de mise à jour.');
-          
+
           // Alternate colors for the dots based on index
           const colors = ['blue-500', 'purple-500', 'emerald-500', 'orange-500', 'rose-500'];
           const colorClass = colors[index % colors.length];
-          
+
           const releaseHtml = `
             <div class="relative reveal active">
-              <span class="absolute -left-[31px] sm:-left-[47px] top-10 -translate-y-1/2 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-${colorClass} shadow-[0_0_12px_rgba(59,130,246,0.8)]"></span>
+              <span class="absolute -left-[32.5px] sm:-left-[48.5px] top-10 -translate-y-1/2 flex h-4 w-4 rounded-full border-4 border-[#0f0f15] bg-${colorClass} shadow-[0_0_12px_rgba(59,130,246,0.8)]"></span>
               <div class="bg-[#14141f]/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 sm:p-8 hover:border-${colorClass}/20 transition-all duration-300 shadow-xl">
                 <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
                   <div>
@@ -584,7 +634,7 @@
               </div>
             </div>
           `;
-          
+
           container.insertAdjacentHTML('beforeend', releaseHtml);
         });
       } catch (error) {

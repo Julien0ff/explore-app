@@ -109,7 +109,12 @@ export function SearchPage({ query, onSearch, onOpenUrl, onNewTab, theme, colors
             <div className={clsx("w-10 h-10 rounded-xl flex items-center justify-center shadow-md", isDark ? "bg-white/10" : "bg-white")}>
               <Logo className="w-5 h-5" />
             </div>
-            <h1 className="text-xl font-black tracking-tight select-none">Explore Search</h1>
+            <h1 className="text-xl font-black tracking-tight select-none flex items-center gap-2">
+              Explore Search
+              <span className={clsx("text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full", colors.bgSolid, "text-white")}>
+                Early Testing
+              </span>
+            </h1>
           </div>
 
           <form onSubmit={handleSubmit} className="flex-1 relative flex max-w-3xl">

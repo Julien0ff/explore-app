@@ -9,7 +9,6 @@ import { clsx } from 'clsx';
 import { getAccentColorClass } from '../lib/theme';
 import { Logo } from './Logo';
 import { ExtensionsPage } from './ExtensionsPage';
-import { ThemesPage } from './ThemesPage';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -49,8 +48,8 @@ interface SettingsModalProps {
   onRequireAuth?: () => void;
   autoCloudSync?: boolean;
   setAutoCloudSync?: (val: boolean) => void;
-  earlyTesting?: { screenshot: boolean, splitView: boolean };
-  setEarlyTesting?: (val: { screenshot: boolean, splitView: boolean }) => void;
+  earlyTesting?: { screenshot: boolean, splitView: boolean, exploreSearch?: boolean };
+  setEarlyTesting?: (val: { screenshot: boolean, splitView: boolean, exploreSearch?: boolean }) => void;
   setConfirmModal?: (val: { isOpen: boolean; title: string; message: string; onConfirm: () => void }) => void;
 }
 
@@ -272,7 +271,7 @@ export function SettingsModal({
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {[
-                  { id: 'explore', name: 'Explore', isLogo: true },
+                  ...(earlyTesting?.exploreSearch ? [{ id: 'explore', name: 'Explore', isLogo: true }] : []),
                   { id: 'google', name: 'Google', url: 'https://www.google.com/s2/favicons?domain=google.com&sz=64' },
                   { id: 'bing', name: 'Bing', url: 'https://www.google.com/s2/favicons?domain=bing.com&sz=64' },
                   { id: 'duckduckgo', name: 'DuckDuckGo', url: 'https://www.google.com/s2/favicons?domain=duckduckgo.com&sz=64' },
@@ -351,13 +350,14 @@ export function SettingsModal({
         );
       case 'extensions':
         return (
-          <div className="animate-fadeIn">
+          <div className="animate-fadeIn h-full flex flex-col">
             <ExtensionsPage
               theme={theme === 'system' ? 'dark' : theme}
               accentColor={accentColor}
               language={language}
               colors={colors}
               isEmbedded={true}
+              onOpenStore={() => onOpenUrl('explore://store')}
             />
           </div>
         );
@@ -529,16 +529,31 @@ export function SettingsModal({
                 })}
               </div>
             </div>
-            {/* Themes Engine integration */}
-            <div className={clsx("mt-12 pt-8 border-t", theme === 'dark' ? "border-white/10" : "border-gray-200")}>
-              <ThemesPage
-                theme={theme === 'system' ? 'dark' : theme}
-                setTheme={setTheme}
-                language={language}
-                accentColor={accentColor}
-                colors={colors}
-                isEmbedded={true}
-              />
+            {/* Screenshot Tool (Moved from Early Testing) */}
+            <div className={clsx("p-6 rounded-3xl border flex items-center justify-between mt-6", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50/50 border-gray-200")}>
+              <div className="space-y-1">
+                <h4 className={clsx("font-bold text-lg flex items-center gap-2", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                  <Camera className="w-5 h-5 text-purple-400" />
+                  {language === 'fr' ? 'Outil de Capture d\'Écran' : 'Screenshot Tool'}
+                </h4>
+                <p className={clsx("text-sm max-w-md", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
+                  {language === 'fr' ? 'Prend une capture de la page courante et la copie dans le presse-papiers.' : 'Takes a screenshot of the current page and copies it to clipboard.'}
+                </p>
+              </div>
+              <button 
+                onClick={() => {
+                   setEarlyTesting?.({ ...(earlyTesting || { screenshot: false, splitView: false }), screenshot: !earlyTesting?.screenshot });
+                }}
+                className={clsx(
+                  "w-14 h-7 rounded-full transition-colors relative shadow-inner shrink-0",
+                  earlyTesting?.screenshot ? colors.bgSolid : (theme === 'dark' ? "bg-gray-600" : "bg-gray-300")
+                )}
+              >
+                <div className={clsx(
+                  "absolute top-1 w-5 h-5 rounded-full bg-white transition-all shadow-md",
+                  earlyTesting?.screenshot ? "left-8" : "left-1"
+                )} />
+              </button>
             </div>
           </div>
         );
@@ -907,30 +922,32 @@ export function SettingsModal({
                 </button>
               </div>
 
-              {/* Screenshot */}
+
+
+              {/* Explore Search Engine */}
               <div className={clsx("p-6 rounded-3xl border flex items-center justify-between", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50/50 border-gray-200")}>
                 <div className="space-y-1">
                   <h4 className={clsx("font-bold text-lg flex items-center gap-2", theme === 'dark' ? "text-white" : "text-gray-900")}>
-                    <Camera className="w-5 h-5 text-purple-400" />
-                    {language === 'fr' ? 'Outil de Capture d\'Écran' : 'Screenshot Tool'}
+                    <Globe className="w-5 h-5 text-green-400" />
+                    {language === 'fr' ? 'Moteur de recherche Explore' : 'Explore Search Engine'}
                   </h4>
                   <p className={clsx("text-sm max-w-md", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
-                    {language === 'fr' ? 'Prend une capture de la page courante et la copie dans le presse-papiers.' : 'Takes a screenshot of the current page and copies it to clipboard.'}
+                    {language === 'fr' ? 'Active le moteur de recherche natif (Made by Explore).' : 'Enables the native (Made by Explore) search engine.'}
                   </p>
                 </div>
                 <button 
                   onClick={() => {
-                    if (earlyTesting?.screenshot) {
-                       setEarlyTesting?.({ ...earlyTesting, screenshot: false });
+                    if (earlyTesting?.exploreSearch) {
+                       setEarlyTesting?.({ ...earlyTesting, screenshot: earlyTesting.screenshot, splitView: earlyTesting.splitView, exploreSearch: false });
                     } else if (setConfirmModal) {
                        setConfirmModal({
                          isOpen: true,
-                         title: language === 'fr' ? 'Activer l\'Outil de Capture (Bêta)' : 'Enable Screenshot Tool (Beta)',
+                         title: language === 'fr' ? 'Activer Explore Search (Bêta)' : 'Enable Explore Search (Beta)',
                          message: language === 'fr' 
-                            ? 'L\'outil de capture d\'écran peut parfois manquer certains éléments complexes d\'une page. En l\'activant, vous acceptez de participer au test. Signalez tout bug rencontré !' 
-                            : 'The screenshot tool might sometimes miss complex page elements. By enabling it, you agree to participate in the test. Report any bugs you encounter!',
+                            ? 'Notre moteur de recherche est en phase de test et peut présenter des lenteurs ou des résultats imprécis. Merci pour vos retours !' 
+                            : 'Our search engine is in early testing and might have slow response times or inaccurate results. Thanks for your feedback!',
                          onConfirm: () => {
-                           setEarlyTesting?.({ ...(earlyTesting || { screenshot: false, splitView: false }), screenshot: true });
+                           setEarlyTesting?.({ ...(earlyTesting || { screenshot: false, splitView: false }), exploreSearch: true });
                            if (setConfirmModal) setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {} });
                          }
                        });
@@ -938,12 +955,12 @@ export function SettingsModal({
                   }}
                   className={clsx(
                     "w-14 h-7 rounded-full transition-colors relative shadow-inner shrink-0",
-                    earlyTesting?.screenshot ? colors.bgSolid : (theme === 'dark' ? "bg-gray-600" : "bg-gray-300")
+                    earlyTesting?.exploreSearch ? colors.bgSolid : (theme === 'dark' ? "bg-gray-600" : "bg-gray-300")
                   )}
                 >
                   <div className={clsx(
                     "absolute top-1 w-5 h-5 rounded-full bg-white transition-all shadow-md",
-                    earlyTesting?.screenshot ? "left-8" : "left-1"
+                    earlyTesting?.exploreSearch ? "left-8" : "left-1"
                   )} />
                 </button>
               </div>
