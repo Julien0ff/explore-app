@@ -13,5 +13,5 @@ jobs:
         with:
           webhook_url: ${{ secrets.DISCORD_WEBHOOK_URL }}
           username: "Explore Update"
-          avatar: "https://github.com/Julien0ff/explore-app/blob/main/website/icon.png"
+          avatar: "https://raw.githubusercontent.com/Julien0ff/explore-app/main/public/icon.png"
           color: "3447003" # Couleur de la barre latérale en décimal (Bleu)
