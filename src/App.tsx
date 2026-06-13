@@ -2234,7 +2234,7 @@ function App() {
                              "absolute top-full mt-4 right-0 rounded-xl shadow-2xl overflow-hidden z-[9999] border",
                              theme === 'dark' ? "bg-[#1e1e2e] border-white/10" : "bg-white border-gray-100"
                            )}
-                           style={{ width: '380px', height: '550px' }}
+                           style={{ width: '320px', height: '380px' }}
                          >
                            <webview
                              src={`chrome-extension://${ext.id}/${ext.popup}`}
