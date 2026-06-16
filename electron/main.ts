@@ -540,7 +540,7 @@ function setupIPC() {
         if (fs.existsSync(manifestPath)) {
           try {
             const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-            const ext = await session.defaultSession.loadExtension(extPath, { allowFileAccess: true });
+            const ext = await session.defaultSession.extensions.loadExtension(extPath, { allowFileAccess: true });
             // Resolve icon path
             let iconDataUrl: string | undefined;
             const iconKeys = manifest.icons ? Object.keys(manifest.icons).sort((a: string, b: string) => Number(b) - Number(a)) : [];
@@ -595,7 +595,7 @@ function setupIPC() {
       copyDirSync(extSourcePath, destPath);
       
       // Load the extension
-      const ext = await session.defaultSession.loadExtension(destPath, { allowFileAccess: true });
+      const ext = await session.defaultSession.extensions.loadExtension(destPath, { allowFileAccess: true });
       
       // Resolve icon
       let iconDataUrl: string | undefined;
@@ -682,7 +682,7 @@ function setupIPC() {
       }
       
       // Load the extension
-      const ext = await session.defaultSession.loadExtension(destPath, { allowFileAccess: true });
+      const ext = await session.defaultSession.extensions.loadExtension(destPath, { allowFileAccess: true });
       
       // Resolve icon
       let iconDataUrl: string | undefined;
@@ -720,7 +720,7 @@ function setupIPC() {
   // Remove an extension
   ipcMain.handle('extensions-remove', async (_, extId: string, extPath: string) => {
     try {
-      await session.defaultSession.removeExtension(extId);
+      await session.defaultSession.extensions.removeExtension(extId);
       if (extPath && fs.existsSync(extPath)) {
         fs.rmSync(extPath, { recursive: true, force: true });
       }
@@ -764,10 +764,16 @@ function createSplashWindow() {
     transparent: true,
     frame: false,
     alwaysOnTop: true,
+    show: false,
+    backgroundColor: '#00000000',
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
     },
+  });
+
+  splashWindow.once('ready-to-show', () => {
+    splashWindow?.show();
   });
 
   const splashUrl = `file://${path.join(__dirname, app.isPackaged ? '../splash.html' : '../splash.html')}`;
@@ -999,3 +1005,43 @@ app.on('window-all-closed', () => {
     app.quit();
   }
 });
+
+// --- Discord RPC Setup ---
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const DiscordRPC = require('discord-rpc');
+
+const clientId = '1471632125148135679';
+DiscordRPC.register(clientId);
+const rpc = new DiscordRPC.Client({ transport: 'ipc' });
+const startTimestamp = new Date();
+
+async function setActivity() {
+  if (!rpc) return;
+  try {
+    await rpc.setActivity({
+      details: 'En train de naviguer sur Explore',
+      startTimestamp,
+      largeImageKey: 'explore_logo', // TODO: Uploadez une image 'explore_logo' sur le portail dev Discord
+      largeImageText: 'Explore Browser',
+      instance: false,
+      buttons: [
+        { label: 'Rejoindre le Discord', url: 'https://discord.gg/sjqwhXahtc' },
+        { label: 'Visiter le site web', url: 'https://github.com/Julien0ff/explore-app' }
+      ]
+    });
+  } catch (e) {
+    console.error('Discord RPC Error:', e);
+  }
+}
+
+rpc.on('ready', () => {
+  setActivity();
+  // Optionnel : Mise à jour régulière si l'état change
+  setInterval(() => {
+    setActivity();
+  }, 15e3);
+});
+
+// Ne crash pas l'app si Discord n'est pas lancé
+rpc.login({ clientId }).catch(console.error);
+// -------------------------

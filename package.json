@@ -1,7 +1,7 @@
 {
   "name": "explore-browser",
   "private": true,
-  "version": "1.6.695",
+  "version": "1.6.697",
   "description": "Navigateur Explore - Le web réinventé",
   "author": "Foxy",
   "license": "GPL-3.0",
@@ -71,6 +71,7 @@
     "adm-zip": "^0.5.17",
     "clsx": "^2.1.1",
     "cross-fetch": "^4.0.0",
+    "discord-rpc": "^4.0.1",
     "electron-updater": "^6.8.3",
     "framer-motion": "^12.34.3",
     "lucide-react": "^0.575.0",

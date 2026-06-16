@@ -508,7 +508,7 @@ function setupIPC() {
     }
     // Load all saved extensions on startup
     electron_1.ipcMain.handle('extensions-load-all', () => __awaiter(this, void 0, void 0, function* () {
-        var _a, _b;
+        var _a, _b, _c, _d, _f, _g;
         const loaded = [];
         try {
             const dirs = fs_1.default.readdirSync(extensionsDir, { withFileTypes: true }).filter(d => d.isDirectory());
@@ -518,7 +518,7 @@ function setupIPC() {
                 if (fs_1.default.existsSync(manifestPath)) {
                     try {
                         const manifest = JSON.parse(fs_1.default.readFileSync(manifestPath, 'utf-8'));
-                        const ext = yield electron_1.session.defaultSession.loadExtension(extPath, { allowFileAccess: true });
+                        const ext = yield electron_1.session.defaultSession.extensions.loadExtension(extPath, { allowFileAccess: true });
                         // Resolve icon path
                         let iconDataUrl;
                         const iconKeys = manifest.icons ? Object.keys(manifest.icons).sort((a, b) => Number(b) - Number(a)) : [];
@@ -539,6 +539,8 @@ function setupIPC() {
                             description: manifest.description || '',
                             icon: iconDataUrl,
                             popup: ((_a = manifest.action) === null || _a === void 0 ? void 0 : _a.default_popup) || ((_b = manifest.browser_action) === null || _b === void 0 ? void 0 : _b.default_popup) || undefined,
+                            popupWidth: ((_c = manifest.action) === null || _c === void 0 ? void 0 : _c.default_width) || ((_d = manifest.browser_action) === null || _d === void 0 ? void 0 : _d.default_width) || undefined,
+                            popupHeight: ((_f = manifest.action) === null || _f === void 0 ? void 0 : _f.default_height) || ((_g = manifest.browser_action) === null || _g === void 0 ? void 0 : _g.default_height) || undefined,
                             enabled: true,
                             path: extPath
                         });
@@ -571,7 +573,7 @@ function setupIPC() {
             }
             copyDirSync(extSourcePath, destPath);
             // Load the extension
-            const ext = yield electron_1.session.defaultSession.loadExtension(destPath, { allowFileAccess: true });
+            const ext = yield electron_1.session.defaultSession.extensions.loadExtension(destPath, { allowFileAccess: true });
             // Resolve icon
             let iconDataUrl;
             const iconKeys = manifest.icons ? Object.keys(manifest.icons).sort((a, b) => Number(b) - Number(a)) : [];
@@ -651,7 +653,7 @@ function setupIPC() {
                 console.error('Failed to cleanup temp extraction:', e);
             }
             // Load the extension
-            const ext = yield electron_1.session.defaultSession.loadExtension(destPath, { allowFileAccess: true });
+            const ext = yield electron_1.session.defaultSession.extensions.loadExtension(destPath, { allowFileAccess: true });
             // Resolve icon
             let iconDataUrl;
             const iconKeys = manifest.icons ? Object.keys(manifest.icons).sort((a, b) => Number(b) - Number(a)) : [];
@@ -687,7 +689,7 @@ function setupIPC() {
     // Remove an extension
     electron_1.ipcMain.handle('extensions-remove', (_, extId, extPath) => __awaiter(this, void 0, void 0, function* () {
         try {
-            yield electron_1.session.defaultSession.removeExtension(extId);
+            yield electron_1.session.defaultSession.extensions.removeExtension(extId);
             if (extPath && fs_1.default.existsSync(extPath)) {
                 fs_1.default.rmSync(extPath, { recursive: true, force: true });
             }
@@ -731,10 +733,15 @@ function createSplashWindow() {
         transparent: true,
         frame: false,
         alwaysOnTop: true,
+        show: false,
+        backgroundColor: '#00000000',
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
         },
+    });
+    splashWindow.once('ready-to-show', () => {
+        splashWindow === null || splashWindow === void 0 ? void 0 : splashWindow.show();
     });
     const splashUrl = `file://${path_1.default.join(__dirname, electron_1.app.isPackaged ? '../splash.html' : '../splash.html')}`;
     splashWindow.loadURL(splashUrl);
@@ -949,3 +956,42 @@ electron_1.app.on('window-all-closed', () => {
         electron_1.app.quit();
     }
 });
+// --- Discord RPC Setup ---
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const DiscordRPC = require('discord-rpc');
+const clientId = '1471632125148135679';
+DiscordRPC.register(clientId);
+const rpc = new DiscordRPC.Client({ transport: 'ipc' });
+const startTimestamp = new Date();
+function setActivity() {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (!rpc)
+            return;
+        try {
+            yield rpc.setActivity({
+                details: 'En train de naviguer sur Explore',
+                startTimestamp,
+                largeImageKey: 'explore_logo', // TODO: Uploadez une image 'explore_logo' sur le portail dev Discord
+                largeImageText: 'Explore Browser',
+                instance: false,
+                buttons: [
+                    { label: 'Rejoindre le Discord', url: 'https://discord.gg/sjqwhXahtc' },
+                    { label: 'Visiter le site web', url: 'https://github.com/Julien0ff/explore-app' }
+                ]
+            });
+        }
+        catch (e) {
+            console.error('Discord RPC Error:', e);
+        }
+    });
+}
+rpc.on('ready', () => {
+    setActivity();
+    // Optionnel : Mise à jour régulière si l'état change
+    setInterval(() => {
+        setActivity();
+    }, 15e3);
+});
+// Ne crash pas l'app si Discord n'est pas lancé
+rpc.login({ clientId }).catch(console.error);
+// -------------------------

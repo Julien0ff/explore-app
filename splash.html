@@ -24,13 +24,14 @@
             position: relative;
             width: 320px;
             height: 340px;
-            background: rgba(14, 14, 26, 0.97);
+            background: rgba(32, 32, 48, 0.97);
             border-radius: 48px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
             overflow: hidden;
         }
 
@@ -57,7 +58,7 @@
             position: absolute;
             inset: 0;
             border-radius: 48px;
-            background: rgba(14, 14, 26, 0.97);
+            background: rgba(32, 32, 48, 0.97);
             z-index: 0;
         }
 
@@ -80,8 +81,8 @@
 
         .logo-glow {
             position: absolute;
-            inset: -20px;
-            background: radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%);
+            inset: -24px;
+            background: radial-gradient(circle, rgba(96, 165, 250, 0.25) 0%, transparent 70%);
             border-radius: 50%;
             animation: breathe 3s ease-in-out infinite;
         }
@@ -111,7 +112,7 @@
         .subtitle {
             font-size: 12px;
             font-weight: 500;
-            color: rgba(255, 255, 255, 0.25);
+            color: rgba(255, 255, 255, 0.5);
             letter-spacing: 3px;
             text-transform: uppercase;
             margin-top: 4px;
@@ -167,6 +168,24 @@
         @keyframes dotPulse {
             0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
             40% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Light Mode Adaptations */
+        @media (prefers-color-scheme: light) {
+            .container {
+                background: rgba(250, 250, 250, 0.97);
+                border: 1px solid rgba(0, 0, 0, 0.08);
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            }
+            .container::after {
+                background: rgba(250, 250, 250, 0.97);
+            }
+            .subtitle {
+                color: rgba(0, 0, 0, 0.45);
+            }
+            .logo-glow {
+                background: radial-gradient(circle, rgba(96, 165, 250, 0.15) 0%, transparent 70%);
+            }
         }
     </style>
 </head>
