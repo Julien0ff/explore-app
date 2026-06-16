@@ -34,12 +34,12 @@ if (!gotTheLock) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
     }
-    
+
     // Protocol handler for Windows/Linux
     // The URL is usually the last argument
     const url = commandLine.find(arg => arg.startsWith(`${PROTOCOL}://`));
     if (url) {
-        mainWindow?.webContents.send('deep-link', url);
+      mainWindow?.webContents.send('deep-link', url);
     }
   });
 }
@@ -113,81 +113,81 @@ function setupSession(sess: Electron.Session = session.defaultSession) {
   const filter = {
     urls: ['*://*/*']
   };
-  
+
   try {
-      const bypassRules = '<local>;*.google.com;*.gstatic.com;*.duckduckgo.com;flagcdn.com';
-      if (globalSessionConfig.proxyRules) {
-        sess.setProxy({ proxyRules: globalSessionConfig.proxyRules, proxyBypassRules: bypassRules });
-      } else {
-        sess.setProxy({ proxyRules: 'direct://' });
-      }
+    const bypassRules = '<local>;*.google.com;*.gstatic.com;*.duckduckgo.com;flagcdn.com';
+    if (globalSessionConfig.proxyRules) {
+      sess.setProxy({ proxyRules: globalSessionConfig.proxyRules, proxyBypassRules: bypassRules });
+    } else {
+      sess.setProxy({ proxyRules: 'direct://' });
+    }
 
-      // Initialize real Ad Blocker if installed
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { ElectronBlocker } = require('@cliqz/adblocker-electron');
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const fetch = require('cross-fetch');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ElectronBlocker.fromPrebuiltAdsAndTracking(fetch).then((b: any) => {
-          if (adBlockEnabled) {
+    // Initialize real Ad Blocker if installed
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { ElectronBlocker } = require('@cliqz/adblocker-electron');
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const fetch = require('cross-fetch');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ElectronBlocker.fromPrebuiltAdsAndTracking(fetch).then((b: any) => {
+        if (adBlockEnabled) {
+          b.enableBlockingInSession(sess);
+        }
+        // Provide a way to toggle it globally
+        ipcMain.removeAllListeners('toggle-adblock'); // Prevent duplicate listeners
+        ipcMain.on('toggle-adblock', (_event, enabled: boolean) => {
+          adBlockEnabled = enabled;
+          if (enabled) {
             b.enableBlockingInSession(sess);
-          }
-          // Provide a way to toggle it globally
-          ipcMain.removeAllListeners('toggle-adblock'); // Prevent duplicate listeners
-          ipcMain.on('toggle-adblock', (_event, enabled: boolean) => {
-            adBlockEnabled = enabled;
-            if (enabled) {
-              b.enableBlockingInSession(sess);
-            } else {
-              b.disableBlockingInSession(sess);
-            }
-          });
-        });
-      } catch {
-        // Fallback to basic custom blocker if module not installed yet
-        sess.webRequest.onBeforeRequest(filter, (details, callback) => {
-          if (!adBlockEnabled) {
-            callback({ cancel: false });
-            return;
-          }
-
-          const url = details.url.toLowerCase();
-          
-          // Whitelist all main Google domain requests
-          const isGoogleMain = (
-            url.startsWith('https://www.google.com') ||
-            url.startsWith('https://www.google.fr') ||
-            url.startsWith('https://google.com') ||
-            url.startsWith('https://google.fr') ||
-            url.startsWith('http://www.google.com') ||
-            url.startsWith('http://www.google.fr')
-          );
-          const isGoogleAdSubdomain = (
-            url.includes('ads.google.com') ||
-            url.includes('adservice.google.com')
-          );
-          if (
-            (isGoogleMain && !isGoogleAdSubdomain) ||
-            url.includes('gstatic.com') ||
-            url.includes('/favicon.ico') ||
-            url.includes('icons.duckduckgo.com') ||
-            url.includes('flagcdn.com')
-          ) {
-            callback({ cancel: false });
-            return;
-          }
-
-          const isAd = getAllBlockedDomains().some(domain => url.includes(domain));
-          
-          if (isAd) {
-            mainWindow?.webContents.send('ad-blocked', url);
-            callback({ cancel: true });
           } else {
-            callback({ cancel: false });
+            b.disableBlockingInSession(sess);
           }
         });
-      }
+      });
+    } catch {
+      // Fallback to basic custom blocker if module not installed yet
+      sess.webRequest.onBeforeRequest(filter, (details, callback) => {
+        if (!adBlockEnabled) {
+          callback({ cancel: false });
+          return;
+        }
+
+        const url = details.url.toLowerCase();
+
+        // Whitelist all main Google domain requests
+        const isGoogleMain = (
+          url.startsWith('https://www.google.com') ||
+          url.startsWith('https://www.google.fr') ||
+          url.startsWith('https://google.com') ||
+          url.startsWith('https://google.fr') ||
+          url.startsWith('http://www.google.com') ||
+          url.startsWith('http://www.google.fr')
+        );
+        const isGoogleAdSubdomain = (
+          url.includes('ads.google.com') ||
+          url.includes('adservice.google.com')
+        );
+        if (
+          (isGoogleMain && !isGoogleAdSubdomain) ||
+          url.includes('gstatic.com') ||
+          url.includes('/favicon.ico') ||
+          url.includes('icons.duckduckgo.com') ||
+          url.includes('flagcdn.com')
+        ) {
+          callback({ cancel: false });
+          return;
+        }
+
+        const isAd = getAllBlockedDomains().some(domain => url.includes(domain));
+
+        if (isAd) {
+          mainWindow?.webContents.send('ad-blocked', url);
+          callback({ cancel: true });
+        } else {
+          callback({ cancel: false });
+        }
+      });
+    }
   } catch (e) {
     console.error('Failed to setup session:', e);
   }
@@ -281,7 +281,7 @@ function setupIPC() {
     }
   });
   ipcMain.on('window-close', () => mainWindow?.close());
-  
+
   // IPC for theme control
   ipcMain.on('set-theme', (_event, mode: 'dark' | 'light' | 'system') => {
     nativeTheme.themeSource = mode;
@@ -341,7 +341,7 @@ function setupIPC() {
   // IPC for importing bookmarks
   ipcMain.handle('import-bookmarks', async () => {
     if (!mainWindow) return null;
-    
+
     const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
       title: 'Import Bookmarks',
       properties: ['openFile'],
@@ -587,16 +587,16 @@ function setupIPC() {
       const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
       const folderName = (manifest.name || path.basename(extSourcePath)).replace(/[^a-zA-Z0-9_-]/g, '_');
       const destPath = path.join(extensionsDir, folderName);
-      
+
       // Copy the extension folder
       if (fs.existsSync(destPath)) {
         fs.rmSync(destPath, { recursive: true, force: true });
       }
       copyDirSync(extSourcePath, destPath);
-      
+
       // Load the extension
       const ext = await session.defaultSession.extensions.loadExtension(destPath, { allowFileAccess: true });
-      
+
       // Resolve icon
       let iconDataUrl: string | undefined;
       const iconKeys = manifest.icons ? Object.keys(manifest.icons).sort((a: string, b: string) => Number(b) - Number(a)) : [];
@@ -610,7 +610,7 @@ function setupIPC() {
           iconDataUrl = `data:${mime};base64,${iconBuf.toString('base64')}`;
         }
       }
-      
+
       return {
         success: true,
         extension: {
@@ -636,20 +636,20 @@ function setupIPC() {
       const tmpDir = os.tmpdir();
       const zipPath = path.join(tmpDir, `ext-${Date.now()}.zip`);
       const extractPath = path.join(tmpDir, `ext-extract-${Date.now()}`);
-      
+
       // Download the zip using Electron's net module
       const response = await net.fetch(zipUrl);
       if (!response.ok) {
         return { success: false, error: `Failed to download: ${response.statusText}` };
       }
-      
+
       const arrayBuffer = await response.arrayBuffer();
       fs.writeFileSync(zipPath, Buffer.from(arrayBuffer));
-      
+
       // Extract the zip
       const zip = new AdmZip(zipPath);
       zip.extractAllTo(extractPath, true);
-      
+
       // Find where the manifest.json is
       let extSourcePath = extractPath;
       if (!fs.existsSync(path.join(extSourcePath, 'manifest.json'))) {
@@ -661,18 +661,18 @@ function setupIPC() {
           return { success: false, error: 'No manifest.json found in downloaded zip' };
         }
       }
-      
+
       const manifestPath = path.join(extSourcePath, 'manifest.json');
       const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
       const folderName = (manifest.name || path.basename(extSourcePath)).replace(/[^a-zA-Z0-9_-]/g, '_');
       const destPath = path.join(extensionsDir, folderName);
-      
+
       // Copy the extension folder
       if (fs.existsSync(destPath)) {
         fs.rmSync(destPath, { recursive: true, force: true });
       }
       copyDirSync(extSourcePath, destPath);
-      
+
       // Cleanup temp
       try {
         fs.rmSync(zipPath, { force: true });
@@ -680,10 +680,10 @@ function setupIPC() {
       } catch (e) {
         console.error('Failed to cleanup temp extraction:', e);
       }
-      
+
       // Load the extension
       const ext = await session.defaultSession.extensions.loadExtension(destPath, { allowFileAccess: true });
-      
+
       // Resolve icon
       let iconDataUrl: string | undefined;
       const iconKeys = manifest.icons ? Object.keys(manifest.icons).sort((a: string, b: string) => Number(b) - Number(a)) : [];
@@ -697,7 +697,7 @@ function setupIPC() {
           iconDataUrl = `data:${mime};base64,${iconBuf.toString('base64')}`;
         }
       }
-      
+
       return {
         success: true,
         extension: {
@@ -778,7 +778,7 @@ function createSplashWindow() {
 
   const splashUrl = `file://${path.join(__dirname, app.isPackaged ? '../splash.html' : '../splash.html')}`;
   splashWindow.loadURL(splashUrl);
-  
+
   return splashWindow;
 }
 
@@ -859,7 +859,7 @@ function createMainWindow() {
         }
       }
     });
-    
+
     item.once('done', (_event, state) => {
       if (state === 'completed') {
         mainWindow?.webContents.send('download-done', {
@@ -879,7 +879,7 @@ function createMainWindow() {
   });
 
   // Removed old ready-to-show listener from here as it was moved up
-  
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -916,11 +916,11 @@ app.whenReady().then(() => {
   app.on('open-url', (event, url) => {
     event.preventDefault();
     if (url.startsWith(`${PROTOCOL}://`)) {
-        if (mainWindow) {
-            if (mainWindow.isMinimized()) mainWindow.restore();
-            mainWindow.focus();
-        }
-        mainWindow?.webContents.send('deep-link', url);
+      if (mainWindow) {
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.focus();
+      }
+      mainWindow?.webContents.send('deep-link', url);
     }
   });
 
@@ -940,14 +940,14 @@ app.whenReady().then(() => {
       } else {
         globalSessionConfig.proxyRules = 'http://127.0.0.1:8080';
       }
-      
+
       const bypassRules = '<local>;*.google.com;*.gstatic.com;*.duckduckgo.com;flagcdn.com';
       const sessions = [
         session.defaultSession,
         session.fromPartition('persist:explore'),
         session.fromPartition('private')
       ];
-      
+
       for (const sess of sessions) {
         if (sess) {
           await sess.setProxy({ proxyRules: globalSessionConfig.proxyRules, proxyBypassRules: bypassRules });
@@ -968,7 +968,7 @@ app.whenReady().then(() => {
         session.fromPartition('persist:explore'),
         session.fromPartition('private')
       ];
-      
+
       for (const sess of sessions) {
         if (sess) {
           await sess.setProxy({ proxyRules: 'direct://' });
@@ -984,7 +984,7 @@ app.whenReady().then(() => {
   // Setup Session (Ad Blocker & User Agent)
   setupSession(session.defaultSession);
   setupSession(session.fromPartition('persist:explore'));
-  
+
   // Context Menu & Webview Handling
   app.on('web-contents-created', (_e, contents) => {
     if (contents.getType() === 'webview') {
@@ -1010,7 +1010,7 @@ app.on('window-all-closed', () => {
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const DiscordRPC = require('discord-rpc');
 
-const clientId = '1471632125148135679';
+const clientId = '1471632125148135679'; // TODO: Remplacez par votre vrai Client ID Discord
 DiscordRPC.register(clientId);
 const rpc = new DiscordRPC.Client({ transport: 'ipc' });
 const startTimestamp = new Date();
@@ -1026,7 +1026,7 @@ async function setActivity() {
       instance: false,
       buttons: [
         { label: 'Rejoindre le Discord', url: 'https://discord.gg/sjqwhXahtc' },
-        { label: 'Visiter le site web', url: 'https://github.com/Julien0ff/explore-app' }
+        { label: 'Visiter le site web', url: 'https://explore.lunaverse.fr' }
       ]
     });
   } catch (e) {
