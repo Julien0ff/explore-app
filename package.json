@@ -1,7 +1,7 @@
 {
   "name": "explore-browser",
   "private": true,
-  "version": "1.6.697",
+  "version": "1.6.698",
   "description": "Navigateur Explore - Le web réinventé",
   "author": "Foxy",
   "license": "GPL-3.0",
@@ -60,6 +60,7 @@
     "dev:electron": "tsc -p electron/tsconfig.json && cross-env NODE_ENV=development electron .",
     "dev": "node scripts/dev.js",
     "build": "tsc -b && vite build && tsc -p electron/tsconfig.json && electron-builder",
+    "build:cap": "tsc -b && vite build && npx cap sync",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -72,6 +73,7 @@
     "@capacitor/ios": "^8.4.1",
     "@capacitor/keyboard": "^8.0.5",
     "@capacitor/status-bar": "^8.0.2",
+    "capacitor-plugin-xframe": "^8.0.0",
     "@cliqz/adblocker-electron": "^1.26.12",
     "@supabase/supabase-js": "^2.97.0",
     "@tailwindcss/postcss": "^4.2.0",

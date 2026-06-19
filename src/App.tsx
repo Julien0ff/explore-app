@@ -61,6 +61,8 @@ import { getActiveTheme, applyTheme } from './lib/themes';
 import { detectPlatform } from './lib/platform';
 import { IOSLayout } from './components/mobile/IOSLayout';
 import { AndroidLayout } from './components/mobile/AndroidLayout';
+import { Capacitor } from '@capacitor/core';
+import { Xframe } from 'capacitor-plugin-xframe';
 
 interface Tab {
   id: string;
@@ -84,6 +86,16 @@ function App() {
   ]);
   const [activeTabId, setActiveTabId] = useState<string>('1');
   const [urlInput, setUrlInput] = useState<string>('https://www.google.com');
+
+  // Start xframe interceptor on native mobile platforms
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      console.log('[Xframe] Starting header interception bypass...');
+      Xframe.start()
+        .then(() => console.log('[Xframe] Header interceptor started successfully'))
+        .catch((err: unknown) => console.error('[Xframe] Failed to start header interceptor:', err));
+    }
+  }, []);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup' | 'forgot-password' | 'reset-password'>('login');
   const [user, setUser] = useState<User | null>(null);
@@ -1758,7 +1770,11 @@ function App() {
       onReload: () => {
         if (activeTab?.url.startsWith('explore://')) return;
         const iframe = document.getElementById(`iframe-${activeTabId}`) as HTMLIFrameElement;
-        if (iframe) iframe.src = iframe.src;
+        if (iframe) {
+          const currentSrc = iframe.src;
+          iframe.src = 'about:blank';
+          setTimeout(() => { iframe.src = currentSrc; }, 10);
+        }
       },
       onSelectTab: setActiveTabId,
       onCloseTab: (id: string) => closeTab({ stopPropagation: () => {} } as React.MouseEvent, id),

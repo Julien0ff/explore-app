@@ -17,17 +17,23 @@ export function detectPlatform(): Platform {
   }
 
   // Check Capacitor native platform
-  if (Capacitor.isNativePlatform()) {
-    const platform = Capacitor.getPlatform();
+  const hasCapacitorBridge = typeof window !== 'undefined' && (window as any).Capacitor;
+  if (Capacitor.isNativePlatform() || (hasCapacitorBridge && (window as any).Capacitor.isNativePlatform?.())) {
+    const platform = Capacitor.getPlatform() || (hasCapacitorBridge && (window as any).Capacitor.getPlatform?.());
+    console.log('[Platform] Detected native Capacitor platform:', platform);
     if (platform === 'ios') return 'ios';
     if (platform === 'android') return 'android';
   }
 
-  // Fallback: use User-Agent sniffing for web preview
-  const ua = navigator.userAgent.toLowerCase();
-  if (/iphone|ipad|ipod/.test(ua)) return 'ios';
-  if (/android/.test(ua)) return 'android';
+  // Fallback: use User-Agent sniffing for web preview / responsive debugging
+  if (typeof navigator !== 'undefined') {
+    const ua = navigator.userAgent.toLowerCase();
+    console.log('[Platform] Sniffing user-agent:', ua);
+    if (/iphone|ipad|ipod/.test(ua)) return 'ios';
+    if (/android/.test(ua)) return 'android';
+  }
 
+  console.log('[Platform] Falling back to desktop');
   return 'desktop';
 }
 

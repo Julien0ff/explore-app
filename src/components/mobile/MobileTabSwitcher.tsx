@@ -53,7 +53,7 @@ export function MobileTabSwitcher({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className={clsx(
-        'fixed inset-0 z-[999] flex flex-col',
+        'fixed inset-0 z-[999] flex flex-col transition-colors duration-500',
         isDark ? 'bg-[#0f0f1a]' : 'bg-gray-100'
       )}
     >
@@ -107,6 +107,12 @@ export function MobileTabSwitcher({
                 exit={{ opacity: 0, scale: 0.7 }}
                 transition={{ duration: 0.25 }}
                 onClick={() => {
+                  const iframe = document.getElementById(`iframe-${activeTabId}`) as HTMLIFrameElement;
+                  if (iframe) {
+                    const currentSrc = iframe.src;
+                    iframe.src = 'about:blank';
+                    setTimeout(() => { iframe.src = currentSrc; }, 10);
+                  }
                   onSelectTab(tab.id);
                   onClose();
                 }}
@@ -118,12 +124,10 @@ export function MobileTabSwitcher({
               >
                 {/* Preview area */}
                 <div className={clsx(
-                  'mobile-tab-preview flex items-center justify-center',
-                  tab.isPrivate
-                    ? 'bg-gradient-to-br from-slate-800 to-slate-900'
-                    : isDark
-                      ? 'bg-gradient-to-br from-white/3 to-white/1'
-                      : 'bg-gradient-to-br from-gray-50 to-gray-100'
+                  'relative aspect-auto h-48 rounded-3xl overflow-hidden shadow-2xl bg-linear-to-br transition-all',
+                  isDark ? 'from-gray-800 to-gray-900 ring-1 ring-white/10' : 'from-white to-gray-100 ring-1 ring-black/5',
+                  isActive && (isDark ? 'ring-2 ring-indigo-500' : 'ring-2 ring-blue-500'),
+                  tab.isPrivate && 'from-indigo-900 to-purple-900'
                 )}>
                   {tab.isPrivate ? (
                     <IncognitoIcon size="lg" animated={false} />

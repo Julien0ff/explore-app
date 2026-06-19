@@ -348,7 +348,7 @@ export function SearchPage({ query, onSearch, onOpenUrl, theme, colors, language
               transition={{ delay: i * 0.03 }}
               className={clsx(
                 "rounded-xl overflow-hidden border cursor-pointer group transition-all duration-200 hover:shadow-xl hover:scale-[1.02]",
-                isDark ? "border-white/5 bg-white/[0.02] hover:border-white/15" : "border-gray-200 bg-white hover:border-gray-300"
+                isDark ? "border-white/5 bg-white/2 hover:border-white/15" : "border-gray-200 bg-white hover:border-gray-300"
               )}
               onClick={() => onOpenUrl(vid.content)}
             >
@@ -417,7 +417,7 @@ export function SearchPage({ query, onSearch, onOpenUrl, theme, colors, language
               transition={{ delay: i * 0.04 }}
               className={clsx(
                 "flex gap-4 p-4 rounded-xl border cursor-pointer group transition-all duration-200 hover:shadow-lg",
-                isDark ? "border-white/5 bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.04]" : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
+                isDark ? "border-white/5 bg-white/2 hover:border-white/15 hover:bg-white/4" : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
               )}
               onClick={() => onOpenUrl(news.url)}
             >
