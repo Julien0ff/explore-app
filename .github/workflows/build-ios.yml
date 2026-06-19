@@ -1,0 +1,49 @@
+name: Build iOS Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build iOS App
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install NPM Dependencies
+        run: npm install
+
+      - name: Build Web App
+        run: |
+          npx tsc -b
+          npx vite build
+
+      - name: Sync Capacitor
+        run: npx cap sync ios
+
+      - name: Build iOS App (Unsigned)
+        working-directory: ./ios/App
+        # This will build the project without codesigning, useful for basic CI checks.
+        # To generate a real .ipa file for distribution, you need to configure 
+        # Certificates and Provisioning Profiles in Xcode and use 'xcodebuild archive'.
+        run: |
+          xcodebuild build \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      # To upload the .ipa to the GitHub release, you will need tools like 'fastlane' 
+      # or GitHub Actions for iOS code signing (e.g. apple-actions/import-codesign-certs).

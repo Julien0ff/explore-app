@@ -1,5 +1,5 @@
 import { 
-  Shield, Star, BookOpen, Globe, Settings, User, LogOut, 
+  Shield, BookOpen, Globe, Settings, User, LogOut, 
   Moon, Sun, History, Lock, Share2 
 } from 'lucide-react';
 import { clsx } from 'clsx';

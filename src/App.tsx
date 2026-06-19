@@ -58,7 +58,7 @@ import { SearchPage } from './components/SearchPage';
 import { FileDown } from 'lucide-react';
 import { getAccentColorClass } from './lib/theme';
 import { getActiveTheme, applyTheme } from './lib/themes';
-import { detectPlatform, isMobile } from './lib/platform';
+import { detectPlatform } from './lib/platform';
 import { IOSLayout } from './components/mobile/IOSLayout';
 import { AndroidLayout } from './components/mobile/AndroidLayout';
 
@@ -1721,7 +1721,7 @@ function App() {
       tabs,
       activeTabId,
       urlInput,
-      theme,
+      theme: theme as 'dark' | 'light',
       colors,
       language,
       suggestions,
@@ -1746,7 +1746,14 @@ function App() {
         updateTab(activeTabId, { url: finalUrl, title: finalUrl, isLoading: true });
         setUrlInput(finalUrl);
       },
-      onGoBack: () => webviewRefs.current[activeTabId]?.goBack?.() || updateTab(activeTabId, { url: 'explore://newtab' }),
+      onGoBack: () => {
+        const wb = webviewRefs.current[activeTabId];
+        if (wb && typeof wb.goBack === 'function' && wb.canGoBack?.()) {
+          wb.goBack();
+        } else {
+          updateTab(activeTabId, { url: 'explore://newtab' });
+        }
+      },
       onGoForward: () => webviewRefs.current[activeTabId]?.goForward?.(),
       onReload: () => {
         if (activeTab?.url.startsWith('explore://')) return;

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { clsx } from 'clsx';
-import { Puzzle, Plus, Trash2, FolderOpen, AlertCircle, Package, RefreshCw, Archive } from 'lucide-react';
+import { Puzzle, Trash2, FolderOpen, AlertCircle, Package, RefreshCw, Archive } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ThemeColors } from '../lib/theme';
 

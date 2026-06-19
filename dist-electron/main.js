@@ -775,6 +775,92 @@ function setupIPC() {
             return { success: false, error: String(e) };
         }
     }));
+    // Install a new extension from a local ZIP file
+    electron_1.ipcMain.handle('extensions-install-zip', (_, zipFilePath) => __awaiter(this, void 0, void 0, function* () {
+        var _a, _b;
+        try {
+            if (!zipFilePath || !fs_1.default.existsSync(zipFilePath)) {
+                return { success: false, error: 'ZIP file not found' };
+            }
+            const tmpDir = os_1.default.tmpdir();
+            const extractPath = path_1.default.join(tmpDir, `ext-extract-${Date.now()}`);
+            // Extract the zip
+            const zip = new adm_zip_1.default(zipFilePath);
+            zip.extractAllTo(extractPath, true);
+            // Find where the manifest.json is
+            let extSourcePath = extractPath;
+            if (!fs_1.default.existsSync(path_1.default.join(extSourcePath, 'manifest.json'))) {
+                // sometimes zips have a root folder inside
+                const dirs = fs_1.default.readdirSync(extractPath, { withFileTypes: true }).filter(d => d.isDirectory());
+                if (dirs.length > 0 && fs_1.default.existsSync(path_1.default.join(extractPath, dirs[0].name, 'manifest.json'))) {
+                    extSourcePath = path_1.default.join(extractPath, dirs[0].name);
+                }
+                else {
+                    return { success: false, error: 'No manifest.json found in ZIP' };
+                }
+            }
+            const manifestPath = path_1.default.join(extSourcePath, 'manifest.json');
+            const manifest = JSON.parse(fs_1.default.readFileSync(manifestPath, 'utf-8'));
+            const folderName = (manifest.name || path_1.default.basename(extSourcePath)).replace(/[^a-zA-Z0-9_-]/g, '_');
+            const destPath = path_1.default.join(extensionsDir, folderName);
+            // Copy the extension folder
+            if (fs_1.default.existsSync(destPath)) {
+                fs_1.default.rmSync(destPath, { recursive: true, force: true });
+            }
+            copyDirSync(extSourcePath, destPath);
+            // Cleanup temp
+            try {
+                fs_1.default.rmSync(extractPath, { recursive: true, force: true });
+            }
+            catch (e) {
+                console.error('Failed to cleanup temp extraction:', e);
+            }
+            // Load the extension
+            const ext = yield electron_1.session.defaultSession.extensions.loadExtension(destPath, { allowFileAccess: true });
+            // Resolve icon
+            let iconDataUrl;
+            const iconKeys = manifest.icons ? Object.keys(manifest.icons).sort((a, b) => Number(b) - Number(a)) : [];
+            if (iconKeys.length > 0) {
+                const iconRelPath = manifest.icons[iconKeys[0]];
+                const iconAbsPath = path_1.default.join(destPath, iconRelPath);
+                if (fs_1.default.existsSync(iconAbsPath)) {
+                    const iconBuf = fs_1.default.readFileSync(iconAbsPath);
+                    const ext2 = path_1.default.extname(iconAbsPath).toLowerCase();
+                    const mime = ext2 === '.svg' ? 'image/svg+xml' : ext2 === '.png' ? 'image/png' : 'image/jpeg';
+                    iconDataUrl = `data:${mime};base64,${iconBuf.toString('base64')}`;
+                }
+            }
+            return {
+                success: true,
+                extension: {
+                    id: ext.id,
+                    name: manifest.name || folderName,
+                    version: manifest.version || '1.0',
+                    description: manifest.description || '',
+                    icon: iconDataUrl,
+                    popup: ((_a = manifest.action) === null || _a === void 0 ? void 0 : _a.default_popup) || ((_b = manifest.browser_action) === null || _b === void 0 ? void 0 : _b.default_popup) || undefined,
+                    enabled: true,
+                    path: destPath
+                }
+            };
+        }
+        catch (e) {
+            console.error('Failed to install extension from zip:', e);
+            return { success: false, error: String(e) };
+        }
+    }));
+    // Open a file dialog to pick an extension ZIP file
+    electron_1.ipcMain.handle('extensions-pick-zip', () => __awaiter(this, void 0, void 0, function* () {
+        if (!mainWindow)
+            return null;
+        const { canceled, filePaths } = yield electron_1.dialog.showOpenDialog(mainWindow, {
+            title: 'Select Extension ZIP File',
+            properties: ['openFile'],
+            filters: [{ name: 'ZIP Files', extensions: ['zip'] }],
+            buttonLabel: 'Load ZIP'
+        });
+        return canceled || filePaths.length === 0 ? null : filePaths[0];
+    }));
     // Remove an extension
     electron_1.ipcMain.handle('extensions-remove', (_, extId, extPath) => __awaiter(this, void 0, void 0, function* () {
         try {

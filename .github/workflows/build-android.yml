@@ -1,0 +1,57 @@
+name: Build Android Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Install NPM Dependencies
+        run: npm install
+
+      - name: Build Web App
+        # Note: Depending on your package.json, electron-builder might throw an error 
+        # if run on ubuntu without xvfb. If npm run build runs tsc && vite build && electron-builder,
+        # you might want to create a separate script like "build:web": "tsc -b && vite build" 
+        # and run that instead, to avoid building the PC version here.
+        run: |
+          npx tsc -b
+          npx vite build
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Build Android APK (Debug)
+        working-directory: ./android
+        run: ./gradlew assembleDebug
+
+      # To build a signed Release APK, you would use 'assembleRelease' and setup 
+      # signing variables (KEYSTORE_BASE64, KEY_ALIAS, etc.) via GitHub Secrets.
+
+      - name: Upload APK to GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

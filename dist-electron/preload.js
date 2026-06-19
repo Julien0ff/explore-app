@@ -75,4 +75,6 @@ electron_1.contextBridge.exposeInMainWorld('electron', {
     extensionsInstallFromUrl: (url) => electron_1.ipcRenderer.invoke('extensions-install-from-url', url),
     extensionsRemove: (id, extPath) => electron_1.ipcRenderer.invoke('extensions-remove', id, extPath),
     extensionsPickFolder: () => electron_1.ipcRenderer.invoke('extensions-pick-folder'),
+    extensionsPickZip: () => electron_1.ipcRenderer.invoke('extensions-pick-zip'),
+    extensionsInstallZip: (zipFilePath) => electron_1.ipcRenderer.invoke('extensions-install-zip', zipFilePath),
 });
