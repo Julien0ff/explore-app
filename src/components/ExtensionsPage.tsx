@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { clsx } from 'clsx';
-import { Puzzle, Plus, Trash2, FolderOpen, AlertCircle, Package, RefreshCw } from 'lucide-react';
+import { Puzzle, Plus, Trash2, FolderOpen, AlertCircle, Package, RefreshCw, Archive } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ThemeColors } from '../lib/theme';
 
@@ -68,6 +68,34 @@ export function ExtensionsPage({ theme, language, colors, isEmbedded, onOpenStor
       }
 
       const result = await electron.extensionsInstall(folderPath);
+      if (result.success && result.extension) {
+        setExtensions(prev => [...prev, result.extension]);
+        window.dispatchEvent(new Event('extensions-changed'));
+      } else {
+        setError(result.error || (language === 'fr' ? 'Échec de l\'installation' : 'Installation failed'));
+      }
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setIsInstalling(false);
+    }
+  };
+
+  const handleInstallZip = async () => {
+    setIsInstalling(true);
+    setError(null);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const electron = (window as any).electron;
+      if (!electron?.extensionsPickZip || !electron?.extensionsInstallZip) return;
+      
+      const zipPath = await electron.extensionsPickZip();
+      if (!zipPath) {
+        setIsInstalling(false);
+        return;
+      }
+
+      const result = await electron.extensionsInstallZip(zipPath);
       if (result.success && result.extension) {
         setExtensions(prev => [...prev, result.extension]);
         window.dispatchEvent(new Event('extensions-changed'));
@@ -167,7 +195,22 @@ export function ExtensionsPage({ theme, language, colors, isEmbedded, onOpenStor
               ) : (
                 <FolderOpen className="w-4 h-4" />
               )}
-              {language === 'fr' ? 'Charger une extension' : 'Load extension'}
+              {language === 'fr' ? 'Dossier' : 'Unpacked Folder'}
+            </button>
+            <button
+              onClick={handleInstallZip}
+              disabled={isInstalling}
+              className={clsx(
+                "flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-semibold transition-all shadow-lg hover:shadow-xl active:scale-95 disabled:opacity-50",
+                colors.bgSolid, colors.bgHover
+              )}
+            >
+              {isInstalling ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Archive className="w-4 h-4" />
+              )}
+              {language === 'fr' ? 'Charger un ZIP' : 'Load ZIP'}
             </button>
           </div>
         </div>
@@ -207,8 +250,8 @@ export function ExtensionsPage({ theme, language, colors, isEmbedded, onOpenStor
               </p>
               <p className={clsx("text-sm mt-1.5 leading-relaxed", isDark ? "text-gray-400" : "text-gray-500")}>
                 {language === 'fr'
-                  ? '1. Téléchargez une extension Chrome au format dézippé (dossier contenant un manifest.json). 2. Cliquez sur « Charger une extension ». 3. Sélectionnez le dossier de l\'extension.'
-                  : '1. Download a Chrome extension as an unpacked folder (containing a manifest.json). 2. Click "Load extension". 3. Select the extension folder.'
+                  ? '1. Téléchargez une extension Chrome au format ZIP ou dossier (contenant un manifest.json). 2. Cliquez sur « Charger un ZIP » ou « Dossier ». 3. Sélectionnez le fichier ZIP ou le dossier de l\'extension.'
+                  : '1. Download a Chrome extension as a ZIP file or folder (containing a manifest.json). 2. Click "Load ZIP" or "Unpacked Folder". 3. Select the ZIP file or extension folder.'
                 }
               </p>
             </div>
@@ -237,16 +280,28 @@ export function ExtensionsPage({ theme, language, colors, isEmbedded, onOpenStor
                 : 'Load your first Chrome extension to customize your browsing experience.'
               }
             </p>
-            <button
-              onClick={handleInstall}
-              className={clsx(
-                "mt-8 flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-semibold transition-all shadow-lg hover:shadow-xl active:scale-95",
-                colors.bgSolid, colors.bgHover
-              )}
-            >
-              <Plus className="w-5 h-5" />
-              {language === 'fr' ? 'Installer une extension' : 'Install an extension'}
-            </button>
+            <div className="flex gap-4 mt-8">
+              <button
+                onClick={handleInstall}
+                className={clsx(
+                  "flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-semibold transition-all shadow-lg hover:shadow-xl active:scale-95",
+                  colors.bgSolid, colors.bgHover
+                )}
+              >
+                <FolderOpen className="w-5 h-5" />
+                {language === 'fr' ? 'Charger un dossier' : 'Load folder'}
+              </button>
+              <button
+                onClick={handleInstallZip}
+                className={clsx(
+                  "flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-semibold transition-all shadow-lg hover:shadow-xl active:scale-95",
+                  colors.bgSolid, colors.bgHover
+                )}
+              >
+                <Archive className="w-5 h-5" />
+                {language === 'fr' ? 'Charger un ZIP' : 'Load ZIP'}
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid gap-4">

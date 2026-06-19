@@ -58,6 +58,9 @@ import { SearchPage } from './components/SearchPage';
 import { FileDown } from 'lucide-react';
 import { getAccentColorClass } from './lib/theme';
 import { getActiveTheme, applyTheme } from './lib/themes';
+import { detectPlatform, isMobile } from './lib/platform';
+import { IOSLayout } from './components/mobile/IOSLayout';
+import { AndroidLayout } from './components/mobile/AndroidLayout';
 
 interface Tab {
   id: string;
@@ -1711,6 +1714,138 @@ function App() {
     );
   };
 
+  const platform = detectPlatform();
+
+  const renderMobileLayout = () => {
+    const layoutProps = {
+      tabs,
+      activeTabId,
+      urlInput,
+      theme,
+      colors,
+      language,
+      suggestions,
+      adBlockEnabled,
+      blockedAdsCount,
+      isBookmarked: bookmarks.some(b => b.url === activeTab?.url),
+      userName: user?.name,
+      userAvatar: user?.avatar,
+      isLoggedIn: !!user,
+      onUrlChange: setUrlInput,
+      onUrlSubmit: (url: string) => {
+        let finalUrl = url;
+        if (!url.startsWith('http') && !url.startsWith('explore://')) {
+          finalUrl = getSearchUrl(url);
+        }
+        updateTab(activeTabId, { url: finalUrl, title: finalUrl, isLoading: true });
+        setUrlInput(finalUrl);
+      },
+      onGetSuggestions: fetchSuggestions,
+      onSuggestionSelect: (suggestion: string) => {
+        const finalUrl = getSearchUrl(suggestion);
+        updateTab(activeTabId, { url: finalUrl, title: finalUrl, isLoading: true });
+        setUrlInput(finalUrl);
+      },
+      onGoBack: () => webviewRefs.current[activeTabId]?.goBack?.() || updateTab(activeTabId, { url: 'explore://newtab' }),
+      onGoForward: () => webviewRefs.current[activeTabId]?.goForward?.(),
+      onReload: () => {
+        if (activeTab?.url.startsWith('explore://')) return;
+        const iframe = document.getElementById(`iframe-${activeTabId}`) as HTMLIFrameElement;
+        if (iframe) iframe.src = iframe.src;
+      },
+      onSelectTab: setActiveTabId,
+      onCloseTab: (id: string) => closeTab({ stopPropagation: () => {} } as React.MouseEvent, id),
+      onNewTab: () => addTab('explore://newtab', true),
+      onNewPrivateTab: () => addTab('explore://newtab', true, true),
+      onToggleBookmark: toggleBookmark,
+      onToggleAdBlock: () => setAdBlockEnabled(!adBlockEnabled),
+      onToggleTheme: () => setTheme(theme === 'dark' ? 'light' : 'dark'),
+      onOpenBookmarks: () => updateTab(activeTabId, { url: 'explore://bookmarks' }),
+      onOpenHistory: () => updateTab(activeTabId, { url: 'explore://history' }),
+      onOpenSettings: () => updateTab(activeTabId, { url: 'explore://settings' }),
+      onOpenAuth: () => setIsAuthModalOpen(true),
+      onLogout: () => supabase.auth.signOut(),
+      onShare: () => {
+        if (navigator.share && activeTab) {
+          navigator.share({ title: activeTab.title, url: activeTab.url }).catch(console.error);
+        }
+      }
+    };
+
+    const renderTabPages = () => (
+      <div className="w-full h-full relative">
+        {tabs.map(tab => {
+          const isActive = activeTabId === tab.id;
+          return (
+            <div
+              key={tab.id}
+              className={clsx(
+                "absolute inset-0 w-full h-full transition-opacity duration-300",
+                isActive ? "opacity-100 z-10 pointer-events-auto" : "opacity-0 z-0 pointer-events-none"
+              )}
+            >
+              {tab.url.startsWith('explore://') ? (
+                <div className={clsx("w-full h-full overflow-y-auto", theme === 'dark' ? "bg-[#1e1e2e]" : "bg-white")}>
+                  {tab.url === 'explore://newtab' && (
+                    <NewTabPage 
+                      theme={theme} 
+                      accentColor={accentColor}
+                      isPrivate={tab.isPrivate}
+                      onSearch={(query) => {
+                        const url = getSearchUrl(query);
+                        updateTab(tab.id, { url, title: url, isLoading: true });
+                      }} 
+                      onQueryChange={setUrlInput}
+                      suggestions={suggestions}
+                      language={language}
+                      blockedAdsCount={blockedAdsCount}
+                      adBlockEnabled={adBlockEnabled}
+                      bookmarks={bookmarks}
+                    />
+                  )}
+                  {tab.url === 'explore://settings' && (
+                    <div className="p-4"><p className="text-gray-500">Settings available in bottom sheet.</p></div>
+                  )}
+                  {tab.url === 'explore://history' && (
+                    <div className="p-4"><p className="text-gray-500">History page (Mobile optimized coming soon).</p></div>
+                  )}
+                  {tab.url === 'explore://bookmarks' && (
+                    <div className="p-4"><p className="text-gray-500">Bookmarks page (Mobile optimized coming soon).</p></div>
+                  )}
+                </div>
+              ) : (
+                <iframe
+                  id={`iframe-${tab.id}`}
+                  src={tab.url}
+                  className="w-full h-full border-none bg-white"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                  onLoad={(e) => {
+                    updateTab(tab.id, { isLoading: false, title: tab.url });
+                    const target = e.target as HTMLIFrameElement;
+                    if (target.contentWindow) {
+                      addToHistory(tab.url, tab.url, tab.isPrivate);
+                    }
+                  }}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+
+    if (platform === 'ios') {
+      return <IOSLayout {...layoutProps}>{renderTabPages()}</IOSLayout>;
+    } else {
+      return <AndroidLayout {...layoutProps}>{renderTabPages()}</AndroidLayout>;
+    }
+  };
+
+  if (platform === 'ios' || platform === 'android') {
+    return renderMobileLayout();
+  }
+
+  // DESKTOP LAYOUT
   return (
     <div className={clsx("flex h-screen w-full overflow-hidden transition-colors duration-1000 relative theme-bg", 
       activeTab?.isPrivate 

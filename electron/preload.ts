@@ -41,6 +41,9 @@ contextBridge.exposeInMainWorld('electron', {
   getSearchSuggestions: (query: string) => ipcRenderer.invoke('get-search-suggestions', query),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   searchWeb: (query: string) => ipcRenderer.invoke('search-web', query),
+  searchImages: (query: string) => ipcRenderer.invoke('search-images', query),
+  searchVideos: (query: string) => ipcRenderer.invoke('search-videos', query),
+  searchNews: (query: string) => ipcRenderer.invoke('search-news', query),
   capturePage: (id: number) => ipcRenderer.invoke('capture-page', id),
   prepareOAuthRedirect: () => ipcRenderer.invoke('prepare-oauth'),
   onContextMenuRequest: (callback: (data: { params: Electron.ContextMenuParams, x: number, y: number }) => void) => 
@@ -72,4 +75,6 @@ contextBridge.exposeInMainWorld('electron', {
   extensionsInstallFromUrl: (url: string) => ipcRenderer.invoke('extensions-install-from-url', url),
   extensionsRemove: (id: string, extPath: string) => ipcRenderer.invoke('extensions-remove', id, extPath),
   extensionsPickFolder: () => ipcRenderer.invoke('extensions-pick-folder'),
+  extensionsPickZip: () => ipcRenderer.invoke('extensions-pick-zip'),
+  extensionsInstallZip: (zipFilePath: string) => ipcRenderer.invoke('extensions-install-zip', zipFilePath),
 });

@@ -84,6 +84,8 @@ interface Window {
     extensionsInstallFromUrl: (url: string) => Promise<{ success: boolean; error?: string; extension?: ElectronExtensionInfo }>;
     extensionsRemove: (id: string, extPath: string) => Promise<{ success: boolean; error?: string }>;
     extensionsPickFolder: () => Promise<string | null>;
+    extensionsPickZip: () => Promise<string | null>;
+    extensionsInstallZip: (zipFilePath: string) => Promise<{ success: boolean; error?: string; extension?: ElectronExtensionInfo }>;
   };
 }
 

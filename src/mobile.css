@@ -1,0 +1,319 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Explore Mobile — Custom Styles
+   Applies ONLY on iOS & Android (Capacitor) builds.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ─── Safe area insets ─────────────────────────────────────────── */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  /* Mobile layout sizes */
+  --mobile-header-h: 52px;
+  --mobile-bottom-h: 60px;
+  --mobile-tab-strip-h: 42px;
+}
+
+/* ─── iOS 26 / 27 Glass Nav Bar ────────────────────────────────── */
+.ios-glass-bar {
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  background: rgba(30, 30, 46, 0.72);
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.08);
+}
+
+.ios-glass-bar.light {
+  background: rgba(255, 255, 255, 0.78);
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+}
+
+/* ─── iOS Bottom Bubble Search Bar ─────────────────────────────── */
+.ios-search-bubble {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 28px;
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ios-search-bubble.light {
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.ios-search-bubble:focus-within {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  transform: scale(1.02);
+}
+
+.ios-search-bubble.light:focus-within {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* ─── iOS Bottom Navigation Bar ────────────────────────────────── */
+.ios-bottom-nav {
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  background: rgba(30, 30, 46, 0.85);
+  border-top: 0.5px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: var(--safe-bottom);
+}
+
+.ios-bottom-nav.light {
+  background: rgba(255, 255, 255, 0.85);
+  border-top: 0.5px solid rgba(0, 0, 0, 0.06);
+}
+
+.ios-nav-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 14px;
+  gap: 2px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  color: rgba(255, 255, 255, 0.45);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ios-nav-button.active {
+  color: var(--theme-accent, #3b82f6);
+}
+
+.ios-nav-button:active {
+  transform: scale(0.92);
+  opacity: 0.7;
+}
+
+/* ─── Android Explore Custom Layout ───────────────────────────── */
+.android-header {
+  background: rgba(30, 30, 46, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.android-header.light {
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.android-url-bar {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  transition: all 0.25s ease;
+}
+
+.android-url-bar.light {
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.android-url-bar:focus-within {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--theme-accent, #3b82f6);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.android-bottom-bar {
+  background: rgba(30, 30, 46, 0.95);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: var(--safe-bottom);
+}
+
+.android-bottom-bar.light {
+  background: rgba(255, 255, 255, 0.95);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.android-nav-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  border-radius: 14px;
+  transition: all 0.2s ease;
+  color: rgba(255, 255, 255, 0.5);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.android-nav-button.active {
+  color: var(--theme-accent, #3b82f6);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.android-nav-button:active {
+  transform: scale(0.88);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ─── Shared Mobile Tab Grid ──────────────────────────────────── */
+.mobile-tab-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 16px;
+  padding-top: calc(var(--safe-top) + 60px);
+  padding-bottom: calc(var(--safe-bottom) + 80px);
+  overflow-y: auto;
+  height: 100vh;
+}
+
+.mobile-tab-card {
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.25s ease;
+  position: relative;
+}
+
+.mobile-tab-card.light {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.mobile-tab-card.active {
+  border-color: var(--theme-accent, #3b82f6);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+
+.mobile-tab-card:active {
+  transform: scale(0.96);
+}
+
+.mobile-tab-preview {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px 12px 0 0;
+}
+
+.mobile-tab-title {
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-tab-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 14px;
+  transition: all 0.15s ease;
+}
+
+.mobile-tab-close:active {
+  transform: scale(0.85);
+  background: rgba(239, 68, 68, 0.7);
+}
+
+/* ─── Mobile Pull-up Settings Sheet ───────────────────────────── */
+.mobile-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9998;
+  backdrop-filter: blur(4px);
+}
+
+.mobile-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 85vh;
+  background: #1e1e2e;
+  border-radius: 24px 24px 0 0;
+  z-index: 9999;
+  overflow-y: auto;
+  padding-bottom: var(--safe-bottom);
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.4);
+}
+
+.mobile-sheet.light {
+  background: #fff;
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-sheet-handle {
+  width: 36px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 10px auto 16px auto;
+}
+
+.mobile-sheet.light .mobile-sheet-handle {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+/* ─── Animations ──────────────────────────────────────────────── */
+@keyframes mobile-slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes mobile-slide-down {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+
+@keyframes mobile-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.mobile-slide-up {
+  animation: mobile-slide-up 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.mobile-slide-down {
+  animation: mobile-slide-down 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+.mobile-fade-in {
+  animation: mobile-fade-in 0.25s ease-out;
+}
+
+/* ─── Disable desktop-only features on mobile ─────────────────── */
+.mobile-layout .drag-region {
+  -webkit-app-region: unset;
+}
+
+/* ─── Touch optimizations ─────────────────────────────────────── */
+.mobile-layout * {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.mobile-layout input,
+.mobile-layout textarea {
+  font-size: 16px !important; /* Prevent iOS zoom on focus */
+}

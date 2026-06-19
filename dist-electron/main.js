@@ -257,6 +257,95 @@ function setupIPC() {
             return null;
         }
     }));
+    // IPC for Explore Image Search (DuckDuckGo Images API)
+    electron_1.ipcMain.handle('search-images', (_, query) => __awaiter(this, void 0, void 0, function* () {
+        try {
+            // Step 1: Get the vqd token from DuckDuckGo
+            const tokenRes = yield fetch(`https://duckduckgo.com/?q=${encodeURIComponent(query)}`, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                }
+            });
+            const tokenHtml = yield tokenRes.text();
+            const vqdMatch = tokenHtml.match(/vqd=["']?([^"'&]+)/);
+            if (!vqdMatch)
+                throw new Error('Could not get vqd token');
+            const vqd = vqdMatch[1];
+            // Step 2: Fetch images using the API
+            const imgRes = yield fetch(`https://duckduckgo.com/i.js?l=fr-fr&o=json&q=${encodeURIComponent(query)}&vqd=${vqd}&f=,,,,,&p=1`, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Referer': 'https://duckduckgo.com/'
+                }
+            });
+            if (!imgRes.ok)
+                throw new Error('Image search failed');
+            const data = yield imgRes.json();
+            return data.results || [];
+        }
+        catch (error) {
+            console.error('Image search failed:', error);
+            return [];
+        }
+    }));
+    // IPC for Explore Video Search (DuckDuckGo Videos API)
+    electron_1.ipcMain.handle('search-videos', (_, query) => __awaiter(this, void 0, void 0, function* () {
+        try {
+            const tokenRes = yield fetch(`https://duckduckgo.com/?q=${encodeURIComponent(query)}`, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                }
+            });
+            const tokenHtml = yield tokenRes.text();
+            const vqdMatch = tokenHtml.match(/vqd=["']?([^"'&]+)/);
+            if (!vqdMatch)
+                throw new Error('Could not get vqd token');
+            const vqd = vqdMatch[1];
+            const vidRes = yield fetch(`https://duckduckgo.com/v.js?l=fr-fr&o=json&q=${encodeURIComponent(query)}&vqd=${vqd}&f=,,,,,&p=1`, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Referer': 'https://duckduckgo.com/'
+                }
+            });
+            if (!vidRes.ok)
+                throw new Error('Video search failed');
+            const data = yield vidRes.json();
+            return data.results || [];
+        }
+        catch (error) {
+            console.error('Video search failed:', error);
+            return [];
+        }
+    }));
+    // IPC for Explore News Search (DuckDuckGo News API)
+    electron_1.ipcMain.handle('search-news', (_, query) => __awaiter(this, void 0, void 0, function* () {
+        try {
+            const tokenRes = yield fetch(`https://duckduckgo.com/?q=${encodeURIComponent(query)}`, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                }
+            });
+            const tokenHtml = yield tokenRes.text();
+            const vqdMatch = tokenHtml.match(/vqd=["']?([^"'&]+)/);
+            if (!vqdMatch)
+                throw new Error('Could not get vqd token');
+            const vqd = vqdMatch[1];
+            const newsRes = yield fetch(`https://duckduckgo.com/news.js?l=fr-fr&o=json&q=${encodeURIComponent(query)}&vqd=${vqd}&f=,,,,,&p=1`, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Referer': 'https://duckduckgo.com/'
+                }
+            });
+            if (!newsRes.ok)
+                throw new Error('News search failed');
+            const data = yield newsRes.json();
+            return data.results || [];
+        }
+        catch (error) {
+            console.error('News search failed:', error);
+            return [];
+        }
+    }));
     // IPC for window controls
     electron_1.ipcMain.on('window-minimize', () => mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.minimize());
     electron_1.ipcMain.on('window-maximize', () => {
@@ -961,37 +1050,69 @@ electron_1.app.on('window-all-closed', () => {
 const DiscordRPC = require('discord-rpc');
 const clientId = '1471632125148135679';
 DiscordRPC.register(clientId);
-const rpc = new DiscordRPC.Client({ transport: 'ipc' });
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let rpc = null;
 const startTimestamp = new Date();
+let isRpcReady = false;
+function connectRPC() {
+    if (rpc) {
+        try {
+            rpc.destroy();
+        }
+        catch ( /* ignore */_a) { /* ignore */ }
+    }
+    rpc = new DiscordRPC.Client({ transport: 'ipc' });
+    rpc.on('ready', () => {
+        isRpcReady = true;
+        setActivity();
+    });
+    rpc.on('disconnected', () => {
+        isRpcReady = false;
+    });
+    rpc.login({ clientId }).catch(() => {
+        isRpcReady = false;
+    });
+}
 function setActivity() {
     return __awaiter(this, void 0, void 0, function* () {
-        if (!rpc)
+        if (!rpc || !isRpcReady)
             return;
         try {
             yield rpc.setActivity({
                 details: 'En train de naviguer sur Explore',
                 startTimestamp,
-                largeImageKey: 'explore_logo', // TODO: Uploadez une image 'explore_logo' sur le portail dev Discord
+                largeImageKey: 'explore_logo',
                 largeImageText: 'Explore Browser',
                 instance: false,
                 buttons: [
                     { label: 'Rejoindre le Discord', url: 'https://discord.gg/sjqwhXahtc' },
-                    { label: 'Visiter le site web', url: 'https://github.com/Julien0ff/explore-app' }
+                    { label: 'Visiter le site web', url: 'https://explore.lunaverse.fr' }
                 ]
             });
         }
-        catch (e) {
-            console.error('Discord RPC Error:', e);
+        catch (_a) {
+            isRpcReady = false; // En cas d'erreur, on force la reconnexion au prochain cycle
         }
     });
 }
-rpc.on('ready', () => {
-    setActivity();
-    // Optionnel : Mise à jour régulière si l'état change
-    setInterval(() => {
+connectRPC();
+// Vérification toutes les 15 secondes
+setInterval(() => {
+    if (!isRpcReady) {
+        connectRPC();
+    }
+    else {
         setActivity();
-    }, 15e3);
+    }
+}, 15000);
+// Nettoyage propre quand l'application se ferme
+electron_1.app.on('before-quit', () => {
+    if (rpc) {
+        try {
+            rpc.clearActivity();
+            rpc.destroy();
+        }
+        catch ( /* ignore */_a) { /* ignore */ }
+    }
 });
-// Ne crash pas l'app si Discord n'est pas lancé
-rpc.login({ clientId }).catch(console.error);
 // -------------------------

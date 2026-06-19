@@ -271,6 +271,92 @@ function setupIPC() {
     }
   });
 
+  // IPC for Explore Image Search (DuckDuckGo Images API)
+  ipcMain.handle('search-images', async (_, query: string) => {
+    try {
+      // Step 1: Get the vqd token from DuckDuckGo
+      const tokenRes = await fetch(`https://duckduckgo.com/?q=${encodeURIComponent(query)}`, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      });
+      const tokenHtml = await tokenRes.text();
+      const vqdMatch = tokenHtml.match(/vqd=["']?([^"'&]+)/);
+      if (!vqdMatch) throw new Error('Could not get vqd token');
+      const vqd = vqdMatch[1];
+
+      // Step 2: Fetch images using the API
+      const imgRes = await fetch(`https://duckduckgo.com/i.js?l=fr-fr&o=json&q=${encodeURIComponent(query)}&vqd=${vqd}&f=,,,,,&p=1`, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Referer': 'https://duckduckgo.com/'
+        }
+      });
+      if (!imgRes.ok) throw new Error('Image search failed');
+      const data = await imgRes.json();
+      return data.results || [];
+    } catch (error) {
+      console.error('Image search failed:', error);
+      return [];
+    }
+  });
+
+  // IPC for Explore Video Search (DuckDuckGo Videos API)
+  ipcMain.handle('search-videos', async (_, query: string) => {
+    try {
+      const tokenRes = await fetch(`https://duckduckgo.com/?q=${encodeURIComponent(query)}`, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      });
+      const tokenHtml = await tokenRes.text();
+      const vqdMatch = tokenHtml.match(/vqd=["']?([^"'&]+)/);
+      if (!vqdMatch) throw new Error('Could not get vqd token');
+      const vqd = vqdMatch[1];
+
+      const vidRes = await fetch(`https://duckduckgo.com/v.js?l=fr-fr&o=json&q=${encodeURIComponent(query)}&vqd=${vqd}&f=,,,,,&p=1`, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Referer': 'https://duckduckgo.com/'
+        }
+      });
+      if (!vidRes.ok) throw new Error('Video search failed');
+      const data = await vidRes.json();
+      return data.results || [];
+    } catch (error) {
+      console.error('Video search failed:', error);
+      return [];
+    }
+  });
+
+  // IPC for Explore News Search (DuckDuckGo News API)
+  ipcMain.handle('search-news', async (_, query: string) => {
+    try {
+      const tokenRes = await fetch(`https://duckduckgo.com/?q=${encodeURIComponent(query)}`, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      });
+      const tokenHtml = await tokenRes.text();
+      const vqdMatch = tokenHtml.match(/vqd=["']?([^"'&]+)/);
+      if (!vqdMatch) throw new Error('Could not get vqd token');
+      const vqd = vqdMatch[1];
+
+      const newsRes = await fetch(`https://duckduckgo.com/news.js?l=fr-fr&o=json&q=${encodeURIComponent(query)}&vqd=${vqd}&f=,,,,,&p=1`, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Referer': 'https://duckduckgo.com/'
+        }
+      });
+      if (!newsRes.ok) throw new Error('News search failed');
+      const data = await newsRes.json();
+      return data.results || [];
+    } catch (error) {
+      console.error('News search failed:', error);
+      return [];
+    }
+  });
+
   // IPC for window controls
   ipcMain.on('window-minimize', () => mainWindow?.minimize());
   ipcMain.on('window-maximize', () => {
@@ -717,6 +803,97 @@ function setupIPC() {
     }
   });
 
+  // Install a new extension from a local ZIP file
+  ipcMain.handle('extensions-install-zip', async (_, zipFilePath: string) => {
+    try {
+      if (!zipFilePath || !fs.existsSync(zipFilePath)) {
+        return { success: false, error: 'ZIP file not found' };
+      }
+      const tmpDir = os.tmpdir();
+      const extractPath = path.join(tmpDir, `ext-extract-${Date.now()}`);
+
+      // Extract the zip
+      const zip = new AdmZip(zipFilePath);
+      zip.extractAllTo(extractPath, true);
+
+      // Find where the manifest.json is
+      let extSourcePath = extractPath;
+      if (!fs.existsSync(path.join(extSourcePath, 'manifest.json'))) {
+        // sometimes zips have a root folder inside
+        const dirs = fs.readdirSync(extractPath, { withFileTypes: true }).filter(d => d.isDirectory());
+        if (dirs.length > 0 && fs.existsSync(path.join(extractPath, dirs[0].name, 'manifest.json'))) {
+          extSourcePath = path.join(extractPath, dirs[0].name);
+        } else {
+          return { success: false, error: 'No manifest.json found in ZIP' };
+        }
+      }
+
+      const manifestPath = path.join(extSourcePath, 'manifest.json');
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+      const folderName = (manifest.name || path.basename(extSourcePath)).replace(/[^a-zA-Z0-9_-]/g, '_');
+      const destPath = path.join(extensionsDir, folderName);
+
+      // Copy the extension folder
+      if (fs.existsSync(destPath)) {
+        fs.rmSync(destPath, { recursive: true, force: true });
+      }
+      copyDirSync(extSourcePath, destPath);
+
+      // Cleanup temp
+      try {
+        fs.rmSync(extractPath, { recursive: true, force: true });
+      } catch (e) {
+        console.error('Failed to cleanup temp extraction:', e);
+      }
+
+      // Load the extension
+      const ext = await session.defaultSession.extensions.loadExtension(destPath, { allowFileAccess: true });
+
+      // Resolve icon
+      let iconDataUrl: string | undefined;
+      const iconKeys = manifest.icons ? Object.keys(manifest.icons).sort((a: string, b: string) => Number(b) - Number(a)) : [];
+      if (iconKeys.length > 0) {
+        const iconRelPath = manifest.icons[iconKeys[0]];
+        const iconAbsPath = path.join(destPath, iconRelPath);
+        if (fs.existsSync(iconAbsPath)) {
+          const iconBuf = fs.readFileSync(iconAbsPath);
+          const ext2 = path.extname(iconAbsPath).toLowerCase();
+          const mime = ext2 === '.svg' ? 'image/svg+xml' : ext2 === '.png' ? 'image/png' : 'image/jpeg';
+          iconDataUrl = `data:${mime};base64,${iconBuf.toString('base64')}`;
+        }
+      }
+
+      return {
+        success: true,
+        extension: {
+          id: ext.id,
+          name: manifest.name || folderName,
+          version: manifest.version || '1.0',
+          description: manifest.description || '',
+          icon: iconDataUrl,
+          popup: manifest.action?.default_popup || manifest.browser_action?.default_popup || undefined,
+          enabled: true,
+          path: destPath
+        }
+      };
+    } catch (e: unknown) {
+      console.error('Failed to install extension from zip:', e);
+      return { success: false, error: String(e) };
+    }
+  });
+
+  // Open a file dialog to pick an extension ZIP file
+  ipcMain.handle('extensions-pick-zip', async () => {
+    if (!mainWindow) return null;
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+      title: 'Select Extension ZIP File',
+      properties: ['openFile'],
+      filters: [{ name: 'ZIP Files', extensions: ['zip'] }],
+      buttonLabel: 'Load ZIP'
+    });
+    return canceled || filePaths.length === 0 ? null : filePaths[0];
+  });
+
   // Remove an extension
   ipcMain.handle('extensions-remove', async (_, extId: string, extPath: string) => {
     try {
@@ -1010,18 +1187,42 @@ app.on('window-all-closed', () => {
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const DiscordRPC = require('discord-rpc');
 
-const clientId = '1471632125148135679'; // TODO: Remplacez par votre vrai Client ID Discord
+const clientId = '1471632125148135679';
 DiscordRPC.register(clientId);
-const rpc = new DiscordRPC.Client({ transport: 'ipc' });
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let rpc: any = null;
 const startTimestamp = new Date();
+let isRpcReady = false;
+
+function connectRPC() {
+  if (rpc) {
+    try { rpc.destroy(); } catch { /* ignore */ }
+  }
+  
+  rpc = new DiscordRPC.Client({ transport: 'ipc' });
+  
+  rpc.on('ready', () => {
+    isRpcReady = true;
+    setActivity();
+  });
+  
+  rpc.on('disconnected', () => {
+    isRpcReady = false;
+  });
+
+  rpc.login({ clientId }).catch(() => {
+    isRpcReady = false;
+  });
+}
 
 async function setActivity() {
-  if (!rpc) return;
+  if (!rpc || !isRpcReady) return;
   try {
     await rpc.setActivity({
       details: 'En train de naviguer sur Explore',
       startTimestamp,
-      largeImageKey: 'explore_logo', // TODO: Uploadez une image 'explore_logo' sur le portail dev Discord
+      largeImageKey: 'explore_logo',
       largeImageText: 'Explore Browser',
       instance: false,
       buttons: [
@@ -1029,19 +1230,29 @@ async function setActivity() {
         { label: 'Visiter le site web', url: 'https://explore.lunaverse.fr' }
       ]
     });
-  } catch (e) {
-    console.error('Discord RPC Error:', e);
+  } catch {
+    isRpcReady = false; // En cas d'erreur, on force la reconnexion au prochain cycle
   }
 }
 
-rpc.on('ready', () => {
-  setActivity();
-  // Optionnel : Mise à jour régulière si l'état change
-  setInterval(() => {
-    setActivity();
-  }, 15e3);
-});
+connectRPC();
 
-// Ne crash pas l'app si Discord n'est pas lancé
-rpc.login({ clientId }).catch(console.error);
+// Vérification toutes les 15 secondes
+setInterval(() => {
+  if (!isRpcReady) {
+    connectRPC();
+  } else {
+    setActivity();
+  }
+}, 15000);
+
+// Nettoyage propre quand l'application se ferme
+app.on('before-quit', () => {
+  if (rpc) {
+    try {
+      rpc.clearActivity();
+      rpc.destroy();
+    } catch { /* ignore */ }
+  }
+});
 // -------------------------
