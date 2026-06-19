@@ -3,6 +3,8 @@
  * Detects whether the app is running on Desktop (Electron), iOS, or Android (Capacitor).
  */
 
+import { Capacitor } from '@capacitor/core';
+
 export type Platform = 'desktop' | 'ios' | 'android';
 
 /**
@@ -15,10 +17,8 @@ export function detectPlatform(): Platform {
   }
 
   // Check Capacitor native platform
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const capacitor = (window as any)?.Capacitor;
-  if (capacitor?.isNativePlatform?.()) {
-    const platform = capacitor.getPlatform?.();
+  if (Capacitor.isNativePlatform()) {
+    const platform = Capacitor.getPlatform();
     if (platform === 'ios') return 'ios';
     if (platform === 'android') return 'android';
   }
