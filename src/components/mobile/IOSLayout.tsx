@@ -226,10 +226,15 @@ export function IOSLayout({
 
       {/* ─── Settings Sheet ────────────────────────────────── */}
       <AnimatePresence>
-        {showSettingsSheet && (
+        {(showSettingsSheet || activeTab?.url === 'explore://settings') && (
           <MobileSettingsSheet
-            isOpen={showSettingsSheet}
-            onClose={() => setShowSettingsSheet(false)}
+            isOpen={true}
+            onClose={() => {
+              setShowSettingsSheet(false);
+              if (activeTab?.url === 'explore://settings') {
+                onGoBack();
+              }
+            }}
             theme={theme}
             colors={colors}
             language={language}

@@ -53,7 +53,7 @@ export function MobileTabSwitcher({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className={clsx(
-        'fixed inset-0 z-[999] flex flex-col transition-colors duration-500',
+        'fixed inset-0 z-999 flex flex-col transition-colors duration-500',
         isDark ? 'bg-[#0f0f1a]' : 'bg-gray-100'
       )}
     >
@@ -107,12 +107,6 @@ export function MobileTabSwitcher({
                 exit={{ opacity: 0, scale: 0.7 }}
                 transition={{ duration: 0.25 }}
                 onClick={() => {
-                  const iframe = document.getElementById(`iframe-${activeTabId}`) as HTMLIFrameElement;
-                  if (iframe) {
-                    const currentSrc = iframe.src;
-                    iframe.src = 'about:blank';
-                    setTimeout(() => { iframe.src = currentSrc; }, 10);
-                  }
                   onSelectTab(tab.id);
                   onClose();
                 }}

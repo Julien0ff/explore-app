@@ -192,7 +192,7 @@ export function AuthModal({
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
               className={clsx(
-                "w-full max-w-md p-6 rounded-2xl shadow-2xl border relative",
+                "w-full max-w-md mx-4 p-6 rounded-2xl shadow-2xl border relative",
                 theme === 'dark' ? "bg-[#1e1e2e] border-white/10 text-white" : "bg-white border-gray-200 text-gray-900"
               )}
             >

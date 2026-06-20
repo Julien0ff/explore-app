@@ -55,12 +55,14 @@ import { ExtensionsPage } from './components/ExtensionsPage';
 import ExtensionStore from './components/ExtensionStore';
 import { ThemesPage } from './components/ThemesPage';
 import { SearchPage } from './components/SearchPage';
+import { MobileSettingsPage } from './components/mobile/MobileSettingsPage';
+import { MobileHistoryPage } from './components/mobile/MobileHistoryPage';
+import { MobileBookmarksPage } from './components/mobile/MobileBookmarksPage';
 import { FileDown } from 'lucide-react';
 import { getAccentColorClass } from './lib/theme';
 import { getActiveTheme, applyTheme } from './lib/themes';
 import { detectPlatform } from './lib/platform';
 import { IOSLayout } from './components/mobile/IOSLayout';
-import { AndroidLayout } from './components/mobile/AndroidLayout';
 import { Capacitor } from '@capacitor/core';
 import { Xframe } from 'capacitor-plugin-xframe';
 
@@ -1827,13 +1829,85 @@ function App() {
                     />
                   )}
                   {tab.url === 'explore://settings' && (
-                    <div className="p-4"><p className="text-gray-500">Settings available in bottom sheet.</p></div>
+                    <MobileSettingsPage
+                      theme={theme as 'dark' | 'light' | 'system'}
+                      setTheme={setTheme}
+                      accentColor={accentColor}
+                      setAccentColor={setAccentColor}
+                      language={language}
+                      setLanguage={setLanguage}
+                      searchEngine={searchEngine}
+                      setSearchEngine={setSearchEngine}
+                      tabPosition={tabPosition}
+                      setTabPosition={setTabPosition}
+                      shortcuts={shortcuts}
+                      setShortcuts={setShortcuts}
+                      onOpenUrl={(url) => updateTab(tab.id, { url })}
+                      onImportBookmarks={handleImportBookmarks}
+                      onClearData={handleClearData}
+                      windowStyle={windowStyle}
+                      setWindowStyle={setWindowStyle}
+                      showBookmarksBar={showBookmarksBar}
+                      setShowBookmarksBar={setShowBookmarksBar}
+                      ambientMode={ambientMode}
+                      setAmbientMode={setAmbientMode}
+                      checkForUpdates={handleCheckForUpdates}
+                      onSaveSessionToCloud={handleSaveSessionToCloud}
+                      onRestoreSessionFromCloud={handleRestoreSessionFromCloud}
+                      isAuthenticated={!!user}
+                      onRequireAuth={() => setIsAuthModalOpen(true)}
+                      autoCloudSync={autoCloudSync}
+                      setAutoCloudSync={setAutoCloudSync}
+                      earlyTesting={earlyTesting}
+                      setEarlyTesting={setEarlyTesting}
+                      setConfirmModal={setConfirmModal}
+                      onClose={() => updateTab(tab.id, { url: 'explore://newtab' })}
+                    />
                   )}
                   {tab.url === 'explore://history' && (
-                    <div className="p-4"><p className="text-gray-500">History page (Mobile optimized coming soon).</p></div>
+                    <MobileHistoryPage
+                      theme={theme as 'dark' | 'light' | 'system'}
+                      colors={colors}
+                      language={language}
+                      history={history}
+                      historySearchQuery={historySearchQuery}
+                      setHistorySearchQuery={setHistorySearchQuery}
+                      setConfirmModal={setConfirmModal}
+                      deleteHistory={deleteHistory}
+                      deleteHistoryItem={deleteHistoryItem}
+                      updateTab={(url) => updateTab(tab.id, { url })}
+                      getFaviconUrl={getFaviconUrl}
+                    />
                   )}
                   {tab.url === 'explore://bookmarks' && (
-                    <div className="p-4"><p className="text-gray-500">Bookmarks page (Mobile optimized coming soon).</p></div>
+                    <MobileBookmarksPage
+                      theme={theme as 'dark' | 'light' | 'system'}
+                      colors={colors}
+                      language={language}
+                      bookmarks={bookmarks}
+                      bookmarkSearchQuery={bookmarkSearchQuery}
+                      setBookmarkSearchQuery={setBookmarkSearchQuery}
+                      createFolder={createFolder}
+                      confirmDeleteBookmark={confirmDeleteBookmark}
+                      setBookmarkContextMenu={setBookmarkContextMenu}
+                      updateTab={(url) => updateTab(tab.id, { url })}
+                      getFaviconUrl={getFaviconUrl}
+                    />
+                  )}
+                  {tab.url.startsWith('explore://search') && (
+                    <SearchPage 
+                      query={new URLSearchParams(tab.url.split('?')[1]).get('q') || ''}
+                      onSearch={(q) => {
+                        const url = getSearchUrl(q);
+                        updateTab(tab.id, { url, title: url, isLoading: true });
+                        setUrlInput(url);
+                      }}
+                      onOpenUrl={(url) => updateTab(tab.id, { url, title: url, isLoading: true })}
+                      onNewTab={(url) => addTab(url)}
+                      theme={theme as 'dark' | 'light'}
+                      colors={colors}
+                      language={language}
+                    />
                   )}
                 </div>
               ) : (
@@ -1857,11 +1931,10 @@ function App() {
       </div>
     );
 
-    if (platform === 'ios') {
+    if (platform === 'ios' || platform === 'android') {
       return <IOSLayout {...layoutProps}>{renderTabPages()}</IOSLayout>;
-    } else {
-      return <AndroidLayout {...layoutProps}>{renderTabPages()}</AndroidLayout>;
     }
+
   };
 
   if (platform === 'ios' || platform === 'android') {

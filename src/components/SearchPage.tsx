@@ -74,8 +74,14 @@ export function SearchPage({ query, onSearch, onOpenUrl, theme, colors, language
     setError(null);
     setResults([]);
     try {
-      if (!electron?.searchWeb) throw new Error("Search engine IPC not available");
-      const html = await electron.searchWeb(q);
+      let html = '';
+      if (electron?.searchWeb) {
+        html = await electron.searchWeb(q);
+      } else {
+        const res = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`);
+        if (!res.ok) throw new Error("Network response was not ok");
+        html = await res.text();
+      }
       if (!html) throw new Error("No response from search backend");
 
       const parser = new DOMParser();
@@ -118,7 +124,9 @@ export function SearchPage({ query, onSearch, onOpenUrl, theme, colors, language
     setError(null);
     setImageResults([]);
     try {
-      if (!electron?.searchImages) throw new Error("Image search IPC not available");
+      if (!electron?.searchImages) {
+        throw new Error("Image search not supported on mobile without backend proxy");
+      }
       const data = await electron.searchImages(q);
       setImageResults(data || []);
     } catch (err) {
@@ -134,7 +142,9 @@ export function SearchPage({ query, onSearch, onOpenUrl, theme, colors, language
     setError(null);
     setVideoResults([]);
     try {
-      if (!electron?.searchVideos) throw new Error("Video search IPC not available");
+      if (!electron?.searchVideos) {
+        throw new Error("Video search not supported on mobile without backend proxy");
+      }
       const data = await electron.searchVideos(q);
       setVideoResults(data || []);
     } catch (err) {
@@ -150,7 +160,9 @@ export function SearchPage({ query, onSearch, onOpenUrl, theme, colors, language
     setError(null);
     setNewsResults([]);
     try {
-      if (!electron?.searchNews) throw new Error("News search IPC not available");
+      if (!electron?.searchNews) {
+        throw new Error("News search not supported on mobile without backend proxy");
+      }
       const data = await electron.searchNews(q);
       setNewsResults(data || []);
     } catch (err) {

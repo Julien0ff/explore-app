@@ -403,7 +403,7 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
       <button
         onClick={() => setIsDrawerOpen(true)}
         className={clsx(
-          "absolute top-6 left-6 p-3 rounded-2xl border transition-all duration-300 z-40 group hover:scale-110 shadow-lg",
+          "absolute top-4 left-4 sm:top-6 sm:left-6 p-2.5 sm:p-3 rounded-2xl border transition-all duration-300 z-40 group hover:scale-110 shadow-lg mt-[env(safe-area-inset-top,0px)]",
           theme === 'dark' 
             ? "bg-[#181825]/60 border-white/10 text-gray-400 hover:text-yellow-400 hover:border-yellow-400/30 hover:shadow-[0_0_20px_rgba(250,204,21,0.2)]" 
             : "bg-white/60 border-gray-200 text-gray-500 hover:text-yellow-500 hover:border-yellow-500/30 hover:shadow-lg hover:shadow-gray-200"
@@ -417,7 +417,7 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
       {enabledWidgets.includes('weather') && weather && (
         <div
           className={clsx(
-            "absolute top-6 right-20 flex items-center gap-3 px-4 py-2 rounded-2xl border transition-all duration-300 z-40 shadow-lg backdrop-blur-md cursor-default",
+            "absolute top-4 right-16 sm:top-6 sm:right-20 flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 rounded-2xl border transition-all duration-300 z-40 shadow-lg backdrop-blur-md cursor-default mt-[env(safe-area-inset-top,0px)]",
             theme === 'dark' 
               ? "bg-[#181825]/60 border-white/10 hover:border-white/20 hover:shadow-[0_0_20px_rgba(255,255,255,0.05)]" 
               : "bg-white/60 border-gray-200 hover:border-gray-300 hover:shadow-xl"
@@ -439,7 +439,7 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
       <button
         onClick={() => setIsWidgetMenuOpen(true)}
         className={clsx(
-          "absolute top-6 right-6 p-3 rounded-2xl border transition-all duration-300 z-40 group hover:scale-110 shadow-lg",
+          "absolute top-4 right-4 sm:top-6 sm:right-6 p-2.5 sm:p-3 rounded-2xl border transition-all duration-300 z-40 group hover:scale-110 shadow-lg mt-[env(safe-area-inset-top,0px)]",
           theme === 'dark' 
             ? "bg-[#181825]/60 border-white/10 text-gray-400 hover:text-blue-400 hover:border-blue-400/30 hover:shadow-[0_0_20px_rgba(59,130,246,0.2)]" 
             : "bg-white/60 border-gray-200 text-gray-500 hover:text-blue-500 hover:border-blue-500/30 hover:shadow-lg hover:shadow-gray-200"
