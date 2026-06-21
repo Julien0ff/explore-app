@@ -1,6 +1,6 @@
 import { 
   Shield, BookOpen, Globe, Settings, User, LogOut, 
-  Moon, Sun, History, Lock, Share2 
+  Moon, Sun, History, Lock 
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
@@ -19,7 +19,6 @@ interface MobileSettingsSheetProps {
   onOpenHistory: () => void;
   onOpenSettings: () => void;
   onNewPrivateTab: () => void;
-  onShare: () => void;
   userName?: string;
   userAvatar?: string;
   onOpenAuth: () => void;
@@ -41,7 +40,6 @@ export function MobileSettingsSheet({
   onOpenHistory,
   onOpenSettings,
   onNewPrivateTab,
-  onShare,
   userName,
   userAvatar,
   onOpenAuth,
@@ -68,11 +66,6 @@ export function MobileSettingsSheet({
       icon: <Lock className="w-5 h-5" />,
       label: language === 'fr' ? 'Navigation\nprivée' : 'Private\nBrowsing',
       onClick: onNewPrivateTab,
-    },
-    {
-      icon: <Share2 className="w-5 h-5" />,
-      label: language === 'fr' ? 'Partager' : 'Share',
-      onClick: onShare,
     },
   ];
 
@@ -132,7 +125,10 @@ export function MobileSettingsSheet({
               </>
             ) : (
               <button
-                onClick={onOpenAuth}
+                onClick={() => {
+                  onClose();
+                  onOpenAuth();
+                }}
                 className={clsx(
                   'w-full flex items-center gap-3 py-1',
                   isDark ? 'text-white/70' : 'text-gray-600'
@@ -157,7 +153,7 @@ export function MobileSettingsSheet({
           </div>
 
           {/* Quick Actions Grid */}
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             {quickActions.map((action, i) => (
               <button
                 key={i}
@@ -166,7 +162,7 @@ export function MobileSettingsSheet({
                   onClose();
                 }}
                 className={clsx(
-                  'flex flex-col items-center gap-2 py-3 rounded-2xl transition-all active:scale-90',
+                  'flex flex-col items-center justify-center gap-2 py-3 h-[72px] rounded-2xl transition-all active:scale-90',
                   isDark ? 'bg-white/4 hover:bg-white/8 text-white/60' : 'bg-gray-50 hover:bg-gray-100 text-gray-500'
                 )}
               >

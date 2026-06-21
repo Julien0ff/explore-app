@@ -37,10 +37,11 @@ interface MobileSettingsPageProps {
 
 export function MobileSettingsPage(props: MobileSettingsPageProps) {
   return (
-    <div className="w-full h-full overflow-y-auto bg-transparent p-2 pb-24">
+    <div className="w-full h-full overflow-hidden bg-transparent pb-16">
       <SettingsModal 
         isOpen={true}
         isFullPage={true}
+        isMobile={true}
         {...props}
       />
     </div>

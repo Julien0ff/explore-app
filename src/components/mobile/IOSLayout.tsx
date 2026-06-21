@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  ArrowLeft, ArrowRight, RotateCw, Layers, Ellipsis, Star, Shield
+  ArrowLeft, ArrowRight, RotateCw, Layers, Ellipsis, Star, Home
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { AnimatePresence } from 'framer-motion';
@@ -53,7 +53,6 @@ interface IOSLayoutProps {
   onOpenSettings: () => void;
   onOpenAuth: () => void;
   onLogout: () => void;
-  onShare: () => void;
 }
 
 export function IOSLayout({
@@ -90,7 +89,6 @@ export function IOSLayout({
   onOpenSettings,
   onOpenAuth,
   onLogout,
-  onShare,
 }: IOSLayoutProps) {
   const [showTabSwitcher, setShowTabSwitcher] = useState(false);
   const [showSettingsSheet, setShowSettingsSheet] = useState(false);
@@ -121,8 +119,11 @@ export function IOSLayout({
         )}
       </div>
 
-      {/* ─── iOS 26/27 Bottom Bar ──────────────────────────── */}
-      <div className={clsx('ios-bottom-nav', !isDark && 'light')}>
+      {/* ─── iOS Bottom Bar ──────────────────────────── */}
+      <div className={clsx(
+        'ios-bottom-nav fixed bottom-4 left-4 right-4 rounded-3xl overflow-hidden shadow-2xl transition-transform duration-300 z-50',
+        !isDark && 'light'
+      )}>
         {/* Search Bubble */}
         <div className="px-2 pt-2 pb-1">
           <MobileSearchBar
@@ -145,8 +146,7 @@ export function IOSLayout({
           {/* Back */}
           <button
             onClick={onGoBack}
-            disabled={!activeTab?.canGoBack}
-            className={clsx('ios-nav-button', !activeTab?.canGoBack && 'opacity-30')}
+            className="ios-nav-button"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -154,8 +154,7 @@ export function IOSLayout({
           {/* Forward */}
           <button
             onClick={onGoForward}
-            disabled={!activeTab?.canGoForward}
-            className={clsx('ios-nav-button', !activeTab?.canGoForward && 'opacity-30')}
+            className="ios-nav-button"
           >
             <ArrowRight className="w-5 h-5" />
           </button>
@@ -168,12 +167,12 @@ export function IOSLayout({
             <Star className={clsx('w-5 h-5', isBookmarked && 'fill-current')} />
           </button>
 
-          {/* Ad blocker indicator */}
+          {/* Home */}
           <button
-            onClick={onToggleAdBlock}
-            className={clsx('ios-nav-button', adBlockEnabled && 'active')}
+            onClick={() => onUrlSubmit('explore://newtab')}
+            className="ios-nav-button"
           >
-            <Shield className={clsx('w-5 h-5', adBlockEnabled && colors.text)} />
+            <Home className="w-5 h-5" />
           </button>
 
           {/* Tab Switcher */}
@@ -226,15 +225,10 @@ export function IOSLayout({
 
       {/* ─── Settings Sheet ────────────────────────────────── */}
       <AnimatePresence>
-        {(showSettingsSheet || activeTab?.url === 'explore://settings') && (
+        {showSettingsSheet && (
           <MobileSettingsSheet
-            isOpen={true}
-            onClose={() => {
-              setShowSettingsSheet(false);
-              if (activeTab?.url === 'explore://settings') {
-                onGoBack();
-              }
-            }}
+            isOpen={showSettingsSheet}
+            onClose={() => setShowSettingsSheet(false)}
             theme={theme}
             colors={colors}
             language={language}
@@ -245,7 +239,6 @@ export function IOSLayout({
             onOpenHistory={onOpenHistory}
             onOpenSettings={onOpenSettings}
             onNewPrivateTab={onNewPrivateTab}
-            onShare={onShare}
             userName={userName}
             userAvatar={userAvatar}
             onOpenAuth={onOpenAuth}

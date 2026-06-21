@@ -1765,10 +1765,21 @@ function App() {
         if (wb && typeof wb.goBack === 'function' && wb.canGoBack?.()) {
           wb.goBack();
         } else {
-          updateTab(activeTabId, { url: 'explore://newtab' });
+          try {
+            window.history.back();
+          } catch {
+            updateTab(activeTabId, { url: 'explore://newtab' });
+          }
         }
       },
-      onGoForward: () => webviewRefs.current[activeTabId]?.goForward?.(),
+      onGoForward: () => {
+        const wb = webviewRefs.current[activeTabId];
+        if (wb && typeof wb.goForward === 'function' && wb.canGoForward?.()) {
+          wb.goForward();
+        } else {
+          try { window.history.forward(); } catch { /* ignore */ }
+        }
+      },
       onReload: () => {
         if (activeTab?.url.startsWith('explore://')) return;
         const iframe = document.getElementById(`iframe-${activeTabId}`) as HTMLIFrameElement;
@@ -1790,11 +1801,6 @@ function App() {
       onOpenSettings: () => updateTab(activeTabId, { url: 'explore://settings' }),
       onOpenAuth: () => setIsAuthModalOpen(true),
       onLogout: () => supabase.auth.signOut(),
-      onShare: () => {
-        if (navigator.share && activeTab) {
-          navigator.share({ title: activeTab.title, url: activeTab.url }).catch(console.error);
-        }
-      }
     };
 
     const renderTabPages = () => (
@@ -1815,6 +1821,7 @@ function App() {
                     <NewTabPage 
                       theme={theme} 
                       accentColor={accentColor}
+                      ambientMode={ambientMode && (platform === 'ios' || platform === 'android')}
                       isPrivate={tab.isPrivate}
                       onSearch={(query) => {
                         const url = getSearchUrl(query);
@@ -1913,7 +1920,7 @@ function App() {
               ) : (
                 <iframe
                   id={`iframe-${tab.id}`}
-                  src={tab.url}
+                  src={window.electron ? tab.url : `https://corsproxy.io/?${encodeURIComponent(tab.url)}`}
                   className="w-full h-full border-none bg-white"
                   sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
                   onLoad={(e) => {
@@ -1938,7 +1945,24 @@ function App() {
   };
 
   if (platform === 'ios' || platform === 'android') {
-    return renderMobileLayout();
+    return (
+      <>
+        {renderMobileLayout()}
+        <ConfirmModal 
+          isOpen={confirmModal.isOpen}
+          onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+          onConfirm={() => confirmModal.onConfirm(modalInputValue)}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          theme={theme as 'dark' | 'light' | 'system'}
+          accentColor={accentColor}
+          isInput={confirmModal.isInput}
+          inputValue={modalInputValue}
+          setInputValue={setModalInputValue}
+          inputPlaceholder={confirmModal.inputPlaceholder}
+        />
+      </>
+    );
   }
 
   // DESKTOP LAYOUT

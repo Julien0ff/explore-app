@@ -102,50 +102,55 @@ export function MobileTabSwitcher({
               <motion.div
                 key={tab.id}
                 layout
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.7 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.25 }}
                 onClick={() => {
                   onSelectTab(tab.id);
                   onClose();
                 }}
                 className={clsx(
-                  'mobile-tab-card cursor-pointer',
+                  'mobile-tab-card cursor-pointer flex items-center p-3 gap-4',
                   !isDark && 'light',
                   isActive && 'active'
                 )}
               >
-                {/* Preview area */}
+                {/* Icon area */}
                 <div className={clsx(
-                  'relative aspect-auto h-48 rounded-3xl overflow-hidden shadow-2xl bg-linear-to-br transition-all',
-                  isDark ? 'from-gray-800 to-gray-900 ring-1 ring-white/10' : 'from-white to-gray-100 ring-1 ring-black/5',
+                  'w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 bg-gradient-to-br shadow-inner',
+                  isDark ? 'from-white/10 to-white/5 ring-1 ring-white/10' : 'from-gray-100 to-gray-50 ring-1 ring-black/5',
                   isActive && (isDark ? 'ring-2 ring-indigo-500' : 'ring-2 ring-blue-500'),
-                  tab.isPrivate && 'from-indigo-900 to-purple-900'
+                  tab.isPrivate && 'from-indigo-900 to-purple-900 text-white'
                 )}>
                   {tab.isPrivate ? (
-                    <IncognitoIcon size="lg" animated={false} />
+                    <IncognitoIcon size="sm" animated={false} />
                   ) : favicon ? (
-                    <img src={favicon} alt="" className="w-10 h-10 rounded-lg" />
+                    <img src={favicon} alt="" className="w-6 h-6 rounded-md" />
                   ) : (
                     <div className={clsx(
-                      'w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold',
-                      isDark ? 'bg-white/10 text-white/50' : 'bg-gray-200 text-gray-400'
+                      'text-lg font-bold',
+                      isDark ? 'text-white/50' : 'text-gray-400'
                     )}>
                       {tab.title?.[0]?.toUpperCase() || 'E'}
                     </div>
                   )}
                 </div>
 
-                {/* Title bar */}
-                <div className={clsx(
-                  'mobile-tab-title flex items-center gap-2',
-                  isDark ? 'text-white/80' : 'text-gray-700'
-                )}>
-                  {favicon && (
-                    <img src={favicon} alt="" className="w-3.5 h-3.5 rounded-sm shrink-0" />
-                  )}
-                  <span className="truncate">{tab.title}</span>
+                {/* Text area */}
+                <div className="flex-1 min-w-0">
+                  <h3 className={clsx(
+                    "font-bold text-sm truncate",
+                    isDark ? "text-white/90" : "text-gray-900"
+                  )}>
+                    {tab.title || 'Nouvel onglet'}
+                  </h3>
+                  <p className={clsx(
+                    "text-xs truncate mt-0.5",
+                    isDark ? "text-white/40" : "text-gray-500"
+                  )}>
+                    {tab.url.replace(/^https?:\/\//, '')}
+                  </p>
                 </div>
 
                 {/* Close button */}
@@ -154,9 +159,12 @@ export function MobileTabSwitcher({
                     e.stopPropagation();
                     onCloseTab(tab.id);
                   }}
-                  className="mobile-tab-close"
+                  className={clsx(
+                    "w-8 h-8 rounded-full flex items-center justify-center transition-colors active:scale-90",
+                    isDark ? "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-900"
+                  )}
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-4 h-4" />
                 </button>
               </motion.div>
             );

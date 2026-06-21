@@ -74,17 +74,20 @@ export function MobileSearchBar({
         <div
           className={clsx(
             isIOS ? 'ios-search-bubble' : 'android-url-bar',
-            !isDark && 'light'
+            !isDark && 'light',
+            'relative flex items-center justify-center'
           )}
         >
           {/* Icon */}
-          {isPrivate ? (
-            <Lock className={clsx('w-4 h-4 shrink-0', isDark ? 'text-slate-400' : 'text-slate-500')} />
-          ) : isSecure && !isFocused ? (
-            <Lock className={clsx('w-4 h-4 shrink-0', colors.text)} />
-          ) : (
-            <Search className={clsx('w-4 h-4 shrink-0', isDark ? 'text-white/40' : 'text-gray-400')} />
-          )}
+          <div className="absolute left-4 flex items-center justify-center pointer-events-none">
+            {isPrivate ? (
+              <Lock className={clsx('w-4 h-4 shrink-0', isDark ? 'text-slate-400' : 'text-slate-500')} />
+            ) : isSecure && !isFocused ? (
+              <Lock className={clsx('w-4 h-4 shrink-0', colors.text)} />
+            ) : (
+              <Search className={clsx('w-4 h-4 shrink-0', isDark ? 'text-white/40' : 'text-gray-400')} />
+            )}
+          </div>
 
           {/* Input */}
           <input
@@ -100,7 +103,7 @@ export function MobileSearchBar({
                 : 'Search or enter URL…'
             }
             className={clsx(
-              'flex-1 bg-transparent outline-none text-sm',
+              'w-full bg-transparent outline-none text-sm pl-8 pr-8',
               isDark ? 'text-white placeholder:text-white/30' : 'text-gray-900 placeholder:text-gray-400',
               !isFocused && 'text-center'
             )}
@@ -115,13 +118,17 @@ export function MobileSearchBar({
           {isFocused && urlInput && (
             <button
               type="button"
-              onClick={() => onUrlChange('')}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onUrlChange('');
+                inputRef.current?.focus();
+              }}
               className={clsx(
-                'w-6 h-6 rounded-full flex items-center justify-center shrink-0',
-                isDark ? 'bg-white/10' : 'bg-gray-200'
+                'absolute right-4 w-5 h-5 rounded-full flex items-center justify-center shrink-0 z-10',
+                isDark ? 'bg-white/15' : 'bg-gray-300'
               )}
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-3 h-3" />
             </button>
           )}
         </div>

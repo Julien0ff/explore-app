@@ -104,7 +104,7 @@ export function ConfirmModal({
               </button>
               <button
                 onClick={() => { onConfirm(); onClose(); }}
-                className={clsx("px-4 py-2 rounded-xl font-medium transition-colors", isDark ? `bg-${accentColor}-500 hover:bg-${accentColor}-600 text-white` : `bg-${accentColor}-500 hover:bg-${accentColor}-600 text-white`)}
+                className={clsx("px-4 py-2 rounded-xl font-medium transition-colors text-white", colors.bgSolid, colors.bgHover)}
               >
                 {defaultConfirmText}
               </button>

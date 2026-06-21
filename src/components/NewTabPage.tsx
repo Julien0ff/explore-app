@@ -148,6 +148,7 @@ interface NewTabPageProps {
   adBlockEnabled?: boolean;
   bookmarks?: Bookmark[];
   isPrivate?: boolean;
+  ambientMode?: boolean;
 }
 
 interface QuickLink {
@@ -156,7 +157,7 @@ interface QuickLink {
   url: string;
 }
 
-export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChange, suggestions = [], blockedAdsCount = 0, adBlockEnabled = false, bookmarks = [], isPrivate = false }: NewTabPageProps) {
+export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChange, suggestions = [], blockedAdsCount = 0, adBlockEnabled = false, bookmarks = [], isPrivate = false, ambientMode = true }: NewTabPageProps) {
   const colors = getAccentColorClass(accentColor, theme === 'dark');
   const [query, setQuery] = useState('');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -399,6 +400,26 @@ export function NewTabPage({ onSearch, theme, accentColor, language, onQueryChan
         theme === 'dark' ? "bg-transparent text-white" : "bg-transparent text-gray-900"
       )}
     >
+      {/* Ambient Glow */}
+      {ambientMode && (
+        <>
+          <div 
+            className="absolute inset-0 z-0 pointer-events-none transition-all duration-1000 ease-in-out blur-[120px]"
+            style={{
+              background: `radial-gradient(circle at 50% 50%, ${colors.hex}40 0%, ${colors.hex}10 60%, transparent 100%)`,
+              opacity: theme === 'dark' ? 0.95 : 0.75
+            }}
+          />
+          <div 
+            className="absolute inset-0 z-0 pointer-events-none transition-all duration-1500 ease-in-out mix-blend-screen blur-[100px]"
+            style={{
+              background: `radial-gradient(circle at 100% 0%, ${colors.hex}20 0%, transparent 80%)`,
+              opacity: theme === 'dark' ? 0.4 : 0.2
+            }}
+          />
+        </>
+      )}
+
       {/* Floating Toggle Button */}
       <button
         onClick={() => setIsDrawerOpen(true)}

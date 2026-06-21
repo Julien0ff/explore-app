@@ -54,7 +54,6 @@ interface AndroidLayoutProps {
   onOpenSettings: () => void;
   onOpenAuth: () => void;
   onLogout: () => void;
-  onShare: () => void;
 }
 
 export function AndroidLayout({
@@ -91,7 +90,6 @@ export function AndroidLayout({
   onOpenSettings,
   onOpenAuth,
   onLogout,
-  onShare,
 }: AndroidLayoutProps) {
   const [showTabSwitcher, setShowTabSwitcher] = useState(false);
   const [showSettingsSheet, setShowSettingsSheet] = useState(false);
@@ -194,7 +192,7 @@ export function AndroidLayout({
         {children}
       </div>
 
-      {/* ─── Android Bottom Navigation Bar ─────────────────── */}
+      {/* ─── Android Bottom Nav ────────────────────────────── */}
       <div className={clsx('android-bottom-bar', !isDark && 'light')}>
         <div className="flex items-center justify-around px-2 py-1.5">
           {/* Home */}
@@ -208,8 +206,7 @@ export function AndroidLayout({
           {/* Back */}
           <button
             onClick={onGoBack}
-            disabled={!activeTab?.canGoBack}
-            className={clsx('android-nav-button', !activeTab?.canGoBack && 'opacity-30')}
+            className="android-nav-button"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -222,8 +219,7 @@ export function AndroidLayout({
           {/* Forward */}
           <button
             onClick={onGoForward}
-            disabled={!activeTab?.canGoForward}
-            className={clsx('android-nav-button', !activeTab?.canGoForward && 'opacity-30')}
+            className="android-nav-button"
           >
             <ArrowRight className="w-5 h-5" />
           </button>
@@ -238,7 +234,7 @@ export function AndroidLayout({
         </div>
       </div>
 
-      {/* ─── Tab Switcher ──────────────────────────────────── */}
+      {/* ─── Tab Switcher Overlay ──────────────────────────── */}
       <AnimatePresence>
         {showTabSwitcher && (
           <MobileTabSwitcher
@@ -271,7 +267,6 @@ export function AndroidLayout({
             onOpenHistory={onOpenHistory}
             onOpenSettings={onOpenSettings}
             onNewPrivateTab={onNewPrivateTab}
-            onShare={onShare}
             userName={userName}
             userAvatar={userAvatar}
             onOpenAuth={onOpenAuth}

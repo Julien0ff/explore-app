@@ -64,13 +64,13 @@
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   background: rgba(30, 30, 46, 0.85);
-  border-top: 0.5px solid rgba(255, 255, 255, 0.08);
-  padding-bottom: var(--safe-bottom);
+  border: 0.5px solid rgba(255, 255, 255, 0.15);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .ios-bottom-nav.light {
   background: rgba(255, 255, 255, 0.85);
-  border-top: 0.5px solid rgba(0, 0, 0, 0.06);
+  border: 0.5px solid rgba(0, 0, 0, 0.15);
 }
 
 .ios-nav-button {
@@ -162,8 +162,8 @@
 
 /* ─── Shared Mobile Tab Grid ──────────────────────────────────── */
 .mobile-tab-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   padding: 16px;
   padding-top: calc(var(--safe-top) + 60px);

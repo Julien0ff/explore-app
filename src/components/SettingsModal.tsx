@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, Layout, RefreshCw, Send, Globe, Palette, Keyboard, Shield, Accessibility, Info, 
-  Check, Sparkles, Sliders, Chrome, Cloud, UploadCloud, DownloadCloud, Star, FlaskConical, Bug, Camera
+  Check, Sparkles, Sliders, Chrome, Cloud, UploadCloud, DownloadCloud, Star, FlaskConical, Bug, Camera, Menu
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -14,6 +14,7 @@ interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   isFullPage?: boolean;
+  isMobile?: boolean;
   tabPosition: 'top' | 'left' | 'bottom' | 'right';
   setTabPosition: (pos: 'top' | 'left' | 'bottom' | 'right') => void;
   theme: 'light' | 'dark' | 'system';
@@ -57,6 +58,7 @@ export function SettingsModal({
   isOpen,
   onClose,
   isFullPage = false,
+  isMobile = false,
   tabPosition,
   setTabPosition,
   theme,
@@ -201,7 +203,7 @@ export function SettingsModal({
     }
   };
 
-  const categories = [
+  const allCategories = [
     { id: 'general', name: language === 'fr' ? 'Général' : 'General', icon: Globe },
     { id: 'appearance', name: language === 'fr' ? 'Apparence & Thèmes' : 'Appearance & Themes', icon: Palette },
     { id: 'extensions', name: language === 'fr' ? 'Extensions' : 'Extensions', icon: Chrome },
@@ -213,6 +215,11 @@ export function SettingsModal({
     { id: 'about', name: language === 'fr' ? 'À propos' : 'About', icon: Info },
   ] as const;
 
+  const categories = allCategories.filter(c => {
+    if (isMobile && (c.id === 'extensions' || c.id === 'shortcuts')) return false;
+    return true;
+  });
+
 
   // Render specific content panel
   const renderCategoryContent = (catId: typeof activeCategory) => {
@@ -221,6 +228,7 @@ export function SettingsModal({
         return (
           <div className="space-y-8 animate-fadeIn">
             {/* Tab Position */}
+            {!isMobile && (
             <div className={clsx("p-6 rounded-3xl border", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50/50 border-gray-200")}>
               <h3 className={clsx("text-lg font-bold mb-4 flex items-center gap-2", theme === 'dark' ? "text-white" : "text-gray-900")}>
                 <Layout className="w-5 h-5 opacity-75" />
@@ -262,6 +270,7 @@ export function SettingsModal({
                 ))}
               </div>
             </div>
+            )}
 
             {/* Search Engine */}
             <div className={clsx("p-6 rounded-3xl border", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50/50 border-gray-200")}>
@@ -402,7 +411,8 @@ export function SettingsModal({
             </div>
 
             {/* Window Style */}
-            <div className={clsx("p-6 rounded-3xl border", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50/50 border-gray-200")}>
+            {!isMobile && (
+              <div className={clsx("p-6 rounded-3xl border", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50/50 border-gray-200")}>
               <h3 className={clsx("text-lg font-bold mb-4", theme === 'dark' ? "text-white" : "text-gray-900")}>
                 {language === 'fr' ? 'Style de fenêtre' : 'Window Style'}
               </h3>
@@ -441,6 +451,7 @@ export function SettingsModal({
                 </button>
               </div>
             </div>
+            )}
 
             {/* Ambient Mode Toggle */}
             <div className={clsx("p-6 rounded-3xl border flex items-center justify-between", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50/50 border-gray-200")}>
@@ -468,6 +479,7 @@ export function SettingsModal({
             </div>
 
             {/* Bookmarks Bar Toggle */}
+            {!isMobile && (
             <div className={clsx("p-6 rounded-3xl border flex items-center justify-between", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50/50 border-gray-200")}>
               <div className="space-y-1">
                 <h4 className={clsx("font-bold text-lg flex items-center gap-2", theme === 'dark' ? "text-white" : "text-gray-900")}>
@@ -491,6 +503,7 @@ export function SettingsModal({
                 )} />
               </button>
             </div>
+            )}
 
             {/* Accent Color */}
             <div className={clsx("p-6 rounded-3xl border", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50/50 border-gray-200")}>
@@ -882,6 +895,7 @@ export function SettingsModal({
             {/* Feature Toggles */}
             <div className="space-y-4">
               {/* Split View */}
+              {!isMobile && (
               <div className={clsx("p-6 rounded-3xl border flex items-center justify-between", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50/50 border-gray-200")}>
                 <div className="space-y-1">
                   <h4 className={clsx("font-bold text-lg flex items-center gap-2", theme === 'dark' ? "text-white" : "text-gray-900")}>
@@ -921,8 +935,7 @@ export function SettingsModal({
                   )} />
                 </button>
               </div>
-
-
+              )}
 
               {/* Explore Search Engine */}
               <div className={clsx("p-6 rounded-3xl border flex items-center justify-between", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50/50 border-gray-200")}>
@@ -979,7 +992,7 @@ export function SettingsModal({
                 <Logo className="w-12 h-12" />
               </div>
               <h3 className="text-2xl font-black">Explore Browser</h3>
-              <p className="text-sm opacity-60 font-bold mt-1">Version {appVersion} (Stable)</p>
+              <p className="text-sm opacity-60 font-bold mt-1">Version {isMobile ? '1.0' : appVersion} (Stable)</p>
               <div className="mt-4 flex gap-2">
                 <span className={clsx("px-3 py-1 rounded-full text-xs font-bold", theme === 'dark' ? "bg-blue-500/20 text-blue-400" : "bg-blue-100 text-blue-700")}>
                   Stable
@@ -1105,62 +1118,101 @@ export function SettingsModal({
   };
 
   const Wrapper = ({ children }: { children: React.ReactNode }) => {
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+
     if (isFullPage) {
       return (
-        <div className="w-full h-full flex flex-row overflow-hidden transition-all duration-300 bg-transparent text-current">
-          {/* Dashboard Left Sidebar */}
-          <div className={clsx(
-            "w-72 p-6 flex flex-col gap-2 shrink-0 border-r",
-            theme === 'dark' ? "bg-transparent border-white/5 text-white" : "bg-transparent border-gray-150 text-gray-900"
-          )}>
-            <div className="flex items-center gap-3 mb-6 px-2">
-              <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-white/5 border border-white/10 shadow-lg shrink-0">
-                <Logo className="w-6 h-6" />
-              </div>
-              <div className="min-w-0">
-                <h2 className="font-black text-lg leading-tight truncate">Explore</h2>
-                <p className="text-xs opacity-50 font-bold">{language === 'fr' ? 'Paramètres' : 'Settings'}</p>
-              </div>
-            </div>
-
-            {/* Categories Buttons list */}
-            <div className="flex-1 space-y-1.5">
-              {categories.map((cat) => {
-                const IconComponent = cat.icon;
-                const isActive = activeCategory === cat.id;
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => {
-                      setActiveCategory(cat.id as typeof activeCategory);
-                    }}
-                    className={clsx(
-                      "w-full px-4 py-3 rounded-2xl flex items-center gap-3.5 font-bold text-sm transition-all hover:translate-x-1 text-left",
-                      isActive
-                        ? clsx(colors.bgSolid, "text-white shadow-md shadow-blue-500/10")
-                        : theme === 'dark'
-                          ? "text-gray-400 hover:bg-white/5 hover:text-white"
-                          : "text-gray-600 hover:bg-gray-100/70 hover:text-gray-900"
+        <div className="w-full h-full flex flex-col md:flex-row overflow-hidden transition-all duration-300 bg-transparent text-current">
+          {/* Dashboard Left Sidebar (Hidden on mobile unless burger menu is open) */}
+          <AnimatePresence>
+            {(!isMobile || isMobileMenuOpen) && (
+              <>
+                {isMobile && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="absolute inset-0 bg-black/50 z-40"
+                  />
+                )}
+                <motion.div 
+                  initial={isMobile ? { x: '-100%' } : false}
+                  animate={isMobile ? { x: 0 } : false}
+                  exit={isMobile ? { x: '-100%' } : undefined}
+                  transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                  className={clsx(
+                    "p-6 flex flex-col gap-2 shrink-0 border-r z-50",
+                    isMobile ? "absolute top-0 left-0 bottom-0 w-72 h-full shadow-2xl" : "w-72",
+                    theme === 'dark' ? "bg-[#181825] md:bg-transparent border-white/5 text-white" : "bg-white md:bg-transparent border-gray-150 text-gray-900"
+                  )}
+                >
+                  <div className="flex items-center gap-3 mb-6 px-2">
+                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-white/5 border border-white/10 shadow-lg shrink-0">
+                      <Logo className="w-6 h-6" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="font-black text-lg leading-tight truncate">Explore</h2>
+                      <p className="text-xs opacity-50 font-bold">{language === 'fr' ? 'Paramètres' : 'Settings'}</p>
+                    </div>
+                    {isMobile && (
+                      <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 -mr-2 opacity-50 hover:opacity-100">
+                        <X className="w-5 h-5" />
+                      </button>
                     )}
-                  >
-                    <IconComponent className="w-5 h-5 shrink-0" />
-                    <span>{cat.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-            
-            <div className={clsx("mt-auto pt-4 border-t px-2", theme === 'dark' ? "border-white/5" : "border-gray-100")}>
-              <p className="text-[10px] opacity-40 font-bold text-center tracking-widest uppercase">Explore v{appVersion}</p>
-            </div>
-          </div>
+                  </div>
+
+                  {/* Categories Buttons list */}
+                  <div className="flex-1 space-y-1.5 overflow-y-auto custom-scrollbar pr-2">
+                    {categories.map((cat) => {
+                      const IconComponent = cat.icon;
+                      const isActive = activeCategory === cat.id;
+                      return (
+                        <button
+                          key={cat.id}
+                          onClick={() => {
+                            setActiveCategory(cat.id as typeof activeCategory);
+                            if (isMobile) setIsMobileMenuOpen(false);
+                          }}
+                          className={clsx(
+                            "w-full px-4 py-3 rounded-2xl flex items-center gap-3.5 font-bold text-sm transition-all hover:translate-x-1 text-left",
+                            isActive
+                              ? clsx(colors.bgSolid, "text-white shadow-md shadow-blue-500/10")
+                              : theme === 'dark'
+                                ? "text-gray-400 hover:bg-white/5 hover:text-white"
+                                : "text-gray-600 hover:bg-gray-100/70 hover:text-gray-900"
+                          )}
+                        >
+                          <IconComponent className="w-5 h-5 shrink-0" />
+                          <span>{cat.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  {!isMobile && (
+                    <div className={clsx("mt-auto pt-4 border-t px-2", theme === 'dark' ? "border-white/5" : "border-gray-100")}>
+                      <p className="text-[10px] opacity-40 font-bold text-center tracking-widest uppercase">Explore v{appVersion}</p>
+                    </div>
+                  )}
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
 
           {/* Dashboard Right Main Content */}
-          <div className="flex-1 flex flex-col overflow-hidden min-h-[70vh]">
-            <div className={clsx("p-8 pb-4 flex items-center justify-between border-b shrink-0", theme === 'dark' ? "border-white/5" : "border-gray-150")}>
-              <h2 className="text-2xl font-black flex items-center gap-3">
-                {categories.find(c => c.id === activeCategory)?.name}
-              </h2>
+          <div className="flex-1 flex flex-col h-full min-h-0">
+            <div className={clsx("p-6 md:p-8 pb-4 flex items-center justify-between border-b shrink-0", theme === 'dark' ? "border-white/5" : "border-gray-150")}>
+              <div className="flex items-center gap-4">
+                {isMobile && (
+                  <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 -ml-2 rounded-xl transition-colors hover:bg-black/5 dark:hover:bg-white/5">
+                    <Menu className="w-6 h-6" />
+                  </button>
+                )}
+                <h2 className="text-xl md:text-2xl font-black flex items-center gap-3">
+                  {categories.find(c => c.id === activeCategory)?.name}
+                </h2>
+              </div>
               <button
                 onClick={onClose}
                 className={clsx(
@@ -1171,10 +1223,10 @@ export function SettingsModal({
                 )}
               >
                 <X className="w-4 h-4" />
-                {language === 'fr' ? 'Fermer' : 'Close'}
+                <span className="hidden sm:inline">{language === 'fr' ? 'Fermer' : 'Close'}</span>
               </button>
             </div>
-            <div className="flex-1 p-8 overflow-y-auto max-h-[70vh]">
+            <div className="flex-1 p-4 md:p-8 overflow-y-auto">
               {children}
             </div>
 
