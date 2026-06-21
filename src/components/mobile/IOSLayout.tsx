@@ -119,13 +119,9 @@ export function IOSLayout({
         )}
       </div>
 
-      {/* ─── iOS Bottom Bar ──────────────────────────── */}
-      <div className={clsx(
-        'ios-bottom-nav fixed bottom-4 left-4 right-4 rounded-3xl overflow-hidden shadow-2xl transition-transform duration-300 z-50',
-        !isDark && 'light'
-      )}>
-        {/* Search Bubble */}
-        <div className="px-2 pt-2 pb-1">
+      {/* ─── iOS Floating Search Pill ──────────────────────────── */}
+      <div className="absolute bottom-[calc(env(safe-area-inset-bottom,0px)+64px)] left-4 right-4 z-50 pointer-events-none">
+        <div className="pointer-events-auto shadow-xl rounded-2xl">
           <MobileSearchBar
             urlInput={urlInput}
             onUrlChange={onUrlChange}
@@ -140,46 +136,37 @@ export function IOSLayout({
             currentUrl={activeTab?.url}
           />
         </div>
+      </div>
 
+      {/* ─── iOS Bottom Tab Bar ──────────────────────────── */}
+      <div className={clsx(
+        'ios-bottom-nav absolute bottom-0 left-0 right-0 z-50',
+        !isDark && 'light'
+      )}>
         {/* Navigation Row */}
-        <div className="flex items-center justify-around px-2 py-1">
+        <div className="flex items-center justify-around px-2 py-2">
           {/* Back */}
-          <button
-            onClick={onGoBack}
-            className="ios-nav-button"
-          >
+          <button onClick={onGoBack} className="ios-nav-button">
             <ArrowLeft className="w-5 h-5" />
           </button>
 
           {/* Forward */}
-          <button
-            onClick={onGoForward}
-            className="ios-nav-button"
-          >
+          <button onClick={onGoForward} className="ios-nav-button">
             <ArrowRight className="w-5 h-5" />
           </button>
 
           {/* Bookmark */}
-          <button
-            onClick={onToggleBookmark}
-            className={clsx('ios-nav-button', isBookmarked && 'active')}
-          >
+          <button onClick={onToggleBookmark} className={clsx('ios-nav-button', isBookmarked && 'active')}>
             <Star className={clsx('w-5 h-5', isBookmarked && 'fill-current')} />
           </button>
 
           {/* Home */}
-          <button
-            onClick={() => onUrlSubmit('explore://newtab')}
-            className="ios-nav-button"
-          >
+          <button onClick={() => onUrlSubmit('explore://newtab')} className="ios-nav-button">
             <Home className="w-5 h-5" />
           </button>
 
           {/* Tab Switcher */}
-          <button
-            onClick={() => setShowTabSwitcher(true)}
-            className="ios-nav-button relative"
-          >
+          <button onClick={() => setShowTabSwitcher(true)} className="ios-nav-button relative">
             <Layers className="w-5 h-5" />
             {tabs.length > 1 && (
               <span className={clsx(
@@ -191,16 +178,8 @@ export function IOSLayout({
             )}
           </button>
 
-          {/* Reload */}
-          <button onClick={onReload} className="ios-nav-button">
-            <RotateCw className={clsx('w-5 h-5', activeTab?.isLoading && 'animate-spin')} />
-          </button>
-
           {/* More (Settings Sheet) */}
-          <button
-            onClick={() => setShowSettingsSheet(true)}
-            className="ios-nav-button"
-          >
+          <button onClick={() => setShowSettingsSheet(true)} className="ios-nav-button">
             <Ellipsis className="w-5 h-5" />
           </button>
         </div>

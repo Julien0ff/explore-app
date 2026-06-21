@@ -32,6 +32,8 @@
 /* ─── iOS Bottom Bubble Search Bar ─────────────────────────────── */
 .ios-search-bubble {
   background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
   border-radius: 28px;
   padding: 10px 18px;
   display: flex;
@@ -42,7 +44,7 @@
 }
 
 .ios-search-bubble.light {
-  background: rgba(0, 0, 0, 0.04);
+  background: rgba(255, 255, 255, 0.7);
   border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
@@ -64,13 +66,13 @@
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   background: rgba(30, 30, 46, 0.85);
-  border: 0.5px solid rgba(255, 255, 255, 0.15);
+  border-top: 0.5px solid rgba(255, 255, 255, 0.15);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .ios-bottom-nav.light {
   background: rgba(255, 255, 255, 0.85);
-  border: 0.5px solid rgba(0, 0, 0, 0.15);
+  border-top: 0.5px solid rgba(0, 0, 0, 0.15);
 }
 
 .ios-nav-button {
