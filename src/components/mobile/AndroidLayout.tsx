@@ -113,11 +113,7 @@ export function AndroidLayout({
           'android-header',
           !isDark && 'light'
         )}
-        depth={4}
-        strength={8}
-        chromaticAberration={1}
         radius={0}
-        blur={16}
         effect="regular"
         enabled={liquidGlassEnabled}
       >
@@ -212,11 +208,7 @@ export function AndroidLayout({
       {/* ─── Android Bottom Nav ──────────────────────────── */}
       <LiquidGlass
         className={clsx('android-bottom-bar', !isDark && 'light')}
-        depth={4}
-        strength={8}
-        chromaticAberration={1}
         radius={0}
-        blur={16}
         effect="regular"
         enabled={liquidGlassEnabled}
       >

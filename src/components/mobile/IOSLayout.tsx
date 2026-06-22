@@ -128,11 +128,7 @@ export function IOSLayout({
       <div className="absolute bottom-[calc(env(safe-area-inset-bottom,0px)+64px)] left-4 right-4 z-50 pointer-events-none">
         <LiquidGlass 
           className="pointer-events-auto shadow-xl"
-          depth={8} 
-          strength={15} 
-          chromaticAberration={2}
           radius={28}
-          blur={20}
           effect="clear"
           enabled={liquidGlassEnabled}
         >
@@ -159,11 +155,7 @@ export function IOSLayout({
             'w-full pointer-events-auto border-t',
             liquidGlassEnabled ? 'border-white/10' : (isDark ? 'border-white/10 bg-[#0f0f1a]/90' : 'border-gray-200 bg-white/90')
           )}
-          depth={4}
-          strength={10}
-          chromaticAberration={1}
           radius={0}
-          blur={20}
           effect="regular"
           enabled={liquidGlassEnabled}
         >
