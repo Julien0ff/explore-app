@@ -1,6 +1,6 @@
 import { 
   Shield, BookOpen, Globe, Settings, User, LogOut, 
-  Moon, Sun, History, Lock 
+  Moon, Sun, History, Lock, Sparkles 
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
@@ -25,6 +25,9 @@ interface MobileSettingsSheetProps {
   onLogout: () => void;
   isLoggedIn: boolean;
   blockedAdsCount: number;
+  /** Toggle between liquid glass and normal tab bar style */
+  liquidGlassEnabled?: boolean;
+  onToggleLiquidGlass?: () => void;
 }
 
 export function MobileSettingsSheet({
@@ -46,6 +49,8 @@ export function MobileSettingsSheet({
   onLogout,
   isLoggedIn,
   blockedAdsCount,
+  liquidGlassEnabled = true,
+  onToggleLiquidGlass,
 }: MobileSettingsSheetProps) {
   const isDark = theme === 'dark';
 
@@ -230,6 +235,39 @@ export function MobileSettingsSheet({
               </p>
               <Globe className={clsx('w-4 h-4', isDark ? 'text-white/20' : 'text-gray-300')} />
             </button>
+
+            {/* Separator */}
+            <div className={clsx('h-px mx-4', isDark ? 'bg-white/5' : 'bg-gray-200')} />
+
+            {/* Liquid Glass Toggle */}
+            {onToggleLiquidGlass && (
+              <button
+                onClick={onToggleLiquidGlass}
+                className={clsx(
+                  'w-full flex items-center gap-4 px-4 py-3.5 transition-all active:scale-[0.98]',
+                  isDark ? 'hover:bg-white/4' : 'hover:bg-gray-100'
+                )}
+              >
+                <Sparkles className={clsx('w-5 h-5', liquidGlassEnabled ? colors.text : (isDark ? 'text-white/30' : 'text-gray-300'))} />
+                <div className="flex-1 text-left">
+                  <p className={clsx('text-sm font-medium', isDark ? 'text-white/80' : 'text-gray-700')}>
+                    Liquid Glass
+                  </p>
+                  <p className={clsx('text-xs', isDark ? 'text-white/30' : 'text-gray-400')}>
+                    {language === 'fr' ? 'Effet vitré sur les barres' : 'Glass effect on bars'}
+                  </p>
+                </div>
+                <div className={clsx(
+                  'w-12 h-7 rounded-full p-0.5 transition-colors',
+                  liquidGlassEnabled ? colors.bgSolid : (isDark ? 'bg-white/15' : 'bg-gray-300')
+                )}>
+                  <div className={clsx(
+                    'w-6 h-6 rounded-full bg-white shadow-sm transition-transform',
+                    liquidGlassEnabled ? 'translate-x-5' : 'translate-x-0'
+                  )} />
+                </div>
+              </button>
+            )}
           </div>
 
           {/* Settings button */}

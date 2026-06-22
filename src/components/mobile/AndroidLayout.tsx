@@ -9,6 +9,7 @@ import { MobileSearchBar } from './MobileSearchBar';
 import { MobileTabSwitcher } from './MobileTabSwitcher';
 import { MobileSettingsSheet } from './MobileSettingsSheet';
 import { Logo } from '../Logo';
+import { LiquidGlass } from '../ui/LiquidGlass';
 
 interface Tab {
   id: string;
@@ -34,6 +35,9 @@ interface AndroidLayoutProps {
   userName?: string;
   userAvatar?: string;
   isLoggedIn: boolean;
+  /** Toggle between liquid glass and normal bar style */
+  liquidGlassEnabled?: boolean;
+  onToggleLiquidGlass?: () => void;
   children: React.ReactNode;
   onUrlChange: (value: string) => void;
   onUrlSubmit: (url: string) => void;
@@ -70,6 +74,8 @@ export function AndroidLayout({
   userName,
   userAvatar,
   isLoggedIn,
+  liquidGlassEnabled = false,
+  onToggleLiquidGlass,
   children,
   onUrlChange,
   onUrlSubmit,
@@ -101,99 +107,119 @@ export function AndroidLayout({
       'mobile-layout flex flex-col h-screen w-screen overflow-hidden',
       isDark ? 'bg-[#0f0f1a]' : 'bg-white'
     )}>
-      {/* ─── Android Top Header ────────────────────────────── */}
-      <div
-        className={clsx('android-header', !isDark && 'light')}
-        style={{ paddingTop: 'var(--safe-top)' }}
+      {/* ─── Android Top Header ──────────────────────────── */}
+      <LiquidGlass
+        className={clsx(
+          'android-header',
+          !isDark && 'light'
+        )}
+        depth={4}
+        strength={8}
+        chromaticAberration={1}
+        radius={0}
+        blur={16}
+        effect="regular"
+        enabled={liquidGlassEnabled}
       >
-        <div className="flex items-center gap-3 px-3 py-2">
-          {/* Logo */}
-          <div className="w-8 h-8 flex items-center justify-center shrink-0">
-            <Logo />
-          </div>
+        <div style={{ paddingTop: 'var(--safe-top)' }}>
+          <div className="flex items-center gap-3 px-3 py-2">
+            {/* Logo */}
+            <div className="w-8 h-8 flex items-center justify-center shrink-0">
+              <Logo />
+            </div>
 
-          {/* URL Bar */}
-          <div className="flex-1">
-            <MobileSearchBar
-              urlInput={urlInput}
-              onUrlChange={onUrlChange}
-              onSubmit={onUrlSubmit}
-              suggestions={suggestions}
-              onSuggestionSelect={onSuggestionSelect}
-              onGetSuggestions={onGetSuggestions}
-              isPrivate={!!activeTab?.isPrivate}
-              theme={theme}
-              colors={colors}
-              language={language}
-              currentUrl={activeTab?.url}
-            />
-          </div>
+            {/* URL Bar */}
+            <div className="flex-1">
+              <MobileSearchBar
+                urlInput={urlInput}
+                onUrlChange={onUrlChange}
+                onSubmit={onUrlSubmit}
+                suggestions={suggestions}
+                onSuggestionSelect={onSuggestionSelect}
+                onGetSuggestions={onGetSuggestions}
+                isPrivate={!!activeTab?.isPrivate}
+                theme={theme}
+                colors={colors}
+                language={language}
+                currentUrl={activeTab?.url}
+              />
+            </div>
 
-          {/* Ad Shield */}
-          <button
-            onClick={onToggleAdBlock}
-            className={clsx(
-              'android-nav-button relative',
-              adBlockEnabled && 'active'
-            )}
-          >
-            <Shield className={clsx('w-5 h-5', adBlockEnabled ? colors.text : '')} />
-            {adBlockEnabled && blockedAdsCount > 0 && (
+            {/* Ad Shield */}
+            <button
+              onClick={onToggleAdBlock}
+              className={clsx(
+                'android-nav-button relative',
+                adBlockEnabled && 'active'
+              )}
+            >
+              <Shield className={clsx('w-5 h-5', adBlockEnabled ? colors.text : '')} />
+              {adBlockEnabled && blockedAdsCount > 0 && (
+                <span className={clsx(
+                  'absolute -top-1 -right-1 min-w-[14px] h-3.5 rounded-full text-[8px] font-bold flex items-center justify-center px-0.5',
+                  colors.bgSolid, 'text-white'
+                )}>
+                  {blockedAdsCount > 99 ? '99+' : blockedAdsCount}
+                </span>
+              )}
+            </button>
+
+            {/* Tab count */}
+            <button
+              onClick={() => setShowTabSwitcher(true)}
+              className={clsx(
+                'android-nav-button relative',
+              )}
+            >
+              <Layers className="w-5 h-5" />
               <span className={clsx(
                 'absolute -top-1 -right-1 min-w-[14px] h-3.5 rounded-full text-[8px] font-bold flex items-center justify-center px-0.5',
                 colors.bgSolid, 'text-white'
               )}>
-                {blockedAdsCount > 99 ? '99+' : blockedAdsCount}
+                {tabs.length}
               </span>
-            )}
-          </button>
+            </button>
 
-          {/* Tab count */}
-          <button
-            onClick={() => setShowTabSwitcher(true)}
-            className={clsx(
-              'android-nav-button relative',
-            )}
-          >
-            <Layers className="w-5 h-5" />
-            <span className={clsx(
-              'absolute -top-1 -right-1 min-w-[14px] h-3.5 rounded-full text-[8px] font-bold flex items-center justify-center px-0.5',
-              colors.bgSolid, 'text-white'
-            )}>
-              {tabs.length}
-            </span>
-          </button>
-
-          {/* Menu */}
-          <button
-            onClick={() => setShowSettingsSheet(true)}
-            className="android-nav-button"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Loading bar */}
-        {activeTab?.isLoading && (
-          <div className="h-[2px] w-full relative overflow-hidden">
-            <div
-              className={clsx('h-full rounded-r-full absolute', colors.bgSolid)}
-              style={{
-                animation: 'loading-bar 1.5s ease-in-out infinite',
-                width: '60%',
-              }}
-            />
+            {/* Menu */}
+            <button
+              onClick={() => setShowSettingsSheet(true)}
+              className="android-nav-button"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
           </div>
-        )}
-      </div>
+
+          {/* Loading bar */}
+          {activeTab?.isLoading && (
+            <div className="h-[2px] w-full relative overflow-hidden">
+              <div
+                className={clsx('h-full rounded-r-full absolute', colors.bgSolid)}
+                style={{
+                  animation: 'loading-bar 1.5s ease-in-out infinite',
+                  width: '60%',
+                }}
+              />
+            </div>
+          )}
+        </div>
+      </LiquidGlass>
 
       {/* ─── Main Content Area ─────────────────────────────── */}
       <div className="flex-1 relative overflow-hidden">
         {children}
       </div>
 
-      {/* ─── Android Bottom Nav ────────────────────────────── */}
-      <div className={clsx('android-bottom-bar', !isDark && 'light')}>
+      {/* ─── Android Bottom Nav ──────────────────────────── */}
+      <LiquidGlass
+        className={clsx('android-bottom-bar', !isDark && 'light')}
+        depth={4}
+        strength={8}
+        chromaticAberration={1}
+        radius={0}
+        blur={16}
+        effect="regular"
+        enabled={liquidGlassEnabled}
+      >
         <div className="flex items-center justify-around px-2 py-1.5">
           {/* Home */}
           <button
@@ -232,7 +258,7 @@ export function AndroidLayout({
             <Star className={clsx('w-5 h-5', isBookmarked && 'fill-current')} />
           </button>
         </div>
-      </div>
+      </LiquidGlass>
 
       {/* ─── Tab Switcher Overlay ──────────────────────────── */}
       <AnimatePresence>
@@ -273,6 +299,8 @@ export function AndroidLayout({
             onLogout={onLogout}
             isLoggedIn={isLoggedIn}
             blockedAdsCount={blockedAdsCount}
+            liquidGlassEnabled={liquidGlassEnabled}
+            onToggleLiquidGlass={onToggleLiquidGlass}
           />
         )}
       </AnimatePresence>

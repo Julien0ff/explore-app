@@ -65,6 +65,7 @@ import { detectPlatform } from './lib/platform';
 import { IOSLayout } from './components/mobile/IOSLayout';
 import { Capacitor } from '@capacitor/core';
 import { Xframe } from 'capacitor-plugin-xframe';
+import { getLiquidGlassStyle } from './lib/liquidGlass';
 
 interface Tab {
   id: string;
@@ -108,6 +109,10 @@ function App() {
   const [showPasswordManager, setShowPasswordManager] = useState(false);
   const [showVPN, setShowVPN] = useState(false);
   const [adBlockEnabled, setAdBlockEnabled] = useState(true);
+  const [liquidGlassEnabled, setLiquidGlassEnabled] = useState(() => {
+    const saved = localStorage.getItem('liquidGlassEnabled');
+    return saved !== null ? saved === 'true' : true; // default: enabled
+  });
   const [showAdBlockMenu, setShowAdBlockMenu] = useState(false);
   const [showSplitMenu, setShowSplitMenu] = useState(false);
   const [showScreenshotMenu, setShowScreenshotMenu] = useState(false);
@@ -1796,6 +1801,12 @@ function App() {
       onToggleBookmark: toggleBookmark,
       onToggleAdBlock: () => setAdBlockEnabled(!adBlockEnabled),
       onToggleTheme: () => setTheme(theme === 'dark' ? 'light' : 'dark'),
+      liquidGlassEnabled,
+      onToggleLiquidGlass: () => {
+        const newVal = !liquidGlassEnabled;
+        setLiquidGlassEnabled(newVal);
+        localStorage.setItem('liquidGlassEnabled', String(newVal));
+      },
       onOpenBookmarks: () => updateTab(activeTabId, { url: 'explore://bookmarks' }),
       onOpenHistory: () => updateTab(activeTabId, { url: 'explore://history' }),
       onOpenSettings: () => updateTab(activeTabId, { url: 'explore://settings' }),
@@ -2028,7 +2039,11 @@ function App() {
             "w-16 flex flex-col transition-colors duration-1000 relative z-10 theme-surface",
             tabPosition === 'left' ? "border-r order-first" : "border-l order-last"
           )}
-          style={{
+          style={liquidGlassEnabled ? {
+            ...getLiquidGlassStyle({ dark: theme === 'dark', effect: 'regular', radius: 0 }),
+            borderRight: tabPosition === 'left' ? (theme === 'dark' ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.1)") : undefined,
+            borderLeft: tabPosition === 'right' ? (theme === 'dark' ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.1)") : undefined,
+          } : {
             backgroundColor: ambientMode && activeThemeColor 
               ? (theme === 'dark' ? `${activeThemeColor}1A` : `${activeThemeColor}0F`)
               : (theme === 'dark' ? "#181825" : "#ffffff"),
@@ -2173,7 +2188,10 @@ function App() {
         {tabPosition === 'top' && (
           <div 
             className={clsx("flex items-center gap-2 px-2 pt-1 pb-1 drag-region w-full min-w-0 transition-colors duration-1000 relative z-10")}
-            style={{
+            style={liquidGlassEnabled ? {
+              ...getLiquidGlassStyle({ dark: theme === 'dark', effect: 'regular', radius: 0 }),
+              borderBottom: theme === 'dark' ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.1)",
+            } : {
               backgroundColor: ambientMode && activeThemeColor 
                 ? (theme === 'dark' ? `${activeThemeColor}1A` : `${activeThemeColor}0F`)
                 : (theme === 'dark' ? "#181825" : "#ffffff"),
@@ -2273,7 +2291,11 @@ function App() {
             "h-12 grid grid-cols-3 items-center px-4 border-b relative z-30 transition-colors duration-1000 drag-region", 
             tabPosition === 'bottom' && "order-last border-t border-b-0"
           )}
-          style={{
+          style={liquidGlassEnabled ? {
+            ...getLiquidGlassStyle({ dark: theme === 'dark', effect: 'regular', radius: 0 }),
+            borderBottom: tabPosition !== 'bottom' ? (theme === 'dark' ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.1)") : undefined,
+            borderTop: tabPosition === 'bottom' ? (theme === 'dark' ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.1)") : undefined,
+          } : {
             backgroundColor: ambientMode && activeThemeColor 
               ? (theme === 'dark' ? `${activeThemeColor}20` : `${activeThemeColor}15`)
               : (theme === 'dark' ? "#1e1e2e" : "#ffffff"),
@@ -3096,6 +3118,11 @@ function App() {
                         setShowBookmarksBar={setShowBookmarksBar}
                         ambientMode={ambientMode}
                         setAmbientMode={setAmbientMode}
+                        liquidGlassEnabled={liquidGlassEnabled}
+                        setLiquidGlassEnabled={(val) => {
+                          setLiquidGlassEnabled(val);
+                          localStorage.setItem('liquidGlassEnabled', String(val));
+                        }}
                         checkForUpdates={handleCheckForUpdates}
                         earlyTesting={earlyTesting}
                         setEarlyTesting={setEarlyTesting}
@@ -3650,6 +3677,7 @@ function App() {
         theme={theme}
         accentColor={accentColor}
         initialMode={authModalMode}
+        liquidGlassEnabled={liquidGlassEnabled}
       />
 
       <DownloadsPopup 
@@ -3696,6 +3724,11 @@ function App() {
         onImportBookmarks={handleImportBookmarks}
         ambientMode={ambientMode}
         setAmbientMode={setAmbientMode}
+        liquidGlassEnabled={liquidGlassEnabled}
+        setLiquidGlassEnabled={(val) => {
+          setLiquidGlassEnabled(val);
+          localStorage.setItem('liquidGlassEnabled', String(val));
+        }}
         onClearData={handleClearData}
         earlyTesting={earlyTesting}
         setEarlyTesting={setEarlyTesting}

@@ -9,6 +9,7 @@ import { clsx } from 'clsx';
 import { getAccentColorClass } from '../lib/theme';
 import { Logo } from './Logo';
 import { ExtensionsPage } from './ExtensionsPage';
+import { getLiquidGlassStyle } from '../lib/liquidGlass';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -38,6 +39,8 @@ interface SettingsModalProps {
   onClearData: (onSuccess?: () => void) => void;
   ambientMode: boolean;
   setAmbientMode: (val: boolean) => void;
+  liquidGlassEnabled?: boolean;
+  setLiquidGlassEnabled?: (val: boolean) => void;
   checkForUpdates?: () => void;
   windowStyle: 'mac' | 'windows';
   setWindowStyle: (style: 'mac' | 'windows') => void;
@@ -80,6 +83,8 @@ export function SettingsModal({
   setShowBookmarksBar,
   ambientMode,
   setAmbientMode,
+  liquidGlassEnabled = true,
+  setLiquidGlassEnabled,
   checkForUpdates,
   onSaveSessionToCloud,
   onRestoreSessionFromCloud,
@@ -474,6 +479,31 @@ export function SettingsModal({
                 <div className={clsx(
                   "absolute top-1 w-5 h-5 rounded-full bg-white transition-all shadow-md",
                   ambientMode ? "left-8" : "left-1"
+                )} />
+              </button>
+            </div>
+
+            {/* Liquid Glass Toggle */}
+            <div className={clsx("p-6 rounded-3xl border flex items-center justify-between", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50/50 border-gray-200")}>
+              <div className="space-y-1">
+                 <h4 className={clsx("font-bold text-lg flex items-center gap-2", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                  <Sparkles className="w-5 h-5 text-indigo-400" />
+                  Liquid Glass
+                </h4>
+                <p className={clsx("text-sm max-w-md", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
+                  {language === 'fr' ? 'Applique un effet de verre translucide réaliste sur les barres et les modales (style iOS 26).' : 'Applies a realistic translucent glass effect on bars and modals (iOS 26 style).'}
+                </p>
+              </div>
+              <button 
+                onClick={() => setLiquidGlassEnabled?.(!liquidGlassEnabled)}
+                className={clsx(
+                  "w-14 h-7 rounded-full transition-colors relative shadow-inner shrink-0",
+                  liquidGlassEnabled ? colors.bgSolid : (theme === 'dark' ? "bg-gray-600" : "bg-gray-300")
+                )}
+              >
+                <div className={clsx(
+                  "absolute top-1 w-5 h-5 rounded-full bg-white transition-all shadow-md",
+                  liquidGlassEnabled ? "left-8" : "left-1"
                 )} />
               </button>
             </div>
@@ -1270,8 +1300,10 @@ export function SettingsModal({
                 onClick={(e) => e.stopPropagation()}
                 className={clsx(
                   "w-full max-w-2xl p-6 rounded-3xl shadow-2xl border relative max-h-[90vh] overflow-y-auto z-10",
-                  theme === 'dark' ? "bg-[#1e1e2e] border-white/10 text-white" : "bg-white border-gray-200 text-gray-900"
+                  theme === 'dark' ? "border-white/10 text-white" : "border-gray-200 text-gray-900",
+                  !liquidGlassEnabled && (theme === 'dark' ? "bg-[#1e1e2e]" : "bg-white")
                 )}
+                style={liquidGlassEnabled ? getLiquidGlassStyle({ dark: theme === 'dark', effect: 'regular', radius: 24 }) : undefined}
               >
                 <button
                   onClick={onClose}

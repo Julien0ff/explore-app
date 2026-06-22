@@ -12,6 +12,7 @@ export interface User {
 }
 
 import { getAccentColorClass } from '../lib/theme';
+import { getLiquidGlassStyle } from '../lib/liquidGlass';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ interface AuthModalProps {
   theme: 'light' | 'dark' | 'system';
   accentColor: string;
   initialMode?: 'login' | 'signup' | 'forgot-password' | 'reset-password';
+  liquidGlassEnabled?: boolean;
 }
 
 export function AuthModal({ 
@@ -34,7 +36,8 @@ export function AuthModal({
   language, 
   theme, 
   accentColor,
-  initialMode = 'login'
+  initialMode = 'login',
+  liquidGlassEnabled = true
 }: AuthModalProps) {
   type AuthMode = 'login' | 'signup' | 'forgot-password' | 'reset-password';
 
@@ -193,8 +196,10 @@ export function AuthModal({
               onClick={(e) => e.stopPropagation()}
               className={clsx(
                 "w-full max-w-md mx-4 p-6 rounded-2xl shadow-2xl border relative",
-                theme === 'dark' ? "bg-[#1e1e2e] border-white/10 text-white" : "bg-white border-gray-200 text-gray-900"
+                theme === 'dark' ? "border-white/10 text-white" : "border-gray-200 text-gray-900",
+                !liquidGlassEnabled && (theme === 'dark' ? "bg-[#1e1e2e]" : "bg-white")
               )}
+              style={liquidGlassEnabled ? getLiquidGlassStyle({ dark: theme === 'dark', effect: 'regular', radius: 16 }) : undefined}
             >
               <button
                 onClick={onClose}

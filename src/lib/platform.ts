@@ -17,9 +17,10 @@ export function detectPlatform(): Platform {
   }
 
   // Check Capacitor native platform
-  const hasCapacitorBridge = typeof window !== 'undefined' && (window as any).Capacitor;
-  if (Capacitor.isNativePlatform() || (hasCapacitorBridge && (window as any).Capacitor.isNativePlatform?.())) {
-    const platform = Capacitor.getPlatform() || (hasCapacitorBridge && (window as any).Capacitor.getPlatform?.());
+  const capWindow = typeof window !== 'undefined' ? (window as unknown as { Capacitor?: typeof Capacitor }).Capacitor : undefined;
+  const hasCapacitorBridge = !!capWindow;
+  if (Capacitor.isNativePlatform() || (hasCapacitorBridge && capWindow?.isNativePlatform?.())) {
+    const platform = Capacitor.getPlatform() || (hasCapacitorBridge && capWindow?.getPlatform?.());
     console.log('[Platform] Detected native Capacitor platform:', platform);
     if (platform === 'ios') return 'ios';
     if (platform === 'android') return 'android';

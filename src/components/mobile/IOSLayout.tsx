@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  ArrowLeft, ArrowRight, RotateCw, Layers, Ellipsis, Star, Home
+  ArrowLeft, ArrowRight, Layers, Ellipsis, Star, Home
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { AnimatePresence } from 'framer-motion';
@@ -8,6 +8,7 @@ import type { ThemeColors } from '../../lib/theme';
 import { MobileSearchBar } from './MobileSearchBar';
 import { MobileTabSwitcher } from './MobileTabSwitcher';
 import { MobileSettingsSheet } from './MobileSettingsSheet';
+import { LiquidGlass } from '../ui/LiquidGlass';
 
 interface Tab {
   id: string;
@@ -33,6 +34,9 @@ interface IOSLayoutProps {
   userName?: string;
   userAvatar?: string;
   isLoggedIn: boolean;
+  /** Toggle between liquid glass and normal tab bar style */
+  liquidGlassEnabled?: boolean;
+  onToggleLiquidGlass?: () => void;
   children: React.ReactNode;
   onUrlChange: (value: string) => void;
   onUrlSubmit: (url: string) => void;
@@ -69,6 +73,8 @@ export function IOSLayout({
   userName,
   userAvatar,
   isLoggedIn,
+  liquidGlassEnabled = true,
+  onToggleLiquidGlass,
   children,
   onUrlChange,
   onUrlSubmit,
@@ -76,7 +82,6 @@ export function IOSLayout({
   onSuggestionSelect,
   onGoBack,
   onGoForward,
-  onReload,
   onSelectTab,
   onCloseTab,
   onNewTab,
@@ -121,7 +126,16 @@ export function IOSLayout({
 
       {/* ─── iOS Floating Search Pill ──────────────────────────── */}
       <div className="absolute bottom-[calc(env(safe-area-inset-bottom,0px)+64px)] left-4 right-4 z-50 pointer-events-none">
-        <div className="pointer-events-auto shadow-xl rounded-2xl">
+        <LiquidGlass 
+          className="pointer-events-auto shadow-xl"
+          depth={8} 
+          strength={15} 
+          chromaticAberration={2}
+          radius={28}
+          blur={20}
+          effect="clear"
+          enabled={liquidGlassEnabled}
+        >
           <MobileSearchBar
             urlInput={urlInput}
             onUrlChange={onUrlChange}
@@ -135,54 +149,65 @@ export function IOSLayout({
             language={language}
             currentUrl={activeTab?.url}
           />
-        </div>
+        </LiquidGlass>
       </div>
 
       {/* ─── iOS Bottom Tab Bar ──────────────────────────── */}
-      <div className={clsx(
-        'ios-bottom-nav absolute bottom-0 left-0 right-0 z-50',
-        !isDark && 'light'
-      )}>
-        {/* Navigation Row */}
-        <div className="flex items-center justify-around px-2 py-2">
-          {/* Back */}
-          <button onClick={onGoBack} className="ios-nav-button">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+      <div className={clsx('absolute bottom-0 left-0 right-0 z-50 pointer-events-none')}>
+        <LiquidGlass
+          className={clsx(
+            'w-full pointer-events-auto border-t',
+            liquidGlassEnabled ? 'border-white/10' : (isDark ? 'border-white/10 bg-[#0f0f1a]/90' : 'border-gray-200 bg-white/90')
+          )}
+          depth={4}
+          strength={10}
+          chromaticAberration={1}
+          radius={0}
+          blur={20}
+          effect="regular"
+          enabled={liquidGlassEnabled}
+        >
+          {/* Navigation Row */}
+          <div className="flex items-center justify-around px-2 py-2" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)' }}>
+            {/* Back */}
+            <button onClick={onGoBack} className="ios-nav-button">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
 
-          {/* Forward */}
-          <button onClick={onGoForward} className="ios-nav-button">
-            <ArrowRight className="w-5 h-5" />
-          </button>
+            {/* Forward */}
+            <button onClick={onGoForward} className="ios-nav-button">
+              <ArrowRight className="w-5 h-5" />
+            </button>
 
-          {/* Bookmark */}
-          <button onClick={onToggleBookmark} className={clsx('ios-nav-button', isBookmarked && 'active')}>
-            <Star className={clsx('w-5 h-5', isBookmarked && 'fill-current')} />
-          </button>
+            {/* Bookmark */}
+            <button onClick={onToggleBookmark} className={clsx('ios-nav-button', isBookmarked && 'active')}>
+              <Star className={clsx('w-5 h-5', isBookmarked && 'fill-current')} />
+            </button>
 
-          {/* Home */}
-          <button onClick={() => onUrlSubmit('explore://newtab')} className="ios-nav-button">
-            <Home className="w-5 h-5" />
-          </button>
+            {/* Home */}
+            <button onClick={() => onUrlSubmit('explore://newtab')} className="ios-nav-button">
+              <Home className="w-5 h-5" />
+            </button>
 
-          {/* Tab Switcher */}
-          <button onClick={() => setShowTabSwitcher(true)} className="ios-nav-button relative">
-            <Layers className="w-5 h-5" />
-            {tabs.length > 1 && (
-              <span className={clsx(
-                'absolute -top-0.5 -right-0.5 min-w-[16px] h-4 rounded-full text-[9px] font-bold flex items-center justify-center px-1',
-                colors.bgSolid, 'text-white'
-              )}>
-                {tabs.length}
-              </span>
-            )}
-          </button>
+            {/* Tab Switcher */}
+            <button onClick={() => setShowTabSwitcher(true)} className="ios-nav-button relative">
+              <Layers className="w-5 h-5" />
+              {tabs.length > 1 && (
+                <span className={clsx(
+                  'absolute -top-0.5 -right-0.5 min-w-[16px] h-4 rounded-full text-[9px] font-bold flex items-center justify-center px-1',
+                  colors.bgSolid, 'text-white'
+                )}>
+                  {tabs.length}
+                </span>
+              )}
+            </button>
 
-          {/* More (Settings Sheet) */}
-          <button onClick={() => setShowSettingsSheet(true)} className="ios-nav-button">
-            <Ellipsis className="w-5 h-5" />
-          </button>
-        </div>
+            {/* More (Settings Sheet) */}
+            <button onClick={() => setShowSettingsSheet(true)} className="ios-nav-button">
+              <Ellipsis className="w-5 h-5" />
+            </button>
+          </div>
+        </LiquidGlass>
       </div>
 
       {/* ─── Tab Switcher Overlay ──────────────────────────── */}
@@ -224,6 +249,8 @@ export function IOSLayout({
             onLogout={onLogout}
             isLoggedIn={isLoggedIn}
             blockedAdsCount={blockedAdsCount}
+            liquidGlassEnabled={liquidGlassEnabled}
+            onToggleLiquidGlass={onToggleLiquidGlass}
           />
         )}
       </AnimatePresence>

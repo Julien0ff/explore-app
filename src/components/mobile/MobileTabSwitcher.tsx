@@ -118,7 +118,7 @@ export function MobileTabSwitcher({
               >
                 {/* Icon area */}
                 <div className={clsx(
-                  'w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 bg-gradient-to-br shadow-inner',
+                  'w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 bg-linear-to-br shadow-inner',
                   isDark ? 'from-white/10 to-white/5 ring-1 ring-white/10' : 'from-gray-100 to-gray-50 ring-1 ring-black/5',
                   isActive && (isDark ? 'ring-2 ring-indigo-500' : 'ring-2 ring-blue-500'),
                   tab.isPrivate && 'from-indigo-900 to-purple-900 text-white'
